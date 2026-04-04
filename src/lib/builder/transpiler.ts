@@ -32,6 +32,37 @@ function rewriteImports(source: string, mode: 'preview' | 'production'): string 
     );
 }
 
+// Convert ES module exports to module.exports assignments
+// so the code can run inside new Function() / eval.
+function rewriteExports(source: string): string {
+  return source
+    // export default function Foo(...) → function Foo(...) ... module.exports.default = Foo;
+    .replace(
+      /export\s+default\s+function\s+(\w+)/g,
+      'function $1'
+    )
+    // export function Foo(...) → function Foo(...) ... (we'll assign below)
+    .replace(
+      /export\s+function\s+(\w+)/g,
+      'module.exports.$1 = function $1'
+    )
+    // export const Foo = ... → module.exports.Foo = ...
+    .replace(
+      /export\s+const\s+(\w+)/g,
+      'module.exports.$1'
+    )
+    // export { Foo, Bar } — collect and assign
+    .replace(
+      /export\s*\{([^}]+)\}/g,
+      (_, names: string) => {
+        return names.split(',').map((n) => {
+          const name = n.trim();
+          return `module.exports.${name} = ${name};`;
+        }).join('\n');
+      }
+    );
+}
+
 export function transpileForPreview(source: string, filename: string = 'component.tsx'): string {
   const rewritten = rewriteImports(source, 'preview');
   const result = transform(rewritten, {
@@ -40,7 +71,7 @@ export function transpileForPreview(source: string, filename: string = 'componen
     production: true,
     filePath: filename,
   });
-  return result.code;
+  return rewriteExports(result.code);
 }
 
 export function transpileForProduction(source: string, filename: string = 'component.tsx'): string {
@@ -51,5 +82,5 @@ export function transpileForProduction(source: string, filename: string = 'compo
     production: true,
     filePath: filename,
   });
-  return result.code;
+  return rewriteExports(result.code);
 }

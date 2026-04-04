@@ -8,9 +8,9 @@ export default function SandboxPreviewPage() {
       <head>
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <link href="https://cdn.jsdelivr.net/npm/tailwindcss@4/index.min.css" rel="stylesheet" />
-        <script src="https://cdn.jsdelivr.net/npm/react@19/umd/react.production.min.js" crossOrigin="anonymous" />
-        <script src="https://cdn.jsdelivr.net/npm/react-dom@19/umd/react-dom.production.min.js" crossOrigin="anonymous" />
+        <script src="https://cdn.tailwindcss.com" />
+        <script src="https://cdn.jsdelivr.net/npm/react@18/umd/react.production.min.js" crossOrigin="anonymous" />
+        <script src="https://cdn.jsdelivr.net/npm/react-dom@18/umd/react-dom.production.min.js" crossOrigin="anonymous" />
       </head>
       <body>
         <div id="root" />
