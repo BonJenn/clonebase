@@ -90,13 +90,13 @@ A web-based platform where users can build/publish web apps, share them as templ
 - [ ] Creator earnings dashboard (basic)
 - [ ] Webhook handler for Stripe events
 
-## Phase 4 — Template Ecosystem
-- [ ] Template export (standalone Next.js project download)
-- [ ] Template versioning (update published templates)
-- [ ] Template categories + search/filtering in marketplace
-- [ ] Template ratings/reviews
-- [ ] Second template: SaaS Waitlist page
-- [ ] Third template: Link-in-Bio page
+## Phase 4 — Template Ecosystem (DONE)
+- [x] Template export (standalone Next.js project download)
+- [x] Template versioning (version + changelog fields on templates)
+- [x] Template categories + search/filtering + sort in marketplace
+- [x] Template ratings/reviews (with auto-aggregation trigger)
+- [x] Second template: SaaS Waitlist page
+- [x] Third template: Link-in-Bio page
 
 ## Phase 5 — Production Readiness
 - [ ] Custom domain support (CNAME mapping per tenant)

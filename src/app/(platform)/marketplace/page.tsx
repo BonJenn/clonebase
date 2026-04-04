@@ -3,20 +3,26 @@ import { TemplateCard } from '@/components/platform/template-card';
 import { TEMPLATE_CATEGORIES } from '@/lib/constants';
 import type { AppTemplate } from '@/types';
 
+type SortOption = 'popular' | 'newest' | 'top-rated';
+
 interface MarketplacePageProps {
-  searchParams: Promise<{ category?: string; q?: string }>;
+  searchParams: Promise<{ category?: string; q?: string; sort?: SortOption }>;
 }
 
 export default async function MarketplacePage({ searchParams }: MarketplacePageProps) {
-  const { category, q } = await searchParams;
+  const { category, q, sort } = await searchParams;
   const supabase = await createServerSupabaseClient();
+
+  const sortField = sort === 'newest' ? 'created_at'
+    : sort === 'top-rated' ? 'average_rating'
+    : 'clone_count';
 
   let query = supabase
     .from('app_templates')
     .select('*, pricing:template_pricing(*)')
     .eq('status', 'published')
     .eq('visibility', 'public')
-    .order('clone_count', { ascending: false });
+    .order(sortField, { ascending: false });
 
   if (category) {
     query = query.eq('category', category);
@@ -46,8 +52,21 @@ export default async function MarketplacePage({ searchParams }: MarketplacePageP
         />
       </form>
 
+      {/* Sort options */}
+      <div className="mt-6 flex justify-center gap-4 text-sm">
+        {([['popular', 'Most Popular'], ['newest', 'Newest'], ['top-rated', 'Top Rated']] as const).map(([key, label]) => (
+          <a
+            key={key}
+            href={`/marketplace?${new URLSearchParams({ ...(category ? { category } : {}), ...(q ? { q } : {}), sort: key }).toString()}`}
+            className={`font-medium transition-colors ${(!sort && key === 'popular') || sort === key ? 'text-indigo-600' : 'text-gray-500 hover:text-gray-700'}`}
+          >
+            {label}
+          </a>
+        ))}
+      </div>
+
       {/* Category filters */}
-      <div className="mt-6 flex flex-wrap justify-center gap-2">
+      <div className="mt-4 flex flex-wrap justify-center gap-2">
         <a
           href="/marketplace"
           className={`rounded-full px-3 py-1 text-sm transition-colors

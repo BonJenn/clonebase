@@ -39,12 +39,17 @@ export interface AppTemplate {
   api_config: Record<string, unknown>;
   db_schema: Record<string, unknown>;
   clone_count: number;
+  average_rating: number;
+  review_count: number;
+  version: number;
+  changelog: string | null;
   created_at: string;
   updated_at: string;
   // Joined fields
   creator?: Profile;
   pricing?: TemplatePricing;
   integration_definitions?: IntegrationDefinition[];
+  reviews?: TemplateReview[];
 }
 
 export interface TemplatePricing {
@@ -68,6 +73,17 @@ export interface TemplatePurchase {
   amount_cents: number;
   status: string;
   created_at: string;
+}
+
+export interface TemplateReview {
+  id: string;
+  template_id: string;
+  user_id: string;
+  rating: number;
+  review_text: string | null;
+  created_at: string;
+  updated_at: string;
+  reviewer?: Pick<Profile, 'display_name' | 'avatar_url'>;
 }
 
 export interface Tenant {

@@ -51,7 +51,16 @@ export function TemplateCard({ template }: TemplateCardProps) {
 
         <div className="mt-3 flex items-center justify-between text-xs text-gray-400">
           <span>{template.category || 'Uncategorized'}</span>
-          <span>{template.clone_count} clones</span>
+          <div className="flex items-center gap-3">
+            {template.review_count > 0 && (
+              <span className="flex items-center gap-1">
+                <span className="text-yellow-500">&#9733;</span>
+                {template.average_rating}
+                <span className="text-gray-300">({template.review_count})</span>
+              </span>
+            )}
+            <span>{template.clone_count} clones</span>
+          </div>
         </div>
       </div>
     </Link>

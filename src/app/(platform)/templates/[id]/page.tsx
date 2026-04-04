@@ -1,6 +1,7 @@
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { notFound } from 'next/navigation';
 import { CloneButton } from './clone-button';
+import { ReviewSection } from '@/components/platform/review-section';
 import type { AppTemplate } from '@/types';
 
 interface TemplateDetailProps {
@@ -116,8 +117,16 @@ export default async function TemplateDetailPage({ params }: TemplateDetailProps
       {/* Stats */}
       <div className="mt-8 flex gap-6 text-sm text-gray-500">
         <span>{tpl.clone_count} clones</span>
+        {tpl.review_count > 0 && (
+          <span className="flex items-center gap-1">
+            <span className="text-yellow-500">&#9733;</span> {tpl.average_rating} ({tpl.review_count} reviews)
+          </span>
+        )}
         <span>{tpl.tags?.length ? tpl.tags.join(', ') : 'No tags'}</span>
       </div>
+
+      {/* Reviews */}
+      <ReviewSection templateId={tpl.id} isOwner={isOwner} />
     </div>
   );
 }
