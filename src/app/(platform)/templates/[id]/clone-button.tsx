@@ -10,9 +10,12 @@ interface CloneButtonProps {
   templateId: string;
   templateName: string;
   isFree: boolean;
+  hasPurchased?: boolean;
+  isOwner?: boolean;
+  priceCents?: number;
 }
 
-export function CloneButton({ templateId, templateName, isFree }: CloneButtonProps) {
+export function CloneButton({ templateId, templateName, isFree, hasPurchased, isOwner, priceCents }: CloneButtonProps) {
   const { user } = useUser();
   const router = useRouter();
   const [showModal, setShowModal] = useState(false);
@@ -20,6 +23,31 @@ export function CloneButton({ templateId, templateName, isFree }: CloneButtonPro
   const [appName, setAppName] = useState(templateName);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [purchasing, setPurchasing] = useState(false);
+
+  const canClone = isFree || hasPurchased || isOwner;
+
+  async function handlePurchase() {
+    setPurchasing(true);
+    setError('');
+    try {
+      const res = await fetch('/api/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ template_id: templateId }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error || 'Failed to start checkout');
+        setPurchasing(false);
+        return;
+      }
+      window.location.href = data.url;
+    } catch {
+      setError('Network error. Please try again.');
+      setPurchasing(false);
+    }
+  }
 
   async function handleClone(e: React.FormEvent) {
     e.preventDefault();
@@ -58,9 +86,16 @@ export function CloneButton({ templateId, templateName, isFree }: CloneButtonPro
     );
   }
 
-  if (!isFree) {
-    // TODO: Integrate Stripe checkout for paid templates
-    return <Button disabled>Purchase & Clone (Coming Soon)</Button>;
+  if (!canClone) {
+    const priceLabel = priceCents ? `$${(priceCents / 100).toFixed(2)}` : 'Paid';
+    return (
+      <div>
+        {error && <p className="mb-2 text-sm text-red-600">{error}</p>}
+        <Button onClick={handlePurchase} loading={purchasing}>
+          Purchase for {priceLabel}
+        </Button>
+      </div>
+    );
   }
 
   return (

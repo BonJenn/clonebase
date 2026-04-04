@@ -11,7 +11,7 @@ export async function POST(request: NextRequest) {
   }
 
   const body = await request.json();
-  const { name, slug, description, category } = body;
+  const { name, slug, description, category, pricing_type, price_cents } = body;
 
   // Validate required fields
   if (!name?.trim() || !slug?.trim()) {
@@ -45,11 +45,12 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Failed to create template' }, { status: 500 });
   }
 
-  // Create free pricing record by default
+  // Create pricing record
+  const validPricingType = pricing_type === 'one_time' ? 'one_time' : 'free';
   await supabase.from('template_pricing').insert({
     template_id: template.id,
-    pricing_type: 'free',
-    price_cents: 0,
+    pricing_type: validPricingType,
+    price_cents: validPricingType === 'one_time' ? Math.max(100, Math.round(price_cents || 0)) : 0,
   });
 
   return NextResponse.json(template, { status: 201 });

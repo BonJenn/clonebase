@@ -45,7 +45,27 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Template not available for cloning' }, { status: 403 });
   }
 
-  // TODO: For paid templates, verify purchase before allowing clone
+  // For paid templates, verify purchase before allowing clone
+  if (template.creator_id !== user.id) {
+    const { data: pricing } = await supabase
+      .from('template_pricing')
+      .select('pricing_type')
+      .eq('template_id', template_id)
+      .single();
+
+    if (pricing && pricing.pricing_type !== 'free') {
+      const { data: purchase } = await supabase
+        .from('template_purchases')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('template_id', template_id)
+        .single();
+
+      if (!purchase) {
+        return NextResponse.json({ error: 'Purchase required for this template' }, { status: 403 });
+      }
+    }
+  }
 
   // Check slug availability
   const { data: existingTenant } = await supabase

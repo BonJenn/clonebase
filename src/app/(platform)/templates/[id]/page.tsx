@@ -29,6 +29,20 @@ export default async function TemplateDetailPage({ params }: TemplateDetailProps
   const isFree = !price || price.pricing_type === 'free';
   const integrations = tpl.integration_definitions || [];
 
+  // Check if current user has purchased or owns this template
+  const { data: { user } } = await supabase.auth.getUser();
+  const isOwner = user?.id === tpl.creator_id;
+  let hasPurchased = false;
+  if (user && !isFree && !isOwner) {
+    const { data: purchase } = await supabase
+      .from('template_purchases')
+      .select('id')
+      .eq('user_id', user.id)
+      .eq('template_id', tpl.id)
+      .single();
+    hasPurchased = !!purchase;
+  }
+
   return (
     <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
       {/* Header */}
@@ -48,7 +62,14 @@ export default async function TemplateDetailPage({ params }: TemplateDetailProps
           <span className="text-2xl font-bold">
             {isFree ? 'Free' : `$${(price!.price_cents / 100).toFixed(2)}`}
           </span>
-          <CloneButton templateId={tpl.id} templateName={tpl.name} isFree={isFree} />
+          <CloneButton
+            templateId={tpl.id}
+            templateName={tpl.name}
+            isFree={isFree}
+            hasPurchased={hasPurchased}
+            isOwner={isOwner}
+            priceCents={price?.price_cents}
+          />
         </div>
       </div>
 

@@ -15,6 +15,8 @@ export default function CreateTemplatePage() {
   const [slug, setSlug] = useState('');
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState('');
+  const [pricingType, setPricingType] = useState<'free' | 'one_time'>('free');
+  const [priceAmount, setPriceAmount] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -33,7 +35,11 @@ export default function CreateTemplatePage() {
       const res = await fetch('/api/templates', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, slug, description, category }),
+        body: JSON.stringify({
+          name, slug, description, category,
+          pricing_type: pricingType,
+          price_cents: pricingType === 'one_time' ? Math.round(parseFloat(priceAmount || '0') * 100) : 0,
+        }),
       });
 
       const data = await res.json();
@@ -102,6 +108,48 @@ export default function CreateTemplatePage() {
             rows={4}
             className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 placeholder:text-gray-400 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
           />
+        </div>
+
+        {/* Pricing */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Pricing</label>
+          <div className="flex gap-4">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="radio"
+                name="pricing"
+                checked={pricingType === 'free'}
+                onChange={() => setPricingType('free')}
+                className="text-indigo-600"
+              />
+              <span className="text-sm">Free</span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="radio"
+                name="pricing"
+                checked={pricingType === 'one_time'}
+                onChange={() => setPricingType('one_time')}
+                className="text-indigo-600"
+              />
+              <span className="text-sm">One-time purchase</span>
+            </label>
+          </div>
+          {pricingType === 'one_time' && (
+            <div className="mt-3">
+              <Input
+                label="Price (USD)"
+                type="number"
+                min="1"
+                step="0.01"
+                value={priceAmount}
+                onChange={(e) => setPriceAmount(e.target.value)}
+                placeholder="9.99"
+                required
+              />
+              <p className="mt-1 text-xs text-gray-500">You receive 85% of each sale.</p>
+            </div>
+          )}
         </div>
 
         <div className="flex gap-3">
