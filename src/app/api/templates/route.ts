@@ -11,7 +11,7 @@ export async function POST(request: NextRequest) {
   }
 
   const body = await request.json();
-  const { name, slug, description, category, pricing_type, price_cents } = body;
+  const { name, slug, description, category, pricing_type, price_cents, source_type } = body;
 
   // Validate required fields
   if (!name?.trim() || !slug?.trim()) {
@@ -34,6 +34,7 @@ export async function POST(request: NextRequest) {
       category: category || null,
       status: 'draft',
       visibility: 'private',
+      source_type: source_type === 'generated' ? 'generated' : 'static',
     })
     .select()
     .single();

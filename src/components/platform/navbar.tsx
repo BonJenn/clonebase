@@ -41,8 +41,8 @@ export function Navbar() {
               <div className="h-8 w-20 animate-pulse rounded-lg bg-gray-200" />
             ) : user ? (
               <>
-                <Link href="/templates/new">
-                  <Button size="sm">Create Template</Button>
+                <Link href="/builder">
+                  <Button size="sm">Build an App</Button>
                 </Link>
                 <Button variant="ghost" size="sm" onClick={handleSignOut}>
                   Sign Out
