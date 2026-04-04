@@ -12,7 +12,7 @@ CREATE TABLE IF NOT EXISTS custom_domains (
   tenant_id uuid NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
   domain text NOT NULL UNIQUE,
   status text DEFAULT 'pending' CHECK (status IN ('pending', 'verified', 'failed')),
-  verification_token text NOT NULL DEFAULT encode(gen_random_bytes(16), 'hex'),
+  verification_token text NOT NULL DEFAULT replace(gen_random_uuid()::text, '-', ''),
   verified_at timestamptz,
   created_at timestamptz DEFAULT now()
 );
