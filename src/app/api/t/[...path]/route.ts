@@ -62,6 +62,12 @@ async function handleRequest(
     return NextResponse.json({ error: 'Template has no API handler' }, { status: 404 });
   }
 
+  // Track API usage (fire-and-forget)
+  supabase.rpc('increment_analytics', {
+    p_tenant_id: tenant.id,
+    p_event_type: `api:${path[0] || 'unknown'}`,
+  }).then(() => {}, () => {});
+
   return handler(request, { tenantId: tenant.id, params: path });
 }
 

@@ -35,6 +35,12 @@ export default async function TenantLayout({ children }: { children: React.React
 
   if (!instance) notFound();
 
+  // Track page view (fire-and-forget)
+  supabase.rpc('increment_analytics', {
+    p_tenant_id: tenant.id,
+    p_event_type: 'page_view',
+  }).then(() => {}, () => {});
+
   const templateSlug = (instance.template as unknown as { slug: string })?.slug;
   if (!templateSlug) notFound();
 

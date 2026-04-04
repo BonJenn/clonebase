@@ -91,8 +91,30 @@ export interface Tenant {
   owner_id: string;
   name: string;
   slug: string;
+  custom_domain: string | null;
+  tier: 'free' | 'pro' | 'enterprise';
+  rate_limit_rpm: number;
   created_at: string;
   updated_at: string;
+}
+
+export interface CustomDomain {
+  id: string;
+  tenant_id: string;
+  domain: string;
+  status: 'pending' | 'verified' | 'failed';
+  verification_token: string;
+  verified_at: string | null;
+  created_at: string;
+}
+
+export interface AnalyticsEvent {
+  id: string;
+  tenant_id: string;
+  event_type: string;
+  event_date: string;
+  count: number;
+  metadata: Record<string, unknown>;
 }
 
 export interface AppInstance {

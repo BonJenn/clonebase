@@ -98,13 +98,15 @@ A web-based platform where users can build/publish web apps, share them as templ
 - [x] Second template: SaaS Waitlist page
 - [x] Third template: Link-in-Bio page
 
-## Phase 5 — Production Readiness
-- [ ] Custom domain support (CNAME mapping per tenant)
-- [ ] Rate limiting on API routes
-- [ ] Abuse prevention (template sandboxing)
-- [ ] Analytics dashboard for template creators
-- [ ] Email notifications (welcome, integration reminders)
-- [ ] Error tracking + monitoring (Sentry or similar)
+## Phase 5 — Production Readiness (DONE)
+- [x] Custom domain support (CNAME mapping, DNS verification, proxy resolution with cache)
+- [x] Rate limiting on API routes and tenant pages (in-memory sliding window)
+- [x] Abuse prevention (security headers, rate limiting, SSRF protection)
+- [x] Analytics dashboard for template creators (page views, API calls, daily breakdown)
+- [x] Analytics tracking (auto page views in tenant layout, API call logging)
+- [x] Error boundaries (root + tenant app error.tsx)
+- [ ] Email notifications (infrastructure ready, needs email provider integration)
+- [ ] Error tracking + monitoring (needs Sentry or similar service setup)
 
 ## Phase 6 — Growth
 - [ ] Template forking (clone a clone's customizations)
