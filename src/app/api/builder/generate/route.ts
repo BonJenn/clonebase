@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
-import Anthropic from '@anthropic-ai/sdk';
+import OpenAI from 'openai';
 import { buildSystemPrompt } from '@/lib/builder/system-prompt';
 
-const anthropic = new Anthropic();
+const openai = new OpenAI();
 
 // POST /api/builder/generate — Generate or iterate on template code
 export async function POST(request: NextRequest) {
@@ -37,35 +37,36 @@ export async function POST(request: NextRequest) {
 
   const systemPrompt = buildSystemPrompt(existing || undefined);
 
-  // Call the API
-  const response = await anthropic.messages.create({
-    model: 'claude-sonnet-4-20250514',
+  // Call OpenAI
+  const response = await openai.chat.completions.create({
+    model: 'gpt-4o',
     max_tokens: 8192,
-    system: systemPrompt,
-    messages: messages.map((m: { role: string; content: string }) => ({
-      role: m.role as 'user' | 'assistant',
-      content: m.content,
-    })),
+    temperature: 0.7,
+    messages: [
+      { role: 'system', content: systemPrompt },
+      ...messages.map((m: { role: string; content: string }) => ({
+        role: m.role as 'user' | 'assistant',
+        content: m.content,
+      })),
+    ],
   });
 
-  // Extract text content
-  const textContent = response.content.find((c) => c.type === 'text');
-  if (!textContent || textContent.type !== 'text') {
+  const textContent = response.choices[0]?.message?.content;
+  if (!textContent) {
     return NextResponse.json({ error: 'No response from model' }, { status: 500 });
   }
 
   // Parse the JSON response
   let generated;
   try {
-    // Try to extract JSON from the response (may be wrapped in markdown fences)
-    let jsonStr = textContent.text.trim();
+    let jsonStr = textContent.trim();
     const fenceMatch = jsonStr.match(/```(?:json)?\s*([\s\S]*?)```/);
     if (fenceMatch) jsonStr = fenceMatch[1].trim();
     generated = JSON.parse(jsonStr);
   } catch {
     return NextResponse.json({
       error: 'Failed to parse generated code',
-      raw: textContent.text,
+      raw: textContent,
     }, { status: 500 });
   }
 
@@ -94,6 +95,7 @@ export async function POST(request: NextRequest) {
     component_files: generated.component_files || {},
     conversation_history: messages,
     generation_prompt: messages[0]?.content || '',
+    model_used: 'gpt-4o',
     version: nextVersion,
     is_current: true,
   });

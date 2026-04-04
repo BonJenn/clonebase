@@ -63,7 +63,7 @@ A web-based platform where users **vibecode web apps using plain English**, publ
 - **Auth:** Supabase Auth
 - **Database:** Postgres (multi-tenant design)
 - **Hosting:** Vercel
-- **Code Generation:** Anthropic API for vibecoding
+- **Code Generation:** OpenAI API (GPT-4o) for vibecoding
 - **Transpilation:** sucrase (pure JS, TSX → JS for runtime eval)
 
 ## Security Requirements
