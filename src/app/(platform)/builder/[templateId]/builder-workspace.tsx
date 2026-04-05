@@ -215,15 +215,17 @@ export function BuilderWorkspace({
 
         {/* Preview / Code / Data panel — iframe always mounted so Data tab can communicate */}
         <div className="flex-1 overflow-hidden relative">
-          <div className={activeView === 'preview' ? 'h-full' : 'h-0 overflow-hidden'}>
-            {showAnimation ? (
-              <GeneratingAnimation />
-            ) : (
-              <LivePreview
-                transpiledCode={transpiledCode}
-                componentName={componentName}
-              />
+          <div className={activeView === 'preview' ? 'h-full relative' : 'h-0 overflow-hidden'}>
+            {/* Animation overlays the preview — iframe stays mounted to preserve state */}
+            {showAnimation && (
+              <div className="absolute inset-0 z-10">
+                <GeneratingAnimation />
+              </div>
             )}
+            <LivePreview
+              transpiledCode={transpiledCode}
+              componentName={componentName}
+            />
           </div>
           {activeView === 'code' && (
             <CodePreview

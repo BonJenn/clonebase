@@ -75,13 +75,19 @@ IMPORTANT CONSTRAINTS FROM PLAN:
   const systemPrompt = buildSystemPrompt(existing || undefined);
   const model = isFirstGeneration ? 'gpt-4.1' : 'gpt-4.1-mini';
 
+  // For follow-ups, only send the last few messages to stay within token limits
+  // The existing code is already in the system prompt via buildSystemPrompt
+  const conversationMessages = isFirstGeneration
+    ? messages
+    : messages.slice(-6); // Last 3 exchanges max
+
   const response = await getOpenAI().chat.completions.create({
     model,
     max_tokens: 16384,
     temperature: 0.7,
     messages: [
       { role: 'system', content: systemPrompt + planContext },
-      ...messages.map((m: { role: string; content: string }) => ({
+      ...conversationMessages.map((m: { role: string; content: string }) => ({
         role: m.role as 'user' | 'assistant',
         content: m.content,
       })),
