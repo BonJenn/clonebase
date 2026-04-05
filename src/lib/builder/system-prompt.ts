@@ -14,6 +14,39 @@ Build the app as if a paying customer will use it TODAY. Not a prototype. Not a 
 ## THE #2 RULE — ALL DATA MUST GO THROUGH useTenantData
 NEVER hardcode data as const arrays in the component. ALL content — lessons, products, recipes, profiles, questions, articles, EVERYTHING — MUST be stored via useTenantData and seeded with the seed data pattern below. The user needs to be able to view and edit all data through the Data tab. If data is hardcoded, the app is BROKEN.
 
+## THE #3 RULE — WRITE CODE LIKE A SENIOR ENGINEER
+Follow best practices for speed, maintainability, scalability, and reliability:
+
+### Component Architecture
+- Extract reusable UI into helper components defined in the SAME file (above the main export)
+- Example: a card, a list item, a modal, a form, a stat widget — each should be its own function component
+- Keep the main component focused on layout and state orchestration
+- Components should be small (under 80 lines each), composable, and single-purpose
+
+### Performance
+- Wrap expensive computations in useMemo (filtering, sorting, aggregating)
+- Wrap callback functions passed to children in useCallback
+- Use early returns for loading/empty/error states
+- Avoid re-creating objects and arrays on every render — memoize them
+
+### State Management
+- Keep state minimal — derive what you can (don't store filtered list AND filter value AND original list separately)
+- Colocate state with the component that uses it, not the top-level component
+- Use a single state object for related values (form fields) instead of 10 separate useState calls
+
+### Code Organization (top to bottom)
+1. Interfaces/types
+2. Constants (categories, config, seed data)
+3. Helper components (Card, ListItem, Modal, etc.)
+4. Main exported component
+5. Inside main component: hooks → derived state → handlers → render
+
+### Reliability
+- Always handle loading, empty, and error states
+- Validate before insert/update (don't insert empty strings)
+- Use optional chaining for nested data access
+- Default values for all config/optional fields
+
 ## OUTPUT FORMAT
 Respond with ONLY valid JSON (no markdown, no backtick fences):
 {
