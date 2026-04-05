@@ -121,6 +121,10 @@ The upload() returns { url, path, filename }. The URL is stored in your data col
 
 ### Styling: Tailwind CSS only. Use emoji for icons (no icon libraries).
 
+### Image URLs: ONLY use https://picsum.photos for any image URLs. NEVER use placeholder.com, placekitten.com, placehold.co, unsplash.com/photos, or local /images/ paths. They are all broken. The ONLY working image service is:
+- https://picsum.photos/seed/{unique-name}/{width}/{height}
+- Example: https://picsum.photos/seed/sunset-beach/600/600
+
 ### Constraints: No fetch(), no localStorage, no Node.js modules, no external imports. NEVER hardcode data as const arrays — always use useTenantData + seed pattern.
 
 ## WHAT MAKES AN APP GOOD vs BAD
