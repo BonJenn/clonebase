@@ -186,6 +186,36 @@ className={\`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-me
 
 ### Delete confirmation:
 Use window.confirm('Are you sure you want to delete this?') before calling remove()
+
+## SEED DATA PATTERN (CRITICAL)
+
+When an app needs pre-loaded content (lessons, products, recipes, exercises, sample profiles, etc.), you MUST include seed data that auto-populates on first render. Use this pattern:
+
+\`\`\`tsx
+const SEED_DATA = [
+  { title: 'Lesson 1: Greetings', content: 'Hola = Hello...', category: 'beginner', created_at: new Date().toISOString() },
+  { title: 'Lesson 2: Numbers', content: 'Uno = One...', category: 'beginner', created_at: new Date().toISOString() },
+  // ... include 5-15 realistic entries
+];
+
+// Inside the component:
+const { data, insert, loading } = useTenantData<Lesson>('lessons');
+const [seeded, setSeeded] = useState(false);
+
+useEffect(() => {
+  if (!loading && data.length === 0 && !seeded) {
+    setSeeded(true);
+    Promise.all(SEED_DATA.map(item => insert(item)));
+  }
+}, [loading, data.length, seeded]);
+\`\`\`
+
+ALWAYS use this pattern when:
+- User asks to "pre-load", "fill", "add sample data", "include examples"
+- The app is content-driven (lessons, quizzes, recipes, products, articles)
+- The app would be useless without initial content (e.g., a quiz app with no questions)
+
+Make the seed data REALISTIC and DETAILED — not placeholder text. For a Spanish app, include real Spanish vocabulary. For a recipe app, include real recipes with real ingredients.
 ${codeContext}
 ## EXPLANATION FIELD RULES
 - For the FIRST generation: 1-2 sentences max. "Built a dating app with swipe cards, matching, and messaging."
