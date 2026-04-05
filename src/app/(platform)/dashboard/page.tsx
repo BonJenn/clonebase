@@ -10,21 +10,30 @@ export default async function DashboardPage() {
 
   if (!user) redirect('/auth/login');
 
-  // Fetch user's app instances (cloned apps) with tenant info
+  // Fetch vibecoded apps (generated templates owned by user)
+  const { data: myApps } = await supabase
+    .from('app_templates')
+    .select('*')
+    .eq('creator_id', user.id)
+    .eq('source_type', 'generated')
+    .order('updated_at', { ascending: false });
+
+  // Fetch cloned app instances with tenant info
   const { data: instances } = await supabase
     .from('app_instances')
     .select(`
       *,
       tenant:tenants(*),
-      template:app_templates(id, name, slug, icon_url)
+      template:app_templates(id, name, slug, icon_url, source_type)
     `)
     .order('created_at', { ascending: false });
 
-  // Fetch user's own templates
+  // Fetch published templates (for marketplace, not generated drafts)
   const { data: templates } = await supabase
     .from('app_templates')
     .select('*')
     .eq('creator_id', user.id)
+    .eq('source_type', 'static')
     .order('created_at', { ascending: false });
 
   return (
@@ -38,42 +47,75 @@ export default async function DashboardPage() {
           <Link href="/dashboard/earnings">
             <Button variant="secondary">Earnings</Button>
           </Link>
-          <Link href="/templates/new">
-            <Button>Create Template</Button>
+          <Link href="/builder">
+            <Button>Build an App</Button>
           </Link>
         </div>
       </div>
 
-      {/* My Apps (cloned instances) */}
+      {/* My Apps — vibecoded apps + cloned instances */}
       <section className="mt-10">
         <h2 className="text-lg font-semibold text-gray-900">My Apps</h2>
-        {!instances?.length ? (
+        {!myApps?.length && !instances?.length ? (
           <div className="mt-4 rounded-xl border border-dashed border-gray-300 p-8 text-center">
-            <p className="text-gray-500">No apps yet. Clone a template from the marketplace to get started.</p>
-            <Link href="/marketplace" className="mt-3 inline-block text-sm text-indigo-600 hover:text-indigo-500">
-              Browse Marketplace
-            </Link>
+            <p className="text-4xl">🚀</p>
+            <p className="mt-3 text-gray-500">No apps yet. Build one or clone from the marketplace.</p>
+            <div className="mt-4 flex items-center justify-center gap-3">
+              <Link href="/builder">
+                <Button>Build an App</Button>
+              </Link>
+              <Link href="/marketplace">
+                <Button variant="secondary">Browse Marketplace</Button>
+              </Link>
+            </div>
           </div>
         ) : (
           <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {(instances as (AppInstance & { tenant: { slug: string }; template: AppTemplate })[]).map((inst) => (
+            {/* Vibecoded apps */}
+            {(myApps as AppTemplate[])?.map((app) => (
+              <Link key={app.id} href={`/dashboard/apps/${app.id}`} className="rounded-xl border border-gray-200 bg-white p-5 hover:shadow-md transition-shadow block">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-purple-100 text-purple-600 font-bold">
+                    {app.name.charAt(0).toUpperCase()}
+                  </div>
+                  <div className="min-w-0">
+                    <h3 className="font-semibold truncate">{app.name}</h3>
+                    <p className="text-xs text-gray-500 truncate">{app.description || 'Vibecoded app'}</p>
+                  </div>
+                </div>
+                <div className="mt-3 flex items-center justify-between">
+                  <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
+                    app.status === 'published' ? 'bg-green-50 text-green-700' : 'bg-purple-50 text-purple-700'
+                  }`}>
+                    {app.status === 'published' ? 'Published' : 'Draft'}
+                  </span>
+                  <span className="text-xs text-gray-400">
+                    {new Date(app.updated_at).toLocaleDateString()}
+                  </span>
+                </div>
+              </Link>
+            ))}
+
+            {/* Cloned instances */}
+            {(instances as (AppInstance & { tenant: { slug: string }; template: AppTemplate })[])?.map((inst) => (
               <Link key={inst.id} href={`/dashboard/projects/${inst.id}`} className="rounded-xl border border-gray-200 bg-white p-5 hover:shadow-md transition-shadow block">
                 <div className="flex items-center gap-3">
                   <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-indigo-100 text-indigo-600 font-bold">
                     {inst.name.charAt(0).toUpperCase()}
                   </div>
-                  <div>
-                    <h3 className="font-semibold">{inst.name}</h3>
+                  <div className="min-w-0">
+                    <h3 className="font-semibold truncate">{inst.name}</h3>
                     <p className="text-xs text-gray-500">{inst.tenant.slug}.clonebase.com</p>
                   </div>
                 </div>
                 <div className="mt-3 flex items-center justify-between">
-                  <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium
-                    ${inst.status === 'active' ? 'bg-green-50 text-green-700' : 'bg-yellow-50 text-yellow-700'}`}>
+                  <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
+                    inst.status === 'active' ? 'bg-green-50 text-green-700' : 'bg-yellow-50 text-yellow-700'
+                  }`}>
                     {inst.status}
                   </span>
                   <span className="text-xs text-gray-400">
-                    from {inst.template?.name}
+                    Cloned from {inst.template?.name}
                   </span>
                 </div>
               </Link>
@@ -82,14 +124,10 @@ export default async function DashboardPage() {
         )}
       </section>
 
-      {/* My Templates */}
-      <section className="mt-12">
-        <h2 className="text-lg font-semibold text-gray-900">My Templates</h2>
-        {!templates?.length ? (
-          <div className="mt-4 rounded-xl border border-dashed border-gray-300 p-8 text-center">
-            <p className="text-gray-500">You haven&apos;t created any templates yet.</p>
-          </div>
-        ) : (
+      {/* My Templates — static/published templates for marketplace */}
+      {templates && templates.length > 0 && (
+        <section className="mt-12">
+          <h2 className="text-lg font-semibold text-gray-900">My Templates</h2>
           <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {(templates as AppTemplate[]).map((tpl) => (
               <Link
@@ -100,8 +138,9 @@ export default async function DashboardPage() {
                 <h3 className="font-semibold">{tpl.name}</h3>
                 <p className="mt-1 text-sm text-gray-500 line-clamp-2">{tpl.description}</p>
                 <div className="mt-3 flex items-center justify-between text-xs text-gray-400">
-                  <span className={`rounded-full px-2 py-0.5 font-medium
-                    ${tpl.status === 'published' ? 'bg-green-50 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
+                  <span className={`rounded-full px-2 py-0.5 font-medium ${
+                    tpl.status === 'published' ? 'bg-green-50 text-green-700' : 'bg-gray-100 text-gray-600'
+                  }`}>
                     {tpl.status}
                   </span>
                   <span>{tpl.clone_count} clones</span>
@@ -109,8 +148,8 @@ export default async function DashboardPage() {
               </Link>
             ))}
           </div>
-        )}
-      </section>
+        </section>
+      )}
     </div>
   );
 }

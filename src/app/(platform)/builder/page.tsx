@@ -1,16 +1,39 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { useUser } from '@/hooks/use-user';
+import { createClient } from '@/lib/supabase/client';
+
+interface DraftApp {
+  id: string;
+  name: string;
+  description: string | null;
+  updated_at: string;
+}
 
 export default function BuilderLandingPage() {
   const router = useRouter();
   const { user, loading: userLoading } = useUser();
+  const [drafts, setDrafts] = useState<DraftApp[]>([]);
   const [prompt, setPrompt] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (!user) return;
+    const supabase = createClient();
+    supabase
+      .from('app_templates')
+      .select('id, name, description, updated_at')
+      .eq('creator_id', user.id)
+      .eq('source_type', 'generated')
+      .order('updated_at', { ascending: false })
+      .limit(10)
+      .then(({ data }) => setDrafts((data as DraftApp[]) || []));
+  }, [user]);
 
   if (userLoading) return null;
   if (!user) {
@@ -78,7 +101,8 @@ export default function BuilderLandingPage() {
         </div>
       </form>
 
-      <div className="mt-16 grid gap-4 sm:grid-cols-3">
+      {/* Suggestions */}
+      <div className="mt-12 grid gap-4 sm:grid-cols-3">
         {[
           { title: 'Todo App', desc: 'A task manager with categories and priorities' },
           { title: 'Event RSVP', desc: 'Collect RSVPs with guest names and dietary preferences' },
@@ -94,6 +118,27 @@ export default function BuilderLandingPage() {
           </button>
         ))}
       </div>
+
+      {/* Recent drafts */}
+      {drafts.length > 0 && (
+        <div className="mt-16">
+          <h2 className="text-lg font-semibold text-gray-900">Continue working on</h2>
+          <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {drafts.map((draft) => (
+              <Link
+                key={draft.id}
+                href={`/builder/${draft.id}`}
+                className="rounded-xl border border-gray-200 bg-white p-4 hover:shadow-md transition-shadow block"
+              >
+                <h3 className="font-medium text-gray-900 truncate">{draft.name}</h3>
+                <p className="mt-1 text-xs text-gray-500">
+                  Last edited {new Date(draft.updated_at).toLocaleDateString()}
+                </p>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
