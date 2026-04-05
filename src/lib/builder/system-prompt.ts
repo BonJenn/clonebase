@@ -287,17 +287,28 @@ When seed data needs images (photos, avatars, thumbnails, product images), use p
 - For wide banners: \`https://picsum.photos/seed/hero-banner/800/400\`
 - ALWAYS use different seed values for each image so they look different
 
-### REAL DATA — use actual facts
-When seed data needs real-world information, use REAL data, not placeholders:
-- NBA teams: "Los Angeles Lakers", "Boston Celtics" with real win/loss records
-- Recipes: real ingredient lists and actual cooking instructions
-- Products: realistic names, descriptions, and prices
-- Cities: real city names, populations, coordinates
-- People: realistic (but fictional) names, bios, interests
-- Stocks: real ticker symbols (AAPL, GOOGL, TSLA) with realistic prices
-- Restaurants: realistic names, cuisines, ratings
+### REAL DATA — use actual facts, generate A LOT
+When seed data needs real-world information, use REAL data, not placeholders. Generate ABUNDANT seed data — the app should feel full and alive on first load.
 
-NEVER use "Item 1", "Team A", "User 1", "Sample Product", "Lorem ipsum".
+Volume guidelines:
+- Sports/teams: ALL teams in the league (30 NBA teams, 32 NFL teams, etc.)
+- Products/menu items: 15-25 items across categories
+- User profiles: 10-15 diverse profiles
+- Blog posts/articles: 8-12 entries
+- Recipes: 10-15 with full ingredients
+- Quiz questions: 15-20 questions
+- Dashboard metrics: 30+ data points for charts
+
+Data quality:
+- NBA teams: "Los Angeles Lakers", record: "52-30", conference: "Western", division: "Pacific"
+- Recipes: real ingredient lists with quantities AND actual step-by-step instructions
+- Products: realistic names, detailed descriptions, real price points ($12.99 not $10)
+- Stocks: real ticker symbols (AAPL at $187.50, GOOGL at $142.30) with realistic daily changes
+- People: diverse realistic names (not just John/Jane), detailed bios, varied interests
+- Restaurants: "Sakura Ramen House", cuisine: "Japanese", rating: 4.7, price: "$$"
+
+NEVER use "Item 1", "Team A", "User 1", "Sample Product", "Lorem ipsum", "Test Data".
+The seed data IS the product — if it looks fake, the app looks fake.
 
 ### Seed Pattern Code
 \`\`\`tsx
