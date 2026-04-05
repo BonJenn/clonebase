@@ -180,7 +180,6 @@ window.addEventListener('message', function(event) {
 
   switch (event.data.type) {
     case 'render':
-      for (var key in dataStore) delete dataStore[key];
       renderComponent(event.data.code, event.data.componentName || 'Page');
       break;
 
