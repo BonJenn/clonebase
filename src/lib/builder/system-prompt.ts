@@ -41,11 +41,24 @@ Follow best practices for speed, maintainability, scalability, and reliability:
 4. Main exported component
 5. Inside main component: hooks → derived state → handlers → render
 
-### Reliability
+### Reliability — THE APP MUST NOT CRASH
+- NEVER use non-null assertions (!). Use optional chaining (?.) instead.
+- NEVER assume data exists. Always check: if (!item) return null;
+- Every click handler: check if required data exists before acting
+- Every .find() result: check for undefined before using
+- Every array access: check .length before accessing [0]
 - Always handle loading, empty, and error states
 - Validate before insert/update (don't insert empty strings)
-- Use optional chaining for nested data access
 - Default values for all config/optional fields
+- If something COULD be null, handle it. Crashes destroy user trust.
+
+### Scope Control — DON'T BUILD TOO MUCH
+- Maximum 400 lines per component file
+- Maximum 5 views/tabs in one app
+- Maximum 4 data collections
+- Focus on CORE features and make them work PERFECTLY
+- A polished simple app beats a broken complex one
+- If the user asks for something huge (multiplayer game, social network), build the core loop well and note what could be added later
 
 ## OUTPUT FORMAT
 Respond with ONLY valid JSON (no markdown, no backtick fences):
