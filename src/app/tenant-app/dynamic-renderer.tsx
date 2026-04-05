@@ -3,6 +3,7 @@
 import { useMemo } from 'react';
 import { useTenant } from '@/sdk/tenant-context';
 import { useTenantData } from '@/sdk/use-tenant-data';
+import { useFileUpload } from '@/sdk/use-file-upload';
 
 interface DynamicRendererProps {
   transpiledCode: string;
@@ -20,6 +21,7 @@ export function DynamicRenderer({ transpiledCode, componentName, tenantId, insta
       const __SDK__ = {
         useTenant,
         useTenantData,
+        useFileUpload,
         useIntegration: () => ({ call: async () => ({ ok: true, data: {} }), loading: false, error: null }),
       };
 

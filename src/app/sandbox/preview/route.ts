@@ -80,6 +80,21 @@ window.__SDK__ = {
       error: null,
     };
   },
+
+  // useFileUpload hook (mock — returns a placeholder URL in preview)
+  useFileUpload: function() {
+    return {
+      upload: function(file) {
+        return Promise.resolve({
+          url: 'https://placehold.co/400x300?text=' + encodeURIComponent(file.name),
+          path: 'preview/' + file.name,
+          filename: file.name,
+        });
+      },
+      uploading: false,
+      error: null,
+    };
+  },
 };
 
 // --- Renderer ---

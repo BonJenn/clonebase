@@ -67,12 +67,35 @@ Props: { tenantId: string; instanceId: string }
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useTenant } from '@/sdk/tenant-context';
 import { useTenantData } from '@/sdk/use-tenant-data';
+import { useFileUpload } from '@/sdk/use-file-upload';
 \`\`\`
 
 ### useTenant() → { tenantId, tenantSlug, tenantName, instanceId, templateSlug, config }
 ### useTenantData<T>(collection) → { data: T[], loading, error, insert(item), update(id, changes), remove(id), refresh() }
+### useFileUpload() → { upload(file: File): Promise<{ url, path, filename } | null>, uploading, error }
 
 You can use MULTIPLE collections for richer data (e.g., "profiles" + "matches" + "messages").
+
+### File Upload Pattern
+When the app needs file uploads (images, documents, essays, photos), use useFileUpload:
+\`\`\`tsx
+const { upload, uploading, error: uploadError } = useFileUpload();
+
+async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+  const file = e.target.files?.[0];
+  if (!file) return;
+  const result = await upload(file);
+  if (result) {
+    // Store the URL in tenant data
+    await insert({ title: file.name, file_url: result.url, uploaded_at: new Date().toISOString() });
+  }
+}
+
+// In JSX:
+<input type="file" onChange={handleFileChange} accept="image/*,.pdf,.doc,.docx,.txt" />
+{uploading && <p>Uploading...</p>}
+\`\`\`
+The upload returns a public URL. Store it in your data collection so you can display the file later (e.g., \`<img src={item.file_url} />\` for images).
 
 ### Styling: Tailwind CSS only. Use emoji for icons (no icon libraries).
 
