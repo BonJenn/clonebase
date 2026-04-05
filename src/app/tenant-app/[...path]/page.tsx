@@ -2,9 +2,9 @@ import { headers } from 'next/headers';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { notFound } from 'next/navigation';
 import { TemplateRenderer } from '../template-renderer';
+import { DynamicRenderer } from '../dynamic-renderer';
+import { loadGeneratedCode, transpileComponent } from '@/lib/builder/load-generated';
 
-// Catch-all route for tenant sub-pages (e.g., /settings, /admin).
-// Uses admin client — tenant resolution is public.
 export default async function TenantCatchAllPage({ params }: { params: Promise<{ path: string[] }> }) {
   const { path } = await params;
   const routePath = '/' + path.join('/');
@@ -25,18 +25,38 @@ export default async function TenantCatchAllPage({ params }: { params: Promise<{
 
   const { data: instance } = await supabase
     .from('app_instances')
-    .select('id, template:app_templates(slug)')
+    .select('id, template_id, template:app_templates(slug, source_type)')
     .eq('tenant_id', tenant.id)
     .eq('status', 'active')
     .single();
 
   if (!instance) notFound();
 
-  const templateSlug = (instance.template as unknown as { slug: string })?.slug;
+  const tpl = instance.template as unknown as { slug: string; source_type: string };
+
+  if (tpl.source_type === 'generated') {
+    const generated = await loadGeneratedCode(instance.template_id);
+    if (!generated) notFound();
+
+    // Pick the right code based on route
+    const code = routePath === '/admin' && generated.admin_code
+      ? generated.admin_code
+      : generated.page_code;
+
+    const { transpiledCode, componentName } = transpileComponent(code);
+    return (
+      <DynamicRenderer
+        transpiledCode={transpiledCode}
+        componentName={componentName}
+        tenantId={tenant.id}
+        instanceId={instance.id}
+      />
+    );
+  }
 
   return (
     <TemplateRenderer
-      templateSlug={templateSlug}
+      templateSlug={tpl.slug}
       routePath={routePath}
       tenantId={tenant.id}
       instanceId={instance.id}
