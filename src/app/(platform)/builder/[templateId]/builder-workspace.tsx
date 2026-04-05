@@ -179,20 +179,22 @@ export function BuilderWorkspace({
           />
         </div>
 
-        {/* Preview / Code / Data panel */}
-        <div className="flex-1 overflow-hidden">
-          {activeView === 'preview' ? (
+        {/* Preview / Code / Data panel — iframe always mounted so Data tab can communicate */}
+        <div className="flex-1 overflow-hidden relative">
+          <div className={activeView === 'preview' ? 'h-full' : 'h-0 overflow-hidden'}>
             <LivePreview
               transpiledCode={transpiledCode}
               componentName={componentName}
             />
-          ) : activeView === 'code' ? (
+          </div>
+          {activeView === 'code' && (
             <CodePreview
               pageCode={code?.page_code || null}
               adminCode={code?.admin_code || null}
               apiHandlerCode={code?.api_handler_code || null}
             />
-          ) : (
+          )}
+          {activeView === 'data' && (
             <DataPanel templateId={templateId} />
           )}
         </div>
