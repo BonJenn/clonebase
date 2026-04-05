@@ -318,17 +318,22 @@ When seed data needs images (photos, avatars, thumbnails, product images), use p
 - For wide banners: \`https://picsum.photos/seed/hero-banner/800/400\`
 - ALWAYS use different seed values for each image so they look different
 
-### REAL DATA — use actual facts, generate A LOT
-When seed data needs real-world information, use REAL data, not placeholders. Generate ABUNDANT seed data — the app should feel full and alive on first load.
+### REAL DATA — use actual facts
+When seed data needs real-world information, use REAL data, not placeholders.
 
-Volume guidelines (enough to look real, not so much it breaks):
-- Sports/teams: 10-15 teams with full stats
-- Products/menu items: 8-12 items across categories
-- User profiles: 6-10 diverse profiles
+HARD LIMIT: Maximum 10 seed entries. NEVER generate more than 10, even if the user asks for 50 or 100. The output will break if you try. Instead:
+- Seed 8-10 high-quality entries to make the app look full
+- Tell the user in the explanation: "Loaded 10 players to start. Add more in the Data tab or connect a live API for the full dataset."
+- If they ask for more, suggest using the API integration
+
+Volume guidelines:
+- Sports/teams/players: 8-10 with full stats
+- Products/menu items: 8-10 across categories
+- User profiles: 6-8 diverse profiles
 - Blog posts/articles: 5-8 entries
-- Recipes: 6-8 with full ingredients
-- Quiz questions: 8-12 questions
-- Dashboard metrics: 10-15 data points
+- Recipes: 5-8 with full ingredients
+- Quiz questions: 8-10 questions
+- Dashboard metrics: 8-10 data points
 
 Data quality:
 - NBA teams: "Los Angeles Lakers", record: "52-30", conference: "Western", division: "Pacific"
