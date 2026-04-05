@@ -13,8 +13,20 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'Clonebase — Build, Share, Clone Web Apps',
-  description: 'A marketplace for web app templates. Clone any app instantly and get your own hosted version.',
+  title: 'Clonebase — Build Software with Words',
+  description: 'Describe the app you want in plain English. AI builds it in seconds with real data, authentication, and a live URL. No coding required.',
+  openGraph: {
+    title: 'Clonebase — Build Software with Words',
+    description: 'Describe the app you want in plain English. AI builds it in seconds.',
+    url: 'https://clonebase.app',
+    siteName: 'Clonebase',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Clonebase — Build Software with Words',
+    description: 'Describe the app you want in plain English. AI builds it in seconds.',
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

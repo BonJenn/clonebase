@@ -87,51 +87,63 @@ export default function BuilderLandingPage() {
   }
 
   return (
-    <div className="mx-auto max-w-3xl px-4 py-16 sm:px-6 lg:px-8">
+    <div className="mx-auto max-w-4xl px-4 py-16 sm:px-6 lg:px-8">
       <div className="text-center">
-        <h1 className="text-4xl font-bold tracking-tight text-gray-900">
-          Build an app with words
+        <h1 className="text-4xl font-bold tracking-tight text-gray-900 sm:text-5xl">
+          What do you want to build?
         </h1>
-        <p className="mt-4 text-lg text-gray-600">
-          Describe what you want and watch it come to life. No coding required.
+        <p className="mt-4 text-lg text-gray-500">
+          Describe your app, website, or tool. Be as specific as you want.
         </p>
       </div>
 
-      <form onSubmit={handleStart} className="mt-12">
+      <form onSubmit={handleStart} className="mt-10">
         {error && (
           <div className="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</div>
         )}
-        <textarea
-          value={prompt}
-          onChange={(e) => setPrompt(e.target.value)}
-          placeholder="Build me a recipe sharing app where users can post recipes with ingredients, instructions, and photos. Include categories like breakfast, lunch, dinner, and dessert..."
-          rows={5}
-          className="block w-full rounded-xl border border-gray-300 px-4 py-3 text-gray-900 shadow-sm placeholder:text-gray-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500"
-          required
-        />
-        <div className="mt-4 flex justify-center">
-          <Button type="submit" size="lg" loading={loading}>
-            Generate My App
-          </Button>
+        <div className="rounded-2xl border border-gray-200 bg-white shadow-lg overflow-hidden">
+          <textarea
+            value={prompt}
+            onChange={(e) => setPrompt(e.target.value)}
+            placeholder="Build me a restaurant website for Tony's Pizza with the full menu, locations, hours, and customer reviews..."
+            rows={4}
+            className="block w-full border-0 px-6 py-5 text-gray-900 text-lg placeholder:text-gray-400 focus:ring-0 resize-none"
+            required
+          />
+          <div className="flex items-center justify-between bg-gray-50 px-6 py-3">
+            <p className="text-xs text-gray-400">Tip: The more detail you give, the better the result</p>
+            <Button type="submit" loading={loading} className="bg-indigo-600 hover:bg-indigo-500">
+              {loading ? 'Creating...' : 'Generate App →'}
+            </Button>
+          </div>
         </div>
       </form>
 
-      {/* Suggestions */}
-      <div className="mt-12 grid gap-4 sm:grid-cols-3">
-        {[
-          { title: 'Todo App', desc: 'A task manager with categories and priorities' },
-          { title: 'Event RSVP', desc: 'Collect RSVPs with guest names and dietary preferences' },
-          { title: 'Feedback Board', desc: 'Users submit and upvote feature requests' },
-        ].map((example) => (
-          <button
-            key={example.title}
-            onClick={() => setPrompt(`Build me a ${example.desc.toLowerCase()}`)}
-            className="rounded-xl border border-gray-200 p-4 text-left transition-shadow hover:shadow-md"
-          >
-            <p className="font-medium text-gray-900">{example.title}</p>
-            <p className="mt-1 text-sm text-gray-500">{example.desc}</p>
-          </button>
-        ))}
+      {/* Try these */}
+      <div className="mt-12">
+        <p className="text-center text-sm font-medium text-gray-400 mb-4">TRY THESE</p>
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {[
+            { emoji: '🍕', title: 'Restaurant Website', prompt: 'Look up a popular pizza restaurant near me and build a beautiful website with the full menu, all locations, hours, and reviews' },
+            { emoji: '📝', title: 'Blogging Platform', prompt: 'Build me a blogging platform where users can sign up, write posts with rich text, and comment on each other\'s posts' },
+            { emoji: '💪', title: 'Fitness Tracker', prompt: 'Build me a fitness tracker where I can log workouts, track my progress over time, and see stats about my training' },
+            { emoji: '🎮', title: 'Virtual World', prompt: 'Build me a Club Penguin-style virtual world where I can walk around rooms, chat, and customize my character' },
+            { emoji: '📊', title: 'Startup Dashboard', prompt: 'Build me a dashboard tracking AI startup funding rounds with company details, valuations, and investor info' },
+            { emoji: '🍳', title: 'Recipe App', prompt: 'Build me a recipe sharing app with categories, ingredients, step-by-step instructions, and beautiful food photos' },
+          ].map((example) => (
+            <button
+              key={example.title}
+              onClick={() => setPrompt(example.prompt)}
+              className="flex items-start gap-3 rounded-xl border border-gray-200 bg-white p-4 text-left transition-all hover:shadow-md hover:border-indigo-200"
+            >
+              <span className="text-2xl shrink-0">{example.emoji}</span>
+              <div>
+                <p className="font-medium text-gray-900">{example.title}</p>
+                <p className="mt-0.5 text-xs text-gray-500 line-clamp-2">{example.prompt}</p>
+              </div>
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Recent drafts */}
