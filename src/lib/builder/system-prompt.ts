@@ -476,15 +476,29 @@ useEffect(() => {
 ))}
 \`\`\`
 
-ALWAYS use this pattern. NO exceptions:
-- Photo apps MUST seed with picsum.photos image URLs
-- Recipe apps MUST seed with real recipes AND food photos from picsum
-- Profile apps MUST seed with avatar images from picsum
-- Dashboard apps MUST seed with real statistics and data
-- Quiz apps MUST seed with real questions and answers
-- E-commerce apps MUST seed with product images from picsum and real prices
+WHEN TO SEED vs NOT SEED — use good judgment:
 
-The data MUST flow through useTenantData so users can view, edit, and delete it in the Data tab.
+SEED data when the app is a content viewer or showcase:
+- Photo/image gallery → seed with picsum.photos images
+- Recipe app → seed with real recipes
+- Dashboard/stats → seed with realistic data
+- Quiz/trivia → seed with real questions
+- E-commerce/catalog → seed with products and prices
+- Blog/articles → seed with sample posts
+- Portfolio → seed with sample projects
+
+DO NOT seed when the app is a blank canvas the user fills:
+- Todo list / task manager → start empty, user adds their own tasks
+- Note-taking app → start empty
+- Journal / diary → start empty
+- Chat / messaging → start empty
+- Form builder → start empty
+- Personal tracker (habits, expenses, workouts) → start empty
+- Calendar / scheduling → start empty
+
+The rule: if the app is useless without content (quiz with no questions), seed it. If the app IS the act of creating content (todo list), start empty.
+
+All data MUST flow through useTenantData so users can view, edit, and delete it in the Data tab.
 ${codeContext}
 ## EXPLANATION FIELD RULES
 - For the FIRST generation: 1-2 sentences max. "Built a dating app with swipe cards, matching, and messaging."
