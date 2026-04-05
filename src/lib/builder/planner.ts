@@ -35,6 +35,8 @@ Return ONLY valid JSON:
   "app_name": "Short App Name (2-4 words)",
   "description": "One sentence description",
   "app_type": "standard|game|interactive",
+  "design_theme": "dark|light|colorful|minimal",
+  "primary_color": "emerald|rose|violet|sky|amber|slate|fuchsia|orange|teal|cyan",
   "needs_auth": true/false,
   "views": ["feed", "profile", "settings"],
   "data_collections": [{"name": "posts", "fields": ["title", "content", "author", "likes", "created_at"]}],
@@ -43,6 +45,10 @@ Return ONLY valid JSON:
   "complexity": "simple|medium|complex",
   "warnings": ["anything that won't work well as a web app"]
 }
+
+Design rules:
+- design_theme: "dark" for gaming/music/nightlife, "light" for business/productivity, "colorful" for social/creative, "minimal" for tools/utilities
+- primary_color: pick a color that matches the app's personality. Fitness=emerald, Social=rose, Gaming=violet, Finance=slate, Food=orange, Education=sky. NEVER default to indigo — be creative.
 
 Rules:
 - app_type: "game" for games/virtual worlds/interactive simulations (use canvas + game loop), "interactive" for drawing/animation apps, "standard" for everything else

@@ -51,7 +51,10 @@ export async function POST(request: NextRequest) {
   let plan = null;
   if (isFirstGeneration) {
     plan = await planApp(messages[0].content);
-    const appType = (plan as unknown as Record<string, unknown>).app_type || 'standard';
+    const planAny = plan as unknown as Record<string, unknown>;
+    const appType = planAny.app_type || 'standard';
+    const designTheme = planAny.design_theme || 'light';
+    const primaryColor = planAny.primary_color || 'indigo';
     const gameInstructions = appType === 'game' ? `
 APP TYPE: GAME — Use <canvas> with requestAnimationFrame game loop.
 - Render characters as emoji on canvas (fillText)
@@ -65,6 +68,8 @@ APP TYPE: GAME — Use <canvas> with requestAnimationFrame game loop.
 ## APP PLAN (follow this exactly)
 App Name: ${plan.app_name}
 App Type: ${appType}
+Design Theme: ${designTheme} (use this layout style)
+Primary Color: ${primaryColor} (use ${primaryColor}-600 for buttons, ${primaryColor}-500 for accents, ${primaryColor}-100 for backgrounds. DO NOT use indigo unless the plan says indigo.)
 Complexity: ${plan.complexity}
 Authentication: ${plan.needs_auth ? 'YES — use useTenantAuth()' : 'NO — do not add auth'}
 Seed Data: ${plan.seed_data ? 'YES — seed with realistic data' : 'NO — start empty'}
