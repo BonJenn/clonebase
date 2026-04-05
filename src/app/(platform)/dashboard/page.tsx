@@ -2,6 +2,7 @@ import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
+import { DeleteAppButton } from '@/components/platform/delete-app-button';
 import type { AppInstance, AppTemplate } from '@/types';
 
 export default async function DashboardPage() {
@@ -73,27 +74,32 @@ export default async function DashboardPage() {
           <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {/* Vibecoded apps */}
             {(myApps as AppTemplate[])?.map((app) => (
-              <Link key={app.id} href={`/dashboard/apps/${app.id}`} className="rounded-xl border border-gray-200 bg-white p-5 hover:shadow-md transition-shadow block">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-purple-100 text-purple-600 font-bold">
-                    {app.name.charAt(0).toUpperCase()}
-                  </div>
-                  <div className="min-w-0">
-                    <h3 className="font-semibold truncate">{app.name}</h3>
-                    <p className="text-xs text-gray-500 truncate">{app.description || 'Vibecoded app'}</p>
-                  </div>
+              <div key={app.id} className="relative rounded-xl border border-gray-200 bg-white p-5 hover:shadow-md transition-shadow">
+                <div className="absolute top-3 right-3">
+                  <DeleteAppButton templateId={app.id} appName={app.name} />
                 </div>
-                <div className="mt-3 flex items-center justify-between">
-                  <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
-                    app.status === 'published' ? 'bg-green-50 text-green-700' : 'bg-purple-50 text-purple-700'
-                  }`}>
-                    {app.status === 'published' ? 'Published' : 'Draft'}
-                  </span>
-                  <span className="text-xs text-gray-400">
-                    {new Date(app.updated_at).toLocaleDateString()}
-                  </span>
-                </div>
-              </Link>
+                <Link href={`/dashboard/apps/${app.id}`} className="block">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-purple-100 text-purple-600 font-bold">
+                      {app.name.charAt(0).toUpperCase()}
+                    </div>
+                    <div className="min-w-0 pr-6">
+                      <h3 className="font-semibold truncate">{app.name}</h3>
+                      <p className="text-xs text-gray-500 truncate">{app.description || 'Vibecoded app'}</p>
+                    </div>
+                  </div>
+                  <div className="mt-3 flex items-center justify-between">
+                    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
+                      app.status === 'published' ? 'bg-green-50 text-green-700' : 'bg-purple-50 text-purple-700'
+                    }`}>
+                      {app.status === 'published' ? 'Published' : 'Draft'}
+                    </span>
+                    <span className="text-xs text-gray-400">
+                      {new Date(app.updated_at).toLocaleDateString()}
+                    </span>
+                  </div>
+                </Link>
+              </div>
             ))}
 
             {/* Cloned instances */}
