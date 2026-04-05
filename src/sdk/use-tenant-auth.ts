@@ -12,6 +12,8 @@ interface TenantAuth {
   signIn: (email: string, password: string) => Promise<boolean>;
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<boolean>;
+  updatePassword: (newPassword: string) => Promise<boolean>;
+  updateProfile: (metadata: Record<string, unknown>) => Promise<boolean>;
 }
 
 // Auth hook for tenant apps. Uses Supabase Auth so tenant app users
@@ -83,5 +85,28 @@ export function useTenantAuth(): TenantAuth {
     return true;
   }, []);
 
-  return { user, loading, error, signUp, signIn, signOut, resetPassword };
+  const updatePassword = useCallback(async (newPassword: string): Promise<boolean> => {
+    setError(null);
+    const supabase = createClient();
+    const { error: err } = await supabase.auth.updateUser({ password: newPassword });
+    if (err) {
+      setError(err.message);
+      return false;
+    }
+    return true;
+  }, []);
+
+  const updateProfile = useCallback(async (metadata: Record<string, unknown>): Promise<boolean> => {
+    setError(null);
+    const supabase = createClient();
+    const { data, error: err } = await supabase.auth.updateUser({ data: metadata });
+    if (err) {
+      setError(err.message);
+      return false;
+    }
+    if (data.user) setUser(data.user);
+    return true;
+  }, []);
+
+  return { user, loading, error, signUp, signIn, signOut, resetPassword, updatePassword, updateProfile };
 }

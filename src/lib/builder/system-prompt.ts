@@ -105,7 +105,7 @@ import { useTenantAuth } from '@/sdk/use-tenant-auth';
 ### useTenant() → { tenantId, tenantSlug, tenantName, instanceId, templateSlug, config }
 ### useTenantData<T>(collection) → { data: T[], loading, error, insert(item), update(id, changes), remove(id), refresh() }
 ### useFileUpload() → { upload(file: File): Promise<{ url, path, filename } | null>, uploading, error }
-### useTenantAuth() → { user, loading, error, signUp(email, password, metadata?), signIn(email, password), signOut(), resetPassword(email) }
+### useTenantAuth() → { user, loading, error, signUp(email, password, metadata?), signIn(email, password), signOut(), resetPassword(email), updatePassword(newPassword), updateProfile(metadata) }
 
 You can use MULTIPLE collections for richer data (e.g., "profiles" + "matches" + "messages").
 
@@ -193,6 +193,10 @@ IMPORTANT:
 - user.id is a UUID. Use it to scope data: \`posts.filter(p => p.user_id === user.id)\`
 - When inserting: \`await insert({ ..., user_id: user.id, user_email: user.email })\`
 - NEVER create a "users" collection or store passwords. useTenantAuth handles everything.
+- To change password: \`await updatePassword(newPassword)\` — returns true/false
+- To update profile: \`await updateProfile({ name: 'New Name', bio: '...' })\` — updates user.user_metadata
+- Access profile data: \`user.user_metadata.name\`, \`user.user_metadata.bio\`, etc.
+- NEVER use console.log as a placeholder. If a feature needs a function from the hook, USE IT.
 
 ### File Upload Pattern (IMPORTANT — follow exactly)
 When the app needs file uploads (images, documents, essays, photos), you MUST:

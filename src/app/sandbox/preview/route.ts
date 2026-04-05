@@ -168,6 +168,23 @@ window.__SDK__ = {
         setError(null);
         return Promise.resolve(true);
       },
+      updatePassword: function(newPassword) {
+        var currentUser = window.__authCurrentUser;
+        if (!currentUser) { setError('Not signed in.'); return Promise.resolve(false); }
+        var account = window.__authAccounts[currentUser.email];
+        if (account) account.password = newPassword;
+        setError(null);
+        return Promise.resolve(true);
+      },
+      updateProfile: function(metadata) {
+        var currentUser = window.__authCurrentUser;
+        if (!currentUser) { setError('Not signed in.'); return Promise.resolve(false); }
+        currentUser.user_metadata = Object.assign({}, currentUser.user_metadata || {}, metadata);
+        window.__authCurrentUser = currentUser;
+        setUser(Object.assign({}, currentUser));
+        setError(null);
+        return Promise.resolve(true);
+      },
     };
   },
 };
