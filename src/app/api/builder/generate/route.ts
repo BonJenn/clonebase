@@ -3,6 +3,7 @@ import { createServerSupabaseClient } from '@/lib/supabase/server';
 import OpenAI from 'openai';
 import { buildSystemPrompt } from '@/lib/builder/system-prompt';
 import { planApp } from '@/lib/builder/planner';
+import { researchTopic, searchImages } from '@/lib/builder/researcher';
 
 export const maxDuration = 120;
 
@@ -53,6 +54,26 @@ export async function POST(request: NextRequest) {
     plan = await planApp(messages[0].content);
     const planAny = plan as unknown as Record<string, unknown>;
     const appType = planAny.app_type || 'standard';
+
+    // Research step: if the planner detected a real business/topic, look it up
+    let researchContext = '';
+    if (plan.needs_research && plan.research_query) {
+      const [research, images] = await Promise.all([
+        researchTopic(plan.research_query),
+        searchImages(plan.research_query, 6),
+      ]);
+      if (research.summary) {
+        researchContext = `
+## REAL-WORLD RESEARCH RESULTS (use this data in the app)
+${research.summary}
+
+Available images (use these URLs in the app):
+${images.map((url, i) => `- Image ${i + 1}: ${url}`).join('\n')}
+
+Use the research facts above as REAL content in the app. Don't make up information — use what was found.
+`;
+      }
+    }
     const designTheme = planAny.design_theme || 'light';
     const primaryColor = planAny.primary_color || 'indigo';
     const gameInstructions = appType === 'game' ? `
@@ -78,6 +99,7 @@ Data Collections: ${plan.data_collections.map(c => `${c.name}(${c.fields.join(',
 Features: ${plan.features.join(', ')}
 ${plan.warnings.length > 0 ? `WARNINGS: ${plan.warnings.join('. ')}` : ''}
 ${gameInstructions}
+${researchContext}
 IMPORTANT CONSTRAINTS FROM PLAN:
 - Maximum ${plan.views.length} views/tabs. Do NOT add more.
 - Maximum ${plan.data_collections.length} data collections. Do NOT add more.

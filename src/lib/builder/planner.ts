@@ -10,6 +10,8 @@ export interface AppPlan {
   app_name: string;
   description: string;
   needs_auth: boolean;
+  needs_research: boolean;
+  research_query: string;
   views: string[];
   data_collections: { name: string; fields: string[] }[];
   features: string[];
@@ -42,6 +44,8 @@ Return ONLY valid JSON:
   "data_collections": [{"name": "posts", "fields": ["title", "content", "author", "likes", "created_at"]}],
   "features": ["create posts", "like posts", "user profiles", "search"],
   "seed_data": true/false,
+  "needs_research": true/false,
+  "research_query": "what to search for online",
   "complexity": "simple|medium|complex",
   "warnings": ["anything that won't work well as a web app"]
 }
@@ -57,6 +61,8 @@ Rules:
   FALSE: single-user tools (calculator, timer, converter), public content viewers (dashboard, gallery with no user posting), simple utilities, games without accounts, anonymous apps
   When in doubt: if the prompt mentions "users", "accounts", "profiles", "sign up", "personal", or implies multiple people using it → TRUE
 - seed_data: true for content viewers (galleries, dashboards), false for blank canvas apps (todo, journal)
+- needs_research: true if the user mentions a SPECIFIC real business, person, place, or topic that needs current factual information to build properly. Examples: "my pizza restaurant Tony's Pizza", "a website for Dr. Smith's dental practice", "a fan page for Taylor Swift". FALSE for generic apps like "a todo list" or "a fitness tracker".
+- research_query: what to search for online to get the real information. e.g., "Tony's Pizza restaurant menu hours location reviews"
 - For games: describe the game mechanics in features (movement, collision, scoring, rooms/levels)
 - For virtual worlds (Club Penguin, Habbo, etc.): use 2D top-down canvas with WASD movement, rooms, and emoji sprites. NOT 3D. NOT just chat rooms with buttons.
 - Real-time multiplayer is NOT possible — simulate with NPC characters instead
@@ -80,6 +86,8 @@ Rules:
       app_name: prompt.slice(0, 40),
       description: prompt,
       needs_auth: false,
+      needs_research: false,
+      research_query: '',
       views: ['main'],
       data_collections: [{ name: 'items', fields: ['title', 'content', 'created_at'] }],
       features: [],
