@@ -44,11 +44,14 @@ export async function POST(request: NextRequest) {
 
   const systemPrompt = buildSystemPrompt(existing || undefined);
 
-  // Call OpenAI
+  // Use o3 for initial generation (quality), gpt-4o for follow-up edits (speed)
+  const isFirstGeneration = !existing && messages.length <= 1;
+  const model = isFirstGeneration ? 'o3' : 'gpt-4o';
+
   const response = await getOpenAI().chat.completions.create({
-    model: 'gpt-4o',
+    model,
     max_tokens: 16384,
-    temperature: 0.7,
+    temperature: model === 'o3' ? 1 : 0.7,
     messages: [
       { role: 'system', content: systemPrompt },
       ...messages.map((m: { role: string; content: string }) => ({

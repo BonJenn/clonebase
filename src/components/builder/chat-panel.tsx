@@ -54,10 +54,15 @@ export function ChatPanel({ messages, onSend, generating }: ChatPanelProps) {
         ))}
         {generating && (
           <div className="flex justify-start">
-            <div className="rounded-xl bg-gray-100 px-4 py-2.5">
-              <div className="flex items-center gap-2 text-sm text-gray-500">
-                <div className="h-4 w-4 animate-spin rounded-full border-2 border-indigo-600 border-t-transparent" />
-                Generating...
+            <div className="rounded-xl bg-gradient-to-r from-indigo-50 to-purple-50 border border-indigo-100 px-4 py-3">
+              <div className="flex items-center gap-3 text-sm">
+                <div className="relative">
+                  <div className="h-5 w-5 animate-spin rounded-full border-2 border-indigo-600 border-t-transparent" />
+                </div>
+                <div>
+                  <p className="font-medium text-indigo-900">Building your app...</p>
+                  <p className="text-xs text-indigo-500 mt-0.5">This may take 15-30 seconds</p>
+                </div>
               </div>
             </div>
           </div>

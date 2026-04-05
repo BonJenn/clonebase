@@ -5,6 +5,7 @@ import { ChatPanel } from '@/components/builder/chat-panel';
 import { LivePreview } from '@/components/builder/live-preview';
 import { CodePreview } from '@/components/builder/code-preview';
 import { DataPanel } from '@/components/builder/data-panel';
+import { GeneratingAnimation } from '@/components/builder/generating-animation';
 import { PublishDialog } from '@/components/builder/publish-dialog';
 import { Button } from '@/components/ui/button';
 
@@ -210,10 +211,14 @@ export function BuilderWorkspace({
         {/* Preview / Code / Data panel — iframe always mounted so Data tab can communicate */}
         <div className="flex-1 overflow-hidden relative">
           <div className={activeView === 'preview' ? 'h-full' : 'h-0 overflow-hidden'}>
-            <LivePreview
-              transpiledCode={transpiledCode}
-              componentName={componentName}
-            />
+            {generating && !transpiledCode ? (
+              <GeneratingAnimation />
+            ) : (
+              <LivePreview
+                transpiledCode={transpiledCode}
+                componentName={componentName}
+              />
+            )}
           </div>
           {activeView === 'code' && (
             <CodePreview
