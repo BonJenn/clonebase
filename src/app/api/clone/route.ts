@@ -140,7 +140,7 @@ export async function POST(request: NextRequest) {
   return NextResponse.json({
     tenant,
     instance,
-    subdomain: `${tenant.slug}.clonebase.com`,
+    subdomain: `${tenant.slug}.clonebase.app`,
     setup_required: integrations.length > 0,
   }, { status: 201 });
 }

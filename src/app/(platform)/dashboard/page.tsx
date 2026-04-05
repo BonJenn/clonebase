@@ -105,7 +105,7 @@ export default async function DashboardPage() {
                   </div>
                   <div className="min-w-0">
                     <h3 className="font-semibold truncate">{inst.name}</h3>
-                    <p className="text-xs text-gray-500">{inst.tenant.slug}.clonebase.com</p>
+                    <p className="text-xs text-gray-500">{inst.tenant.slug}.clonebase.app</p>
                   </div>
                 </div>
                 <div className="mt-3 flex items-center justify-between">

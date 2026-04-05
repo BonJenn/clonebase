@@ -132,7 +132,7 @@ export function CloneButton({ templateId, templateName, isFree, hasPurchased, is
                   required
                 />
                 <p className="mt-1 text-xs text-gray-500">
-                  Your app will be at <strong>{slug || 'my-app'}.clonebase.com</strong>
+                  Your app will be at <strong>{slug || 'my-app'}.clonebase.app</strong>
                 </p>
               </div>
 

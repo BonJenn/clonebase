@@ -1,5 +1,5 @@
 // Platform domain config
-// In production, NEXT_PUBLIC_ROOT_DOMAIN should be "clonebase.com"
+// In production, NEXT_PUBLIC_ROOT_DOMAIN should be "clonebase.app"
 export const ROOT_DOMAIN = process.env.NEXT_PUBLIC_ROOT_DOMAIN || 'localhost:3000';
 export const PROTOCOL = process.env.NODE_ENV === 'production' ? 'https' : 'http';
 

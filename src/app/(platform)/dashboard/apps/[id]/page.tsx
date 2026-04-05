@@ -132,7 +132,7 @@ export default async function AppManagementPage({ params }: { params: Promise<{ 
               return (
                 <div key={inst.id} className="flex items-center justify-between rounded-xl border border-gray-200 bg-white p-4">
                   <div>
-                    <p className="font-medium">{tenant?.slug}.clonebase.com</p>
+                    <p className="font-medium">{tenant?.slug}.clonebase.app</p>
                     <span className={`text-xs font-medium ${inst.status === 'active' ? 'text-green-700' : 'text-gray-500'}`}>
                       {inst.status}
                     </span>

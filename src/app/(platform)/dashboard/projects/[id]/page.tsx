@@ -40,7 +40,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
 
   const typedIntegrations = (integrations || []) as (TenantIntegration & { definition: IntegrationDefinition })[];
 
-  const prodOrigin = `https://${inst.tenant.slug}.clonebase.com`;
+  const prodOrigin = `https://${inst.tenant.slug}.clonebase.app`;
   const isProd = process.env.NODE_ENV === 'production';
   const appUrl = isProd
     ? prodOrigin
@@ -66,7 +66,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
           </div>
           <div>
             <h1 className="text-2xl font-bold">{inst.name}</h1>
-            <p className="text-sm text-gray-500">{inst.tenant.slug}.clonebase.com</p>
+            <p className="text-sm text-gray-500">{inst.tenant.slug}.clonebase.app</p>
           </div>
         </div>
         <div className="flex items-center gap-3">
@@ -105,7 +105,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
             rel="noopener noreferrer"
             className="mt-1 block font-semibold text-indigo-600 hover:text-indigo-500 truncate"
           >
-            {inst.tenant.slug}.clonebase.com
+            {inst.tenant.slug}.clonebase.app
           </a>
           <p className="mt-2 text-xs text-gray-400">
             Created {new Date(inst.created_at).toLocaleDateString()}

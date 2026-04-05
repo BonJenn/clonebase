@@ -111,7 +111,7 @@ export async function GET(request: NextRequest) {
 
 ${template.description || ''}
 
-Exported from [Clonebase](https://clonebase.com).
+Exported from [Clonebase](https://clonebase.app).
 
 ## Setup
 

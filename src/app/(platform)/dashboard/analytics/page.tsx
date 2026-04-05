@@ -96,7 +96,7 @@ export default async function AnalyticsPage({
       ) : (
         <>
           <p className="mt-1 text-sm text-gray-500">
-            {selectedTenant.name} ({selectedTenant.slug}.clonebase.com) — Last 30 days
+            {selectedTenant.name} ({selectedTenant.slug}.clonebase.app) — Last 30 days
           </p>
 
           {/* Summary cards */}

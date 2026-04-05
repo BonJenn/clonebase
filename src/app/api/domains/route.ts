@@ -36,9 +36,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Invalid domain format' }, { status: 400 });
   }
 
-  // Block clonebase.com subdomains
-  if (domain.endsWith('.clonebase.com') || domain === 'clonebase.com') {
-    return NextResponse.json({ error: 'Cannot use clonebase.com domains' }, { status: 400 });
+  // Block clonebase.app subdomains
+  if (domain.endsWith('.clonebase.app') || domain === 'clonebase.app') {
+    return NextResponse.json({ error: 'Cannot use clonebase.app domains' }, { status: 400 });
   }
 
   const { data, error } = await supabase
@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
     instructions: {
       type: 'CNAME',
       name: domain,
-      value: 'cname.clonebase.com',
+      value: 'cname.clonebase.app',
       txt_record: {
         name: `_clonebase.${domain}`,
         value: data.verification_token,
