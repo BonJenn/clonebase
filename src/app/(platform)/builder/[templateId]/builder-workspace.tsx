@@ -166,6 +166,27 @@ export function BuilderWorkspace({
             </button>
           </div>
           <Button
+            onClick={() => {
+              if (!code) return;
+              const exportData = {
+                page_code: code.page_code,
+                admin_code: code.admin_code,
+                api_handler_code: code.api_handler_code,
+              };
+              const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement('a');
+              a.href = url;
+              a.download = `${templateName.replace(/[^a-z0-9]/gi, '-').toLowerCase()}-code.json`;
+              a.click();
+              URL.revokeObjectURL(url);
+            }}
+            disabled={!code}
+            variant="ghost"
+          >
+            Export
+          </Button>
+          <Button
             onClick={() => setShowPublish(true)}
             disabled={!code}
             variant="secondary"
