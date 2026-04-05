@@ -131,11 +131,37 @@ export async function POST(request: NextRequest) {
     is_current: true,
   });
 
+  // Auto-create integration definitions if the AI suggested any
+  const integrations = generated.suggested_integrations || [];
+  if (integrations.length > 0) {
+    for (const integ of integrations) {
+      // Check if this integration already exists for this template
+      const { data: existing } = await supabase
+        .from('integration_definitions')
+        .select('id')
+        .eq('template_id', template_id)
+        .eq('service_key', integ.service_key)
+        .limit(1);
+
+      if (!existing?.length) {
+        await (supabase.from('integration_definitions') as any).insert({
+          template_id: template_id,
+          name: integ.name,
+          service_key: integ.service_key,
+          description: integ.description || '',
+          integration_type: 'user_provided',
+          required_fields: integ.required_fields || ['api_key'],
+        });
+      }
+    }
+  }
+
   return NextResponse.json({
     page_code: generated.page_code,
     admin_code: generated.admin_code || null,
     api_handler_code: generated.api_handler_code || null,
     explanation: generated.explanation || 'Code generated successfully.',
+    suggested_integrations: integrations,
     version: nextVersion,
   });
 }
