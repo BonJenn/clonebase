@@ -3,6 +3,9 @@ import { createServerSupabaseClient } from '@/lib/supabase/server';
 import OpenAI from 'openai';
 import { buildSystemPrompt } from '@/lib/builder/system-prompt';
 
+// Allow up to 120s for o3 model which thinks longer
+export const maxDuration = 120;
+
 let _openai: OpenAI | null = null;
 function getOpenAI() {
   if (!_openai) _openai = new OpenAI();

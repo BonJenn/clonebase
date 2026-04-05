@@ -42,6 +42,7 @@ export function BuilderWorkspace({
   const [activeView, setActiveView] = useState<'preview' | 'code' | 'data'>('preview');
   const [showPublish, setShowPublish] = useState(false);
   const [componentName, setComponentName] = useState('Page');
+  const [showAnimation, setShowAnimation] = useState(false);
 
   // Transpile code for preview whenever it changes
   const transpile = useCallback(async (pageCode: string) => {
@@ -85,6 +86,8 @@ export function BuilderWorkspace({
     const updatedMessages = [...messages, userMessage];
     setMessages(updatedMessages);
     setGenerating(true);
+    setShowAnimation(true);
+    setActiveView('preview');
 
     try {
       const res = await fetch('/api/builder/generate', {
@@ -130,11 +133,13 @@ export function BuilderWorkspace({
 
       // Transpile for preview
       await transpile(data.page_code);
+      setShowAnimation(false);
     } catch {
       setMessages([...updatedMessages, {
         role: 'assistant',
         content: 'Network error. Please try again.',
       }]);
+      setShowAnimation(false);
     }
 
     setGenerating(false);
@@ -211,7 +216,7 @@ export function BuilderWorkspace({
         {/* Preview / Code / Data panel — iframe always mounted so Data tab can communicate */}
         <div className="flex-1 overflow-hidden relative">
           <div className={activeView === 'preview' ? 'h-full' : 'h-0 overflow-hidden'}>
-            {generating && !transpiledCode ? (
+            {showAnimation ? (
               <GeneratingAnimation />
             ) : (
               <LivePreview
