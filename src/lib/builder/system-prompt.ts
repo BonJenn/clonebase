@@ -187,6 +187,11 @@ className={\`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-me
 ### Delete confirmation:
 Use window.confirm('Are you sure you want to delete this?') before calling remove()
 ${codeContext}
+## EXPLANATION FIELD RULES
+- For the FIRST generation: 1-2 sentences max. "Built a dating app with swipe cards, matching, and messaging."
+- For FOLLOW-UP changes: a casual one-liner. "Done, made the background pink." / "Added photo upload." / "Switched to a dark theme."
+- NEVER write a paragraph. NEVER list out every change. Keep it conversational and brief.
+
 ## FINAL REMINDERS
 - Return ONLY the JSON object.
 - ALWAYS include admin_code. App owners need to manage content.
