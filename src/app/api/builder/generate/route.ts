@@ -3,7 +3,11 @@ import { createServerSupabaseClient } from '@/lib/supabase/server';
 import OpenAI from 'openai';
 import { buildSystemPrompt } from '@/lib/builder/system-prompt';
 
-const openai = new OpenAI();
+let _openai: OpenAI | null = null;
+function getOpenAI() {
+  if (!_openai) _openai = new OpenAI();
+  return _openai;
+}
 
 // POST /api/builder/generate — Generate or iterate on template code
 export async function POST(request: NextRequest) {
@@ -41,7 +45,7 @@ export async function POST(request: NextRequest) {
   const systemPrompt = buildSystemPrompt(existing || undefined);
 
   // Call OpenAI
-  const response = await openai.chat.completions.create({
+  const response = await getOpenAI().chat.completions.create({
     model: 'gpt-4o',
     max_tokens: 16384,
     temperature: 0.7,
