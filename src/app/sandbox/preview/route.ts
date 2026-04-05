@@ -81,17 +81,33 @@ window.__SDK__ = {
     };
   },
 
-  // useFileUpload hook (mock — returns a placeholder URL in preview)
+  // useFileUpload hook — reads file as data URL for preview
   useFileUpload: function() {
+    var _state = React.useState(false);
+    var uploading = _state[0];
+    var setUploading = _state[1];
+
     return {
       upload: function(file) {
-        return Promise.resolve({
-          url: 'https://placehold.co/400x300?text=' + encodeURIComponent(file.name),
-          path: 'preview/' + file.name,
-          filename: file.name,
+        setUploading(true);
+        return new Promise(function(resolve) {
+          var reader = new FileReader();
+          reader.onload = function() {
+            setUploading(false);
+            resolve({
+              url: reader.result,
+              path: 'preview/' + file.name,
+              filename: file.name,
+            });
+          };
+          reader.onerror = function() {
+            setUploading(false);
+            resolve(null);
+          };
+          reader.readAsDataURL(file);
         });
       },
-      uploading: false,
+      uploading: uploading,
       error: null,
     };
   },
