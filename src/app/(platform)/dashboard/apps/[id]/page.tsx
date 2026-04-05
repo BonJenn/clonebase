@@ -80,7 +80,7 @@ export default async function AppManagementPage({ params }: { params: Promise<{ 
       )}
 
       {/* Quick actions */}
-      <div className="mt-8 grid gap-4 sm:grid-cols-3">
+      <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Link
           href={`/builder/${id}`}
           className="rounded-xl border border-gray-200 bg-white p-5 hover:shadow-md transition-shadow"
@@ -106,6 +106,15 @@ export default async function AppManagementPage({ params }: { params: Promise<{ 
           <span className="text-2xl">🗄️</span>
           <h3 className="mt-3 font-semibold">Data</h3>
           <p className="mt-1 text-sm text-gray-500">Browse and manage app data</p>
+        </Link>
+
+        <Link
+          href={`/dashboard/apps/${id}/storage`}
+          className="rounded-xl border border-gray-200 bg-white p-5 hover:shadow-md transition-shadow"
+        >
+          <span className="text-2xl">📁</span>
+          <h3 className="mt-3 font-semibold">Storage</h3>
+          <p className="mt-1 text-sm text-gray-500">View uploaded files and media</p>
         </Link>
       </div>
 
