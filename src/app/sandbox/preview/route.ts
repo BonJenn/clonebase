@@ -112,17 +112,18 @@ window.__SDK__ = {
     };
   },
 
-  // useTenantAuth hook (mock — realistic auth simulation in preview)
+  // useTenantAuth hook (mock — persists across re-renders)
   useTenantAuth: function() {
-    var _userState = React.useState(null);
+    // Persist auth state and accounts across code re-renders
+    if (!window.__authAccounts) window.__authAccounts = {};
+    if (!window.__authCurrentUser) window.__authCurrentUser = null;
+
+    var _userState = React.useState(window.__authCurrentUser);
     var user = _userState[0];
     var setUser = _userState[1];
     var _errorState = React.useState(null);
     var error = _errorState[0];
     var setError = _errorState[1];
-
-    // In-memory account store (shared across renders)
-    if (!window.__authAccounts) window.__authAccounts = {};
 
     return {
       user: user,
@@ -134,8 +135,11 @@ window.__SDK__ = {
           setError('An account with this email already exists.');
           return Promise.resolve(false);
         }
-        var newUser = { id: 'user-' + Date.now(), email: email, user_metadata: metadata || { name: email.split('@')[0] } };
+        // Consistent user ID based on email so data persists across sign-ins
+        var userId = 'user-' + email.replace(/[^a-z0-9]/gi, '-');
+        var newUser = { id: userId, email: email, user_metadata: metadata || { name: email.split('@')[0] } };
         window.__authAccounts[email] = { user: newUser, password: password };
+        window.__authCurrentUser = newUser;
         setUser(newUser);
         return Promise.resolve(true);
       },
@@ -150,10 +154,12 @@ window.__SDK__ = {
           setError('Incorrect password.');
           return Promise.resolve(false);
         }
+        window.__authCurrentUser = account.user;
         setUser(account.user);
         return Promise.resolve(true);
       },
       signOut: function() {
+        window.__authCurrentUser = null;
         setUser(null);
         setError(null);
         return Promise.resolve();

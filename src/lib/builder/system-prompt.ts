@@ -109,6 +109,27 @@ import { useTenantAuth } from '@/sdk/use-tenant-auth';
 
 You can use MULTIPLE collections for richer data (e.g., "profiles" + "matches" + "messages").
 
+### NAVIGATION RULES — NO URL ROUTING
+The app runs in a single-page iframe. There is NO router. NEVER use:
+- window.location.href
+- window.location.pathname
+- Next.js Link or useRouter
+- Any URL-based navigation
+
+For multiple views (feed, profile, settings), use STATE-BASED navigation:
+\`\`\`tsx
+const [currentView, setCurrentView] = useState<'feed' | 'profile' | 'settings'>('feed');
+
+// Navigation buttons:
+<button onClick={() => setCurrentView('settings')}>Settings</button>
+
+// Render based on state:
+{currentView === 'feed' && <FeedView />}
+{currentView === 'profile' && <ProfileView />}
+{currentView === 'settings' && <SettingsView />}
+\`\`\`
+This is the ONLY way to navigate between views. URL routing will show 404.
+
 ### Authentication Pattern (ONLY when the user asks for auth/users/accounts)
 Do NOT add auth unless the user specifically asks for user accounts, login, sign up, or authentication.
 
