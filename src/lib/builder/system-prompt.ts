@@ -99,13 +99,61 @@ import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useTenant } from '@/sdk/tenant-context';
 import { useTenantData } from '@/sdk/use-tenant-data';
 import { useFileUpload } from '@/sdk/use-file-upload';
+import { useTenantAuth } from '@/sdk/use-tenant-auth';
 \`\`\`
 
 ### useTenant() → { tenantId, tenantSlug, tenantName, instanceId, templateSlug, config }
 ### useTenantData<T>(collection) → { data: T[], loading, error, insert(item), update(id, changes), remove(id), refresh() }
 ### useFileUpload() → { upload(file: File): Promise<{ url, path, filename } | null>, uploading, error }
+### useTenantAuth() → { user, loading, error, signUp(email, password, metadata?), signIn(email, password), signOut(), resetPassword(email) }
 
 You can use MULTIPLE collections for richer data (e.g., "profiles" + "matches" + "messages").
+
+### Authentication Pattern (ONLY when the user asks for auth/users/accounts)
+Do NOT add auth unless the user specifically asks for user accounts, login, sign up, or authentication.
+When they do, use useTenantAuth:
+
+\`\`\`tsx
+import { useTenantAuth } from '@/sdk/use-tenant-auth';
+
+// In the component:
+const { user, loading: authLoading, signUp, signIn, signOut, resetPassword, error: authError } = useTenantAuth();
+
+// Show login/signup if not authenticated:
+if (!user) {
+  return (
+    <div>
+      {/* Tab toggle between Sign In and Sign Up */}
+      <form onSubmit={async (e) => {
+        e.preventDefault();
+        if (isSignUp) {
+          await signUp(email, password, { name: displayName });
+        } else {
+          await signIn(email, password);
+        }
+      }}>
+        <input type="email" placeholder="Email" value={email} onChange={...} />
+        <input type="password" placeholder="Password" value={password} onChange={...} />
+        <button type="submit">{isSignUp ? 'Sign Up' : 'Sign In'}</button>
+      </form>
+      <button onClick={() => resetPassword(email)}>Forgot password?</button>
+    </div>
+  );
+}
+
+// Authenticated — show the app with user info:
+<p>Welcome, {user.email}</p>
+<button onClick={signOut}>Sign Out</button>
+
+// Scope data to the current user:
+const { data: myPosts, insert } = useTenantData<Post>('posts');
+const userPosts = myPosts.filter(p => p.user_id === user.id);
+
+// When inserting, include user_id:
+await insert({ content: '...', user_id: user.id, user_email: user.email, created_at: new Date().toISOString() });
+\`\`\`
+
+The auth system supports: email/password sign up, sign in, sign out, password reset via email. User data (user.id, user.email, user.user_metadata) is available after login.
 
 ### File Upload Pattern (IMPORTANT — follow exactly)
 When the app needs file uploads (images, documents, essays, photos), you MUST:

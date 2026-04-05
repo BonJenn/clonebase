@@ -4,6 +4,7 @@ import { useMemo } from 'react';
 import { useTenant } from '@/sdk/tenant-context';
 import { useTenantData } from '@/sdk/use-tenant-data';
 import { useFileUpload } from '@/sdk/use-file-upload';
+import { useTenantAuth } from '@/sdk/use-tenant-auth';
 
 interface DynamicRendererProps {
   transpiledCode: string;
@@ -22,6 +23,7 @@ export function DynamicRenderer({ transpiledCode, componentName, tenantId, insta
         useTenant,
         useTenantData,
         useFileUpload,
+        useTenantAuth,
         useIntegration: () => ({ call: async () => ({ ok: true, data: {} }), loading: false, error: null }),
       };
 

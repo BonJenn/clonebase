@@ -111,6 +111,32 @@ window.__SDK__ = {
       error: null,
     };
   },
+
+  // useTenantAuth hook (mock — simulates logged-in user in preview)
+  useTenantAuth: function() {
+    var _state = React.useState({ id: 'preview-user-id', email: 'preview@example.com', user_metadata: { name: 'Preview User' } });
+    var user = _state[0];
+    var setUser = _state[1];
+
+    return {
+      user: user,
+      loading: false,
+      error: null,
+      signUp: function(email, password, metadata) {
+        setUser({ id: 'user-' + Date.now(), email: email, user_metadata: metadata || { name: email.split('@')[0] } });
+        return Promise.resolve(true);
+      },
+      signIn: function(email) {
+        setUser({ id: 'user-' + Date.now(), email: email, user_metadata: { name: email.split('@')[0] } });
+        return Promise.resolve(true);
+      },
+      signOut: function() {
+        setUser(null);
+        return Promise.resolve();
+      },
+      resetPassword: function() { return Promise.resolve(true); },
+    };
+  },
 };
 
 // --- Renderer ---
