@@ -24,13 +24,16 @@ export default async function BuilderPage({
 
   if (!template || template.creator_id !== user.id) notFound();
 
-  // Load existing generated code if any
-  const { data: generated } = await supabase
+  // Load existing generated code if any (use limit+order to handle duplicate is_current rows)
+  const { data: generatedRows } = await supabase
     .from('generated_templates')
     .select('page_code, admin_code, api_handler_code, conversation_history')
     .eq('template_id', templateId)
     .eq('is_current', true)
-    .single();
+    .order('created_at', { ascending: false })
+    .limit(1);
+
+  const generated = generatedRows?.[0] || null;
 
   return (
     <BuilderWorkspace

@@ -27,13 +27,16 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Template not found' }, { status: 404 });
   }
 
-  // Load existing generated code for context
-  const { data: existing } = await supabase
+  // Load existing generated code for context (use limit+order instead of single to handle duplicates)
+  const { data: existingRows } = await supabase
     .from('generated_templates')
     .select('page_code, admin_code, api_handler_code')
     .eq('template_id', template_id)
     .eq('is_current', true)
-    .single();
+    .order('created_at', { ascending: false })
+    .limit(1);
+
+  const existing = existingRows?.[0] || null;
 
   const systemPrompt = buildSystemPrompt(existing || undefined);
 
@@ -74,18 +77,21 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Generated code missing page_code' }, { status: 500 });
   }
 
-  // Persist to database — mark previous versions as not current
-  if (existing) {
-    await supabase
-      .from('generated_templates')
-      .update({ is_current: false })
-      .eq('template_id', template_id)
-      .eq('is_current', true);
-  }
+  // Always mark ALL previous versions as not current before inserting
+  await supabase
+    .from('generated_templates')
+    .update({ is_current: false })
+    .eq('template_id', template_id)
+    .eq('is_current', true);
 
-  const nextVersion = existing
-    ? ((await supabase.from('generated_templates').select('version').eq('template_id', template_id).order('version', { ascending: false }).limit(1).single()).data?.version || 0) + 1
-    : 1;
+  const { data: maxRow } = await supabase
+    .from('generated_templates')
+    .select('version')
+    .eq('template_id', template_id)
+    .order('version', { ascending: false })
+    .limit(1);
+
+  const nextVersion = (maxRow?.[0]?.version || 0) + 1;
 
   await supabase.from('generated_templates').insert({
     template_id,
