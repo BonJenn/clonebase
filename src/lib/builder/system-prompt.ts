@@ -273,38 +273,76 @@ Use window.confirm('Are you sure you want to delete this?') before calling remov
 
 ALL apps that have content MUST seed it through useTenantData. NEVER use hardcoded const arrays that are rendered directly. The seed data must go through insert() so it appears in the data store.
 
+### REAL IMAGES — use picsum.photos
+When seed data needs images (photos, avatars, thumbnails, product images), use picsum.photos URLs. They return real photographs with no API key needed:
+
+- Specific size: \`https://picsum.photos/seed/{unique-name}/400/400\`
+- The "seed" parameter makes the URL return the SAME image every time for that name
+- Use descriptive seeds: \`https://picsum.photos/seed/sunset-beach/600/400\`
+- For avatars: \`https://picsum.photos/seed/user-sarah/200/200\`
+- For wide banners: \`https://picsum.photos/seed/hero-banner/800/400\`
+- ALWAYS use different seed values for each image so they look different
+
+### REAL DATA — use actual facts
+When seed data needs real-world information, use REAL data, not placeholders:
+- NBA teams: "Los Angeles Lakers", "Boston Celtics" with real win/loss records
+- Recipes: real ingredient lists and actual cooking instructions
+- Products: realistic names, descriptions, and prices
+- Cities: real city names, populations, coordinates
+- People: realistic (but fictional) names, bios, interests
+- Stocks: real ticker symbols (AAPL, GOOGL, TSLA) with realistic prices
+- Restaurants: realistic names, cuisines, ratings
+
+NEVER use "Item 1", "Team A", "User 1", "Sample Product", "Lorem ipsum".
+
+### Seed Pattern Code
 \`\`\`tsx
 const SEED_DATA = [
-  { title: 'Lesson 1: Greetings', content: 'Hola = Hello, Adiós = Goodbye, Gracias = Thank you', category: 'beginner', difficulty: 1, created_at: new Date().toISOString() },
-  { title: 'Lesson 2: Numbers', content: 'Uno = 1, Dos = 2, Tres = 3, Cuatro = 4, Cinco = 5', category: 'beginner', difficulty: 1, created_at: new Date().toISOString() },
-  // ... include 5-15 REALISTIC entries with REAL content
+  {
+    caption: 'Golden hour at the beach',
+    image_url: 'https://picsum.photos/seed/beach-sunset/600/600',
+    likes: 42,
+    username: 'sarah_travels',
+    avatar_url: 'https://picsum.photos/seed/avatar-sarah/100/100',
+    created_at: new Date(Date.now() - 3600000).toISOString(),
+  },
+  {
+    caption: 'Morning coffee vibes',
+    image_url: 'https://picsum.photos/seed/coffee-morning/600/600',
+    likes: 28,
+    username: 'coffeelover',
+    avatar_url: 'https://picsum.photos/seed/avatar-coffee/100/100',
+    created_at: new Date(Date.now() - 7200000).toISOString(),
+  },
+  // 5-15 entries with UNIQUE picsum seeds and REAL content
 ];
 
-// Inside the component — this is REQUIRED:
-const { data: lessons, insert, loading } = useTenantData<Lesson>('lessons');
+// Inside the component — REQUIRED:
+const { data: posts, insert, loading } = useTenantData<Post>('posts');
 const [seeded, setSeeded] = useState(false);
 
 useEffect(() => {
-  if (!loading && lessons.length === 0 && !seeded) {
+  if (!loading && posts.length === 0 && !seeded) {
     setSeeded(true);
     SEED_DATA.forEach(item => insert(item));
   }
-}, [loading, lessons.length, seeded]);
+}, [loading, posts.length, seeded]);
 
-// Then render from the 'lessons' data variable — NEVER from SEED_DATA directly:
-{lessons.map(lesson => (
-  <div key={lesson.id}>{lesson.title}</div>
+// Render from the data variable — NEVER from SEED_DATA:
+{posts.map(post => (
+  <img key={post.id} src={post.image_url} alt={post.caption} />
 ))}
 \`\`\`
 
-ALWAYS use this pattern. There are NO exceptions. Even if the user doesn't explicitly ask for seed data:
-- A quiz app MUST seed questions
-- A recipe app MUST seed recipes
-- A lesson app MUST seed lessons
-- A product catalog MUST seed products
-- A profile-based app MUST seed sample profiles
+ALWAYS use this pattern. NO exceptions:
+- Photo apps MUST seed with picsum.photos image URLs
+- Recipe apps MUST seed with real recipes AND food photos from picsum
+- Profile apps MUST seed with avatar images from picsum
+- Dashboard apps MUST seed with real statistics and data
+- Quiz apps MUST seed with real questions and answers
+- E-commerce apps MUST seed with product images from picsum and real prices
 
-The data MUST flow through useTenantData so users can view, edit, and delete it in the Data tab. If you render from a hardcoded array, THE APP IS BROKEN.
+The data MUST flow through useTenantData so users can view, edit, and delete it in the Data tab.
 ${codeContext}
 ## EXPLANATION FIELD RULES
 - For the FIRST generation: 1-2 sentences max. "Built a dating app with swipe cards, matching, and messaging."
