@@ -135,7 +135,7 @@ export async function POST(request: NextRequest) {
 
   // 4. Increment clone count (admin client bypasses RLS for this function)
   const adminClient = createAdminClient();
-  await adminClient.rpc('increment_clone_count', { template_uuid: template.id });
+  await (adminClient.rpc as Function)('increment_clone_count', { template_uuid: template.id });
 
   return NextResponse.json({
     tenant,

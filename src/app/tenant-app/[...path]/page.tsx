@@ -19,7 +19,7 @@ export default async function TenantCatchAllPage({ params }: { params: Promise<{
     .from('tenants')
     .select('id')
     .eq('slug', tenantSlug)
-    .single();
+    .single() as { data: { id: string } | null };
 
   if (!tenant) notFound();
 
@@ -28,7 +28,7 @@ export default async function TenantCatchAllPage({ params }: { params: Promise<{
     .select('id, template_id, template:app_templates(slug, source_type)')
     .eq('tenant_id', tenant.id)
     .eq('status', 'active')
-    .single();
+    .single() as { data: { id: string; template_id: string; template: { slug: string; source_type: string } } | null };
 
   if (!instance) notFound();
 

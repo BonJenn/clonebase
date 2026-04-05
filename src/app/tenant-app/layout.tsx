@@ -22,7 +22,7 @@ export default async function TenantLayout({ children }: { children: React.React
     .from('tenants')
     .select('id, slug, name, owner_id')
     .eq('slug', tenantSlug)
-    .single();
+    .single() as { data: { id: string; slug: string; name: string; owner_id: string } | null };
 
   if (!tenant) notFound();
 
@@ -31,12 +31,12 @@ export default async function TenantLayout({ children }: { children: React.React
     .select('id, config_snapshot, custom_config, template:app_templates(slug)')
     .eq('tenant_id', tenant.id)
     .eq('status', 'active')
-    .single();
+    .single() as { data: { id: string; config_snapshot: Record<string, unknown>; custom_config: Record<string, unknown>; template: { slug: string } } | null };
 
   if (!instance) notFound();
 
   // Track page view (fire-and-forget)
-  supabase.rpc('increment_analytics', {
+  (supabase.rpc as Function)('increment_analytics', {
     p_tenant_id: tenant.id,
     p_event_type: 'page_view',
   }).then(() => {}, () => {});

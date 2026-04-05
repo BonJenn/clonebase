@@ -4,6 +4,7 @@ import { useTenant } from '@/sdk/tenant-context';
 import { useTenantData } from '@/sdk/use-tenant-data';
 
 interface WaitlistEntry {
+  [key: string]: unknown;
   id?: string;
   email: string;
   name: string;

@@ -61,7 +61,7 @@ async function handleRequest(
     .from('tenants')
     .select('id')
     .eq(isUUID ? 'id' : 'slug', tenantIdentifier)
-    .single();
+    .single() as { data: { id: string } | null };
 
   if (!tenant) {
     return NextResponse.json({ error: 'Tenant not found' }, { status: 404 });
@@ -72,7 +72,7 @@ async function handleRequest(
     .select('template_id, template:app_templates(slug, source_type)')
     .eq('tenant_id', tenant.id)
     .eq('status', 'active')
-    .single();
+    .single() as { data: { template_id: string; template: { slug: string; source_type: string } } | null };
 
   if (!instance) {
     return NextResponse.json({ error: 'No active app instance' }, { status: 404 });
@@ -81,7 +81,7 @@ async function handleRequest(
   const tpl = instance.template as unknown as { slug: string; source_type: string };
 
   // Track API usage
-  supabase.rpc('increment_analytics', {
+  (supabase.rpc as Function)('increment_analytics', {
     p_tenant_id: tenant.id,
     p_event_type: `api:${path[0] || 'unknown'}`,
   }).then(() => {}, () => {});

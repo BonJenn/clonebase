@@ -36,7 +36,7 @@ export async function POST(request: NextRequest) {
 
       if (user_id && template_id) {
         // Record the purchase
-        await adminClient.from('template_purchases').insert({
+        await (adminClient.from('template_purchases') as any).insert({
           user_id,
           template_id,
           stripe_payment_intent_id: session.payment_intent as string,

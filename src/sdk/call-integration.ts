@@ -19,7 +19,7 @@ export async function callIntegration(
     .select('id, status, definition:integration_definitions!inner(service_key)')
     .eq('tenant_id', tenantId)
     .eq('definition.service_key', serviceKey)
-    .single();
+    .single() as { data: { id: string; status: string; definition: { service_key: string } } | null };
 
   if (!integration || integration.status !== 'connected') {
     return { ok: false, status: 400, data: { error: `Integration "${serviceKey}" not connected` } };

@@ -32,7 +32,7 @@ export function useTenantData<T extends { id?: string; [key: string]: unknown }>
     if (err) {
       setError(err.message);
     } else {
-      setData((rows || []).map((r) => ({ ...r.data, id: r.id } as T)));
+      setData((rows || []).map((r: { id: string; data: Record<string, unknown> }) => ({ ...r.data, id: r.id } as T)));
     }
     setLoading(false);
   // eslint-disable-next-line react-hooks/exhaustive-deps

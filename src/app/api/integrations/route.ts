@@ -73,8 +73,7 @@ export async function POST(request: NextRequest) {
     const encrypted = encrypt(value);
 
     // Upsert: update if this field already exists for this integration
-    const { error } = await adminClient
-      .from('encrypted_secrets')
+    const { error } = await (adminClient.from('encrypted_secrets') as any)
       .upsert(
         {
           tenant_integration_id,

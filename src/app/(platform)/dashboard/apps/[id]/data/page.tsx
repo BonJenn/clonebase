@@ -28,7 +28,7 @@ export default async function DataPage({ params }: { params: Promise<{ id: strin
     .select('id, tenant_id')
     .eq('template_id', id)
     .limit(1)
-    .single();
+    .single() as { data: { id: string; tenant_id: string } | null };
 
   // Fetch collections and their row counts
   let collections: { collection: string; count: number }[] = [];
@@ -36,7 +36,7 @@ export default async function DataPage({ params }: { params: Promise<{ id: strin
     const { data: rows } = await admin
       .from('tenant_data')
       .select('collection')
-      .eq('tenant_id', instance.tenant_id);
+      .eq('tenant_id', instance.tenant_id) as { data: { collection: string }[] | null };
 
     if (rows) {
       const counts: Record<string, number> = {};

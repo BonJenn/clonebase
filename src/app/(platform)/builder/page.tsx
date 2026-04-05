@@ -32,7 +32,7 @@ export default function BuilderLandingPage() {
       .eq('source_type', 'generated')
       .order('updated_at', { ascending: false })
       .limit(10)
-      .then(({ data }) => setDrafts((data as DraftApp[]) || []));
+      .then(({ data }: { data: DraftApp[] | null }) => setDrafts(data || []));
   }, [user]);
 
   if (userLoading) return null;

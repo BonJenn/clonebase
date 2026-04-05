@@ -33,8 +33,8 @@ export function DataBrowser({ tenantId, collections }: DataBrowserProps) {
       .eq('collection', activeCollection)
       .order('created_at', { ascending: false })
       .limit(100)
-      .then(({ data }) => {
-        setRows((data as DataRow[]) || []);
+      .then(({ data }: { data: DataRow[] | null }) => {
+        setRows(data || []);
         setLoading(false);
       });
   }, [activeCollection, tenantId]);

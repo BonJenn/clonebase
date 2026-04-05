@@ -4,6 +4,7 @@ import { useTenant } from '@/sdk/tenant-context';
 import { useTenantData } from '@/sdk/use-tenant-data';
 
 interface BioLink {
+  [key: string]: unknown;
   id?: string;
   title: string;
   url: string;

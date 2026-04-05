@@ -37,10 +37,10 @@ async function handleChat(req: Request, tenantId: string): Promise<Response> {
     .select('data')
     .eq('tenant_id', tenantId)
     .eq('collection', 'knowledge_base')
-    .limit(20);
+    .limit(20) as { data: { data: Record<string, string> }[] | null };
 
   const knowledgeContext = (knowledgeRows || [])
-    .map((r) => `## ${(r.data as Record<string, string>).title}\n${(r.data as Record<string, string>).content}`)
+    .map((r) => `## ${r.data.title}\n${r.data.content}`)
     .join('\n\n');
 
   // Build the system prompt with knowledge base
