@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { ChatPanel } from '@/components/builder/chat-panel';
 import { LivePreview } from '@/components/builder/live-preview';
 import { CodePreview } from '@/components/builder/code-preview';
+import { DataPanel } from '@/components/builder/data-panel';
 import { PublishDialog } from '@/components/builder/publish-dialog';
 import { Button } from '@/components/ui/button';
 
@@ -37,7 +38,7 @@ export function BuilderWorkspace({
   const [code, setCode] = useState<GeneratedCode | null>(existingCode);
   const [transpiledCode, setTranspiledCode] = useState<string | null>(null);
   const [generating, setGenerating] = useState(false);
-  const [activeView, setActiveView] = useState<'preview' | 'code'>('preview');
+  const [activeView, setActiveView] = useState<'preview' | 'code' | 'data'>('preview');
   const [showPublish, setShowPublish] = useState(false);
   const [componentName, setComponentName] = useState('Page');
 
@@ -150,6 +151,12 @@ export function BuilderWorkspace({
             >
               Code
             </button>
+            <button
+              onClick={() => setActiveView('data')}
+              className={`px-3 py-1.5 ${activeView === 'data' ? 'bg-gray-100 font-medium' : 'text-gray-500'}`}
+            >
+              Data
+            </button>
           </div>
           <Button
             onClick={() => setShowPublish(true)}
@@ -172,19 +179,21 @@ export function BuilderWorkspace({
           />
         </div>
 
-        {/* Preview / Code panel */}
+        {/* Preview / Code / Data panel */}
         <div className="flex-1 overflow-hidden">
           {activeView === 'preview' ? (
             <LivePreview
               transpiledCode={transpiledCode}
               componentName={componentName}
             />
-          ) : (
+          ) : activeView === 'code' ? (
             <CodePreview
               pageCode={code?.page_code || null}
               adminCode={code?.admin_code || null}
               apiHandlerCode={code?.api_handler_code || null}
             />
+          ) : (
+            <DataPanel templateId={templateId} />
           )}
         </div>
       </div>

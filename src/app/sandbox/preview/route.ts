@@ -87,6 +87,10 @@ var root = null;
 
 function renderComponent(code, componentName) {
   try {
+    // Save for re-renders after data mutations
+    window.__lastCode = code;
+    window.__lastComponent = componentName;
+
     var module = { exports: {} };
     var fn = new Function('React', 'module', 'exports', code);
     fn(React, module, module.exports);
@@ -129,10 +133,65 @@ function renderComponent(code, componentName) {
   }
 }
 
+// Send data snapshot to parent
+function sendDataSnapshot() {
+  var snapshot = {};
+  for (var key in dataStore) {
+    snapshot[key] = dataStore[key].map(function(item) {
+      return { id: item.id, collection: key, data: item, created_at: item.created_at || new Date().toISOString() };
+    });
+  }
+  window.parent.postMessage({ type: 'data-snapshot', collections: snapshot }, '*');
+}
+
 window.addEventListener('message', function(event) {
-  if (event.data && event.data.type === 'render') {
-    for (var key in dataStore) delete dataStore[key];
-    renderComponent(event.data.code, event.data.componentName || 'Page');
+  if (!event.data || !event.data.type) return;
+
+  switch (event.data.type) {
+    case 'render':
+      for (var key in dataStore) delete dataStore[key];
+      renderComponent(event.data.code, event.data.componentName || 'Page');
+      break;
+
+    case 'request-data':
+      sendDataSnapshot();
+      break;
+
+    case 'data-insert': {
+      var col = getCollection(event.data.collection);
+      var newItem = Object.assign({}, event.data.data, {
+        id: 'id-' + Date.now() + '-' + Math.random().toString(36).slice(2),
+        created_at: event.data.data.created_at || new Date().toISOString()
+      });
+      col.unshift(newItem);
+      sendDataSnapshot();
+      // Re-render to pick up new data
+      if (root) root.render(React.createElement('div'));
+      setTimeout(function() { renderComponent(window.__lastCode, window.__lastComponent); }, 50);
+      break;
+    }
+
+    case 'data-update': {
+      var uCol = getCollection(event.data.collection);
+      var uIdx = uCol.findIndex(function(i) { return i.id === event.data.id; });
+      if (uIdx !== -1) {
+        uCol[uIdx] = Object.assign({}, event.data.data, { id: event.data.id });
+      }
+      sendDataSnapshot();
+      if (root) root.render(React.createElement('div'));
+      setTimeout(function() { renderComponent(window.__lastCode, window.__lastComponent); }, 50);
+      break;
+    }
+
+    case 'data-delete': {
+      var dCol = getCollection(event.data.collection);
+      var dIdx = dCol.findIndex(function(i) { return i.id === event.data.id; });
+      if (dIdx !== -1) dCol.splice(dIdx, 1);
+      sendDataSnapshot();
+      if (root) root.render(React.createElement('div'));
+      setTimeout(function() { renderComponent(window.__lastCode, window.__lastComponent); }, 50);
+      break;
+    }
   }
 });
 
