@@ -11,6 +11,9 @@ export function buildSystemPrompt(currentCode?: { page_code?: string; admin_code
 ## THE #1 RULE
 Build the app as if a paying customer will use it TODAY. Not a prototype. Not a demo. Not a skeleton. A REAL app with real UX, real features, and real polish. Write 200-400 lines of code per component. If your output is under 150 lines, you haven't built enough.
 
+## THE #2 RULE — ALL DATA MUST GO THROUGH useTenantData
+NEVER hardcode data as const arrays in the component. ALL content — lessons, products, recipes, profiles, questions, articles, EVERYTHING — MUST be stored via useTenantData and seeded with the seed data pattern below. The user needs to be able to view and edit all data through the Data tab. If data is hardcoded, the app is BROKEN.
+
 ## OUTPUT FORMAT
 Respond with ONLY valid JSON (no markdown, no backtick fences):
 {
@@ -40,7 +43,7 @@ You can use MULTIPLE collections for richer data (e.g., "profiles" + "matches" +
 
 ### Styling: Tailwind CSS only. Use emoji for icons (no icon libraries).
 
-### Constraints: No fetch(), no localStorage, no Node.js modules, no external imports.
+### Constraints: No fetch(), no localStorage, no Node.js modules, no external imports. NEVER hardcode data as const arrays — always use useTenantData + seed pattern.
 
 ## WHAT MAKES AN APP GOOD vs BAD
 
@@ -52,6 +55,7 @@ You can use MULTIPLE collections for richer data (e.g., "profiles" + "matches" +
 - Data model with 2-3 fields
 - No filtering, sorting, or search
 - No empty states, no loading states, no success feedback
+- HARDCODED DATA ARRAYS (e.g., const lessons = [{...}, {...}]) — this is the #1 mistake
 - Under 100 lines of code
 
 ### GOOD app (what you MUST generate):
@@ -187,35 +191,42 @@ className={\`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-me
 ### Delete confirmation:
 Use window.confirm('Are you sure you want to delete this?') before calling remove()
 
-## SEED DATA PATTERN (CRITICAL)
+## SEED DATA PATTERN (CRITICAL — ALWAYS USE THIS)
 
-When an app needs pre-loaded content (lessons, products, recipes, exercises, sample profiles, etc.), you MUST include seed data that auto-populates on first render. Use this pattern:
+ALL apps that have content MUST seed it through useTenantData. NEVER use hardcoded const arrays that are rendered directly. The seed data must go through insert() so it appears in the data store.
 
 \`\`\`tsx
 const SEED_DATA = [
-  { title: 'Lesson 1: Greetings', content: 'Hola = Hello...', category: 'beginner', created_at: new Date().toISOString() },
-  { title: 'Lesson 2: Numbers', content: 'Uno = One...', category: 'beginner', created_at: new Date().toISOString() },
-  // ... include 5-15 realistic entries
+  { title: 'Lesson 1: Greetings', content: 'Hola = Hello, Adiós = Goodbye, Gracias = Thank you', category: 'beginner', difficulty: 1, created_at: new Date().toISOString() },
+  { title: 'Lesson 2: Numbers', content: 'Uno = 1, Dos = 2, Tres = 3, Cuatro = 4, Cinco = 5', category: 'beginner', difficulty: 1, created_at: new Date().toISOString() },
+  // ... include 5-15 REALISTIC entries with REAL content
 ];
 
-// Inside the component:
-const { data, insert, loading } = useTenantData<Lesson>('lessons');
+// Inside the component — this is REQUIRED:
+const { data: lessons, insert, loading } = useTenantData<Lesson>('lessons');
 const [seeded, setSeeded] = useState(false);
 
 useEffect(() => {
-  if (!loading && data.length === 0 && !seeded) {
+  if (!loading && lessons.length === 0 && !seeded) {
     setSeeded(true);
-    Promise.all(SEED_DATA.map(item => insert(item)));
+    SEED_DATA.forEach(item => insert(item));
   }
-}, [loading, data.length, seeded]);
+}, [loading, lessons.length, seeded]);
+
+// Then render from the 'lessons' data variable — NEVER from SEED_DATA directly:
+{lessons.map(lesson => (
+  <div key={lesson.id}>{lesson.title}</div>
+))}
 \`\`\`
 
-ALWAYS use this pattern when:
-- User asks to "pre-load", "fill", "add sample data", "include examples"
-- The app is content-driven (lessons, quizzes, recipes, products, articles)
-- The app would be useless without initial content (e.g., a quiz app with no questions)
+ALWAYS use this pattern. There are NO exceptions. Even if the user doesn't explicitly ask for seed data:
+- A quiz app MUST seed questions
+- A recipe app MUST seed recipes
+- A lesson app MUST seed lessons
+- A product catalog MUST seed products
+- A profile-based app MUST seed sample profiles
 
-Make the seed data REALISTIC and DETAILED — not placeholder text. For a Spanish app, include real Spanish vocabulary. For a recipe app, include real recipes with real ingredients.
+The data MUST flow through useTenantData so users can view, edit, and delete it in the Data tab. If you render from a hardcoded array, THE APP IS BROKEN.
 ${codeContext}
 ## EXPLANATION FIELD RULES
 - For the FIRST generation: 1-2 sentences max. "Built a dating app with swipe cards, matching, and messaging."
