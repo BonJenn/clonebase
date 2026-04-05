@@ -68,10 +68,12 @@ export function BuilderWorkspace({
     }
   }, [existingCode, transpile]);
 
-  // Auto-generate on first load if we have an initial prompt
+  // Auto-generate on first load if we have an initial prompt and no existing work
   useEffect(() => {
-    if (initialPrompt && messages.length === 0) {
+    if (initialPrompt && messages.length === 0 && !code) {
       handleSend(initialPrompt);
+      // Clear prompt from URL so refresh doesn't re-trigger
+      window.history.replaceState({}, '', `/builder/${templateId}`);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

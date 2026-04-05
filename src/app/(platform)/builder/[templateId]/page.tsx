@@ -36,7 +36,7 @@ export default async function BuilderPage({
     <BuilderWorkspace
       templateId={templateId}
       templateName={template.name}
-      initialPrompt={prompt || null}
+      initialPrompt={generated ? null : (prompt || null)}
       existingCode={generated ? {
         page_code: generated.page_code,
         admin_code: generated.admin_code,
