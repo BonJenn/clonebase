@@ -5,6 +5,7 @@ import { ChatPanel } from '@/components/builder/chat-panel';
 import { LivePreview } from '@/components/builder/live-preview';
 import { CodePreview } from '@/components/builder/code-preview';
 import { DataPanel } from '@/components/builder/data-panel';
+import { MediaPanel } from '@/components/builder/media-panel';
 import { GeneratingAnimation } from '@/components/builder/generating-animation';
 import { PublishDialog } from '@/components/builder/publish-dialog';
 import { Button } from '@/components/ui/button';
@@ -39,7 +40,7 @@ export function BuilderWorkspace({
   const [code, setCode] = useState<GeneratedCode | null>(existingCode);
   const [transpiledCode, setTranspiledCode] = useState<string | null>(null);
   const [generating, setGenerating] = useState(false);
-  const [activeView, setActiveView] = useState<'preview' | 'code' | 'data'>('preview');
+  const [activeView, setActiveView] = useState<'preview' | 'code' | 'data' | 'media'>('preview');
   const [showPublish, setShowPublish] = useState(false);
   const [componentName, setComponentName] = useState('Page');
   const [showAnimation, setShowAnimation] = useState(false);
@@ -170,6 +171,12 @@ export function BuilderWorkspace({
             >
               Data
             </button>
+            <button
+              onClick={() => setActiveView('media')}
+              className={`px-3 py-1.5 ${activeView === 'media' ? 'bg-gray-100 font-medium' : 'text-gray-500'}`}
+            >
+              Media
+            </button>
           </div>
           <Button
             onClick={() => {
@@ -236,6 +243,9 @@ export function BuilderWorkspace({
           )}
           {activeView === 'data' && (
             <DataPanel templateId={templateId} />
+          )}
+          {activeView === 'media' && (
+            <MediaPanel />
           )}
         </div>
       </div>
