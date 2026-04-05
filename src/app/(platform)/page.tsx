@@ -123,7 +123,7 @@ export default function HomePage() {
           <div className="grid gap-16 lg:grid-cols-2 lg:gap-24 items-center">
             <div>
               <h2 className="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">
-                Everything a real app needs. Built in.
+                Everything a real app needs.<br />Built in.
               </h2>
               <dl className="mt-10 space-y-6">
                 {[
@@ -178,7 +178,7 @@ export default function HomePage() {
           </p>
           <div className="mt-8">
             <Link href="/builder">
-              <Button size="lg" className="text-base px-8 py-4 bg-white text-indigo-600 hover:bg-gray-100">
+              <Button size="lg" className="text-base px-8 py-4 bg-gray-900 text-white hover:bg-gray-800 border border-gray-700">
                 Start Building for Free
               </Button>
             </Link>
