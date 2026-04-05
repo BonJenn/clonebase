@@ -117,8 +117,96 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Features */}
+      {/* Marketplace / Cloning */}
       <section className="bg-white py-24">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="grid gap-16 lg:grid-cols-2 items-center">
+            <div>
+              <div className="inline-flex items-center rounded-full bg-purple-100 px-4 py-1.5 text-sm font-medium text-purple-700">
+                🔁 The Marketplace
+              </div>
+              <h2 className="mt-6 text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">
+                Clone any app.<br />Sell yours.
+              </h2>
+              <p className="mt-4 text-lg text-gray-600 leading-relaxed">
+                Every app on Clonebase can be published to the marketplace. Other users can clone your app
+                in one click — they get their own copy with a unique subdomain, fresh data, and full customization.
+              </p>
+              <dl className="mt-8 space-y-5">
+                <div className="flex gap-3">
+                  <span className="text-xl shrink-0">💰</span>
+                  <div>
+                    <dt className="font-semibold text-gray-900">Sell your apps</dt>
+                    <dd className="text-gray-600">Set a price and earn 85% of every sale. Or make it free to grow your audience.</dd>
+                  </div>
+                </div>
+                <div className="flex gap-3">
+                  <span className="text-xl shrink-0">⚡</span>
+                  <div>
+                    <dt className="font-semibold text-gray-900">One-click cloning</dt>
+                    <dd className="text-gray-600">Buyers get an instant copy with their own subdomain, data, and config. No setup.</dd>
+                  </div>
+                </div>
+                <div className="flex gap-3">
+                  <span className="text-xl shrink-0">🎨</span>
+                  <div>
+                    <dt className="font-semibold text-gray-900">Make it yours</dt>
+                    <dd className="text-gray-600">Cloners can customize everything — data, design, integrations. It&apos;s their app now.</dd>
+                  </div>
+                </div>
+              </dl>
+              <div className="mt-8">
+                <Link href="/marketplace">
+                  <Button variant="secondary" className="text-base">Browse the Marketplace →</Button>
+                </Link>
+              </div>
+            </div>
+            <div className="rounded-2xl bg-gradient-to-br from-purple-50 to-indigo-50 border border-purple-100 p-8">
+              <div className="space-y-4">
+                <div className="rounded-xl bg-white p-5 shadow-sm border border-gray-100">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <span className="text-2xl">🍕</span>
+                      <div>
+                        <p className="font-semibold">Restaurant Website Pro</p>
+                        <p className="text-xs text-gray-500">by @sarah · 234 clones</p>
+                      </div>
+                    </div>
+                    <span className="rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-700">Free</span>
+                  </div>
+                </div>
+                <div className="rounded-xl bg-white p-5 shadow-sm border border-gray-100">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <span className="text-2xl">📊</span>
+                      <div>
+                        <p className="font-semibold">SaaS Analytics Dashboard</p>
+                        <p className="text-xs text-gray-500">by @mike · 89 clones</p>
+                      </div>
+                    </div>
+                    <span className="rounded-full bg-indigo-100 px-3 py-1 text-xs font-semibold text-indigo-700">$9.99</span>
+                  </div>
+                </div>
+                <div className="rounded-xl bg-white p-5 shadow-sm border border-gray-100">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <span className="text-2xl">💪</span>
+                      <div>
+                        <p className="font-semibold">FitTrack Pro</p>
+                        <p className="text-xs text-gray-500">by @alex · 412 clones</p>
+                      </div>
+                    </div>
+                    <span className="rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-700">Free</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Features */}
+      <section className="bg-gray-50 py-24">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="grid gap-16 lg:grid-cols-2 lg:gap-24 items-center">
             <div>
