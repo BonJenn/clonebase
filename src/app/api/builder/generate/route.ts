@@ -60,17 +60,34 @@ export async function POST(request: NextRequest) {
     if (plan.needs_research && plan.research_query) {
       const [research, images] = await Promise.all([
         researchTopic(plan.research_query),
-        searchImages(plan.research_query, 6),
+        searchImages(plan.research_query, 10),
       ]);
+
+      // Combine found image URLs with generated ones
+      const allImages = [...research.images, ...images].slice(0, 12);
+
       if (research.summary) {
         researchContext = `
-## REAL-WORLD RESEARCH RESULTS (use this data in the app)
+## REAL-WORLD RESEARCH RESULTS — USE ALL OF THIS DATA
 ${research.summary}
 
-Available images (use these URLs in the app):
-${images.map((url, i) => `- Image ${i + 1}: ${url}`).join('\n')}
+## IMAGES TO USE IN THE APP (assign these to seed data):
+- Hero/banner: ${allImages[0] || images[0]}
+- Interior/ambiance: ${allImages[1] || images[1]}
+- Food/product 1: ${allImages[2] || images[2]}
+- Food/product 2: ${allImages[3] || images[3]}
+- Food/product 3: ${allImages[4] || images[4]}
+- Food/product 4: ${allImages[5] || images[5]}
+- Team/staff: ${allImages[6] || images[6]}
+- Exterior: ${allImages[7] || images[7]}
+${allImages.slice(8).map((url, i) => `- Extra ${i + 1}: ${url}`).join('\n')}
 
-Use the research facts above as REAL content in the app. Don't make up information — use what was found.
+CRITICAL INSTRUCTIONS FOR BUSINESS WEBSITES:
+- Seed EVERY menu item, location, and review found in the research into separate useTenantData collections
+- Use the image URLs above in the seed data (hero_image, item images, etc.)
+- The owner must be able to edit everything in the Data tab
+- Don't summarize or skip items — include the FULL menu, ALL locations, ALL reviews found
+- Make it look like a real agency-built website, not a template
 `;
       }
     }

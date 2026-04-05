@@ -12,21 +12,57 @@ export interface ResearchResult {
   images: string[];
 }
 
-// Researches a topic using OpenAI's web search to get current information.
-// Used when the user mentions a real business, person, or topic that needs live data.
+// Deep research for businesses and real-world topics.
+// Pulls comprehensive data: full menus, all locations, hours, reviews, photos.
 export async function researchTopic(query: string): Promise<ResearchResult> {
   try {
     const response = await getOpenAI().responses.create({
       model: 'gpt-4.1-mini',
       tools: [{ type: 'web_search_preview' }],
-      input: `Research this and provide factual information that would be useful for building a website or app about it. Include specific details like business name, location, hours, menu items, services, descriptions, reviews, etc. Be specific and detailed.
+      input: `You are researching a real business or topic to build a professional website. Find EVERYTHING available. Be exhaustive.
 
-Topic: ${query}
+Search for: ${query}
 
-Return your findings as a structured summary.`,
+Return ALL of the following that you can find (in a structured format):
+
+## BUSINESS INFO
+- Full official name
+- Tagline or slogan
+- Description / About Us (2-3 sentences)
+- Year established
+- Type of business
+
+## LOCATIONS (list ALL locations)
+For each location:
+- Full address
+- Phone number
+- Hours of operation (every day)
+- Special notes (drive-thru, dine-in, etc.)
+
+## MENU / SERVICES / PRODUCTS (list EVERYTHING)
+For each item:
+- Name
+- Description
+- Price (if available)
+- Category (e.g., Appetizers, Entrees, Desserts, Drinks)
+
+## REVIEWS & RATINGS
+- Google rating and review count
+- Yelp rating and review count
+- 3-5 notable customer reviews (with star rating)
+
+## SOCIAL MEDIA & LINKS
+- Website URL
+- Instagram, Facebook, Twitter handles
+- Any notable press or features
+
+## PHOTOS
+- List any image URLs you find (logo, food photos, interior, exterior)
+- If no direct URLs, describe what photos should show
+
+Be THOROUGH. A real website needs real content. Don't summarize — list everything.`,
     });
 
-    // Extract text from the response
     let text = '';
     for (const item of response.output) {
       if (item.type === 'message') {
@@ -38,34 +74,31 @@ Return your findings as a structured summary.`,
       }
     }
 
-    // Parse into structured data
-    const facts = text.split('\n').filter((line: string) => line.trim().length > 10).slice(0, 20);
+    const facts = text.split('\n').filter((line: string) => line.trim().length > 10);
+
+    // Try to extract any image URLs from the research
+    const imageUrls: string[] = [];
+    const urlRegex = /https?:\/\/[^\s"'<>]+\.(?:jpg|jpeg|png|webp|gif)/gi;
+    const matches = text.match(urlRegex);
+    if (matches) imageUrls.push(...matches.slice(0, 10));
 
     return {
-      summary: text.slice(0, 2000),
+      summary: text.slice(0, 4000),
       facts,
-      images: [],
+      images: imageUrls,
     };
   } catch (err) {
     console.error('Research failed:', err);
-    return {
-      summary: '',
-      facts: [],
-      images: [],
-    };
+    return { summary: '', facts: [], images: [] };
   }
 }
 
-// Search for relevant images using Unsplash (free, no API key needed for small usage)
-export async function searchImages(query: string, count: number = 5): Promise<string[]> {
-  try {
-    // Use picsum with descriptive seeds based on the query
-    const words = query.toLowerCase().split(/\s+/).filter(w => w.length > 3);
-    return Array.from({ length: count }, (_, i) => {
-      const seed = words.slice(0, 3).join('-') + '-' + i;
-      return `https://picsum.photos/seed/${seed}/800/600`;
-    });
-  } catch {
-    return [];
-  }
+// Generate themed image URLs for a business/topic
+export async function searchImages(query: string, count: number = 8): Promise<string[]> {
+  const words = query.toLowerCase().replace(/[^a-z0-9\s]/g, '').split(/\s+/).filter(w => w.length > 2);
+  const base = words.slice(0, 3).join('-');
+
+  // Generate diverse image seeds for different sections of a business site
+  const sections = ['hero', 'interior', 'food-1', 'food-2', 'food-3', 'team', 'exterior', 'ambiance', 'detail', 'feature'];
+  return sections.slice(0, count).map(section => `https://picsum.photos/seed/${base}-${section}/1200/800`);
 }
