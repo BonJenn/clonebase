@@ -47,13 +47,28 @@ export default function BuilderLandingPage() {
     setError('');
     setLoading(true);
 
-    // Create a draft template
+    // Generate a short app name from the prompt
+    let appName = prompt.trim().slice(0, 60);
+    try {
+      const nameRes = await fetch('/api/builder/name', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt: prompt.trim() }),
+      });
+      if (nameRes.ok) {
+        const nameData = await nameRes.json();
+        if (nameData.name) appName = nameData.name;
+      }
+    } catch {
+      // Fall back to truncated prompt
+    }
+
     const slug = 'app-' + Date.now().toString(36);
     const res = await fetch('/api/templates', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        name: prompt.trim().slice(0, 60),
+        name: appName,
         slug,
         description: prompt.trim(),
         source_type: 'generated',

@@ -6,9 +6,10 @@ import { useRouter } from 'next/navigation';
 interface DeleteAppButtonProps {
   templateId: string;
   appName: string;
+  redirectTo?: string;
 }
 
-export function DeleteAppButton({ templateId, appName }: DeleteAppButtonProps) {
+export function DeleteAppButton({ templateId, appName, redirectTo }: DeleteAppButtonProps) {
   const router = useRouter();
   const [deleting, setDeleting] = useState(false);
 
@@ -29,7 +30,11 @@ export function DeleteAppButton({ templateId, appName }: DeleteAppButtonProps) {
     });
 
     if (res.ok) {
-      router.refresh();
+      if (redirectTo) {
+        router.push(redirectTo);
+      } else {
+        router.refresh();
+      }
     } else {
       alert('Failed to delete app. Please try again.');
       setDeleting(false);

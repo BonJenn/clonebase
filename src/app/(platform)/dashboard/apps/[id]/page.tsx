@@ -2,6 +2,7 @@ import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { redirect, notFound } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
+import { DeleteAppButton } from '@/components/platform/delete-app-button';
 
 export default async function AppManagementPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -69,6 +70,7 @@ export default async function AppManagementPage({ params }: { params: Promise<{ 
           </div>
         </div>
         <div className="flex items-center gap-3">
+          <DeleteAppButton templateId={id} appName={template.name} redirectTo="/dashboard" />
           <Link href={`/builder/${id}`}>
             <Button>Edit App</Button>
           </Link>
