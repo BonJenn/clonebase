@@ -8,18 +8,15 @@ function rewriteImports(source: string, mode: 'preview' | 'production'): string 
   return source
     // Remove 'use client' directive
     .replace(/^['"]use client['"];?\s*/m, '')
-    // Rewrite SDK imports
+    // Rewrite any @/sdk/* imports — map each imported name to the flat shim
     .replace(
-      /import\s*\{([^}]+)\}\s*from\s*['"]@\/sdk\/tenant-context['"];?/g,
-      `const {$1} = ${sdkPrefix}.tenantContext;`
-    )
-    .replace(
-      /import\s*\{([^}]+)\}\s*from\s*['"]@\/sdk\/use-tenant-data['"];?/g,
-      `const {$1} = ${sdkPrefix}.useTenantData;`
-    )
-    .replace(
-      /import\s*\{([^}]+)\}\s*from\s*['"]@\/sdk\/use-integration['"];?/g,
-      `const {$1} = ${sdkPrefix}.useIntegration;`
+      /import\s*\{([^}]+)\}\s*from\s*['"]@\/sdk[^'"]*['"];?/g,
+      (_, names: string) => {
+        return names.split(',').map(n => {
+          const name = n.trim();
+          return `var ${name} = ${sdkPrefix}.${name};`;
+        }).join('\n');
+      }
     )
     // Rewrite React imports to use global
     .replace(

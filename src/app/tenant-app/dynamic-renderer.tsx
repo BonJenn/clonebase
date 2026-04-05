@@ -16,11 +16,11 @@ interface DynamicRendererProps {
 export function DynamicRenderer({ transpiledCode, componentName, tenantId, instanceId }: DynamicRendererProps) {
   const Component = useMemo(() => {
     try {
-      // Provide SDK hooks via __SDK__ scope
+      // Provide SDK hooks via flat __SDK__ scope
       const __SDK__ = {
-        tenantContext: { useTenant },
-        useTenantData: { useTenantData },
-        useIntegration: { useIntegration: () => ({ call: async () => ({ ok: true, data: {} }), loading: false, error: null }) },
+        useTenant,
+        useTenantData,
+        useIntegration: () => ({ call: async () => ({ ok: true, data: {} }), loading: false, error: null }),
       };
 
       // eslint-disable-next-line no-new-func

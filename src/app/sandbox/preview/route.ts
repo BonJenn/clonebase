@@ -16,7 +16,7 @@ export async function GET() {
 <body>
   <div id="root"></div>
   <script>
-// --- SDK Shims (in-memory) ---
+// --- SDK Shims (flat — each hook is a direct property on window.__SDK__) ---
 var dataStore = {};
 
 function getCollection(name) {
@@ -25,63 +25,60 @@ function getCollection(name) {
 }
 
 window.__SDK__ = {
-  tenantContext: {
-    useTenant: function() {
-      return {
-        tenantId: 'preview-tenant-id',
-        tenantSlug: 'preview',
-        tenantName: 'Preview App',
-        instanceId: 'preview-instance-id',
-        templateSlug: 'preview',
-        config: {},
-      };
-    },
+  // useTenant hook
+  useTenant: function() {
+    return {
+      tenantId: 'preview-tenant-id',
+      tenantSlug: 'preview',
+      tenantName: 'Preview App',
+      instanceId: 'preview-instance-id',
+      templateSlug: 'preview',
+      config: {},
+    };
   },
-  useTenantData: {
-    useTenantData: function(collectionName) {
-      var _React = React;
-      var _useState = _React.useState;
-      var col = getCollection(collectionName);
-      var _state = _useState(col.slice());
-      var data = _state[0];
-      var setData = _state[1];
 
-      return {
-        data: data,
-        loading: false,
-        error: null,
-        insert: function(item) {
-          var newItem = Object.assign({}, item, { id: 'id-' + Date.now() + '-' + Math.random().toString(36).slice(2) });
-          col.unshift(newItem);
-          setData(col.slice());
-          return Promise.resolve(newItem);
-        },
-        update: function(id, changes) {
-          var idx = col.findIndex(function(i) { return i.id === id; });
-          if (idx === -1) return Promise.resolve(null);
-          col[idx] = Object.assign({}, col[idx], changes);
-          setData(col.slice());
-          return Promise.resolve(col[idx]);
-        },
-        remove: function(id) {
-          var idx = col.findIndex(function(i) { return i.id === id; });
-          if (idx === -1) return Promise.resolve(false);
-          col.splice(idx, 1);
-          setData(col.slice());
-          return Promise.resolve(true);
-        },
-        refresh: function() { return Promise.resolve(); },
-      };
-    },
+  // useTenantData hook
+  useTenantData: function(collectionName) {
+    var col = getCollection(collectionName);
+    var _state = React.useState(col.slice());
+    var data = _state[0];
+    var setData = _state[1];
+
+    return {
+      data: data,
+      loading: false,
+      error: null,
+      insert: function(item) {
+        var newItem = Object.assign({}, item, { id: 'id-' + Date.now() + '-' + Math.random().toString(36).slice(2) });
+        col.unshift(newItem);
+        setData(col.slice());
+        return Promise.resolve(newItem);
+      },
+      update: function(id, changes) {
+        var idx = col.findIndex(function(i) { return i.id === id; });
+        if (idx === -1) return Promise.resolve(null);
+        col[idx] = Object.assign({}, col[idx], changes);
+        setData(col.slice());
+        return Promise.resolve(col[idx]);
+      },
+      remove: function(id) {
+        var idx = col.findIndex(function(i) { return i.id === id; });
+        if (idx === -1) return Promise.resolve(false);
+        col.splice(idx, 1);
+        setData(col.slice());
+        return Promise.resolve(true);
+      },
+      refresh: function() { return Promise.resolve(); },
+    };
   },
-  useIntegration: {
-    useIntegration: function(service) {
-      return {
-        call: function() { return Promise.resolve({ ok: true, data: { message: 'Mock response from ' + service } }); },
-        loading: false,
-        error: null,
-      };
-    },
+
+  // useIntegration hook
+  useIntegration: function(service) {
+    return {
+      call: function() { return Promise.resolve({ ok: true, data: { message: 'Mock response from ' + service } }); },
+      loading: false,
+      error: null,
+    };
   },
 };
 
