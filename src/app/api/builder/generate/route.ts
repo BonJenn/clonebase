@@ -63,17 +63,38 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'No response from model' }, { status: 500 });
   }
 
-  // Parse the JSON response
+  // Parse the JSON response — handle truncated output from large generations
   let generated;
   try {
     let jsonStr = textContent.trim();
     const fenceMatch = jsonStr.match(/```(?:json)?\s*([\s\S]*?)```/);
     if (fenceMatch) jsonStr = fenceMatch[1].trim();
-    generated = JSON.parse(jsonStr);
+
+    try {
+      generated = JSON.parse(jsonStr);
+    } catch {
+      // Try to recover truncated JSON by extracting individual fields
+      const pageMatch = jsonStr.match(/"page_code"\s*:\s*"((?:[^"\\]|\\.)*)"/);
+      const adminMatch = jsonStr.match(/"admin_code"\s*:\s*"((?:[^"\\]|\\.)*)"/);
+      const explanationMatch = jsonStr.match(/"explanation"\s*:\s*"((?:[^"\\]|\\.)*)"/);
+
+
+      if (pageMatch) {
+        generated = {
+          page_code: pageMatch[1].replace(/\\n/g, '\n').replace(/\\"/g, '"').replace(/\\\\/g, '\\'),
+          admin_code: adminMatch ? adminMatch[1].replace(/\\n/g, '\n').replace(/\\"/g, '"').replace(/\\\\/g, '\\') : null,
+          api_handler_code: null,
+          explanation: explanationMatch ? explanationMatch[1] : 'Code generated.',
+        };
+      } else {
+        return NextResponse.json({
+          error: 'Failed to parse generated code. Try a simpler request.',
+        }, { status: 500 });
+      }
+    }
   } catch {
     return NextResponse.json({
-      error: 'Failed to parse generated code',
-      raw: textContent,
+      error: 'Failed to parse generated code. Try again.',
     }, { status: 500 });
   }
 

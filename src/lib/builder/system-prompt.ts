@@ -290,14 +290,14 @@ When seed data needs images (photos, avatars, thumbnails, product images), use p
 ### REAL DATA — use actual facts, generate A LOT
 When seed data needs real-world information, use REAL data, not placeholders. Generate ABUNDANT seed data — the app should feel full and alive on first load.
 
-Volume guidelines:
-- Sports/teams: ALL teams in the league (30 NBA teams, 32 NFL teams, etc.)
-- Products/menu items: 15-25 items across categories
-- User profiles: 10-15 diverse profiles
-- Blog posts/articles: 8-12 entries
-- Recipes: 10-15 with full ingredients
-- Quiz questions: 15-20 questions
-- Dashboard metrics: 30+ data points for charts
+Volume guidelines (enough to look real, not so much it breaks):
+- Sports/teams: 10-15 teams with full stats
+- Products/menu items: 8-12 items across categories
+- User profiles: 6-10 diverse profiles
+- Blog posts/articles: 5-8 entries
+- Recipes: 6-8 with full ingredients
+- Quiz questions: 8-12 questions
+- Dashboard metrics: 10-15 data points
 
 Data quality:
 - NBA teams: "Los Angeles Lakers", record: "52-30", conference: "Western", division: "Pacific"
