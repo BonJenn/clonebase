@@ -46,7 +46,10 @@ Return ONLY valid JSON:
 
 Rules:
 - app_type: "game" for games/virtual worlds/interactive simulations (use canvas + game loop), "interactive" for drawing/animation apps, "standard" for everything else
-- needs_auth: true if the app has user accounts, personal data, or multi-user interaction
+- needs_auth — be smart about this:
+  TRUE: social apps, apps where "users" post/share/interact, blogs with authors, messaging, dating, any app where people have accounts or profiles, games with save progress, apps with "my" data (my recipes, my workouts)
+  FALSE: single-user tools (calculator, timer, converter), public content viewers (dashboard, gallery with no user posting), simple utilities, games without accounts, anonymous apps
+  When in doubt: if the prompt mentions "users", "accounts", "profiles", "sign up", "personal", or implies multiple people using it → TRUE
 - seed_data: true for content viewers (galleries, dashboards), false for blank canvas apps (todo, journal)
 - For games: describe the game mechanics in features (movement, collision, scoring, rooms/levels)
 - For virtual worlds (Club Penguin, Habbo, etc.): use 2D top-down canvas with WASD movement, rooms, and emoji sprites. NOT 3D. NOT just chat rooms with buttons.
