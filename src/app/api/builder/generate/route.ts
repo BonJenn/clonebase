@@ -51,9 +51,20 @@ export async function POST(request: NextRequest) {
   let plan = null;
   if (isFirstGeneration) {
     plan = await planApp(messages[0].content);
+    const appType = (plan as unknown as Record<string, unknown>).app_type || 'standard';
+    const gameInstructions = appType === 'game' ? `
+APP TYPE: GAME — Use <canvas> with requestAnimationFrame game loop.
+- Render characters as emoji on canvas (fillText)
+- WASD/arrow keys for movement
+- Use useRef for game state (position, velocity) — only useState for UI state
+- Collision detection with bounding boxes
+- This is a 2D game, NOT a form-based app. The main view should be a canvas.
+` : '';
+
     planContext = `
 ## APP PLAN (follow this exactly)
 App Name: ${plan.app_name}
+App Type: ${appType}
 Complexity: ${plan.complexity}
 Authentication: ${plan.needs_auth ? 'YES — use useTenantAuth()' : 'NO — do not add auth'}
 Seed Data: ${plan.seed_data ? 'YES — seed with realistic data' : 'NO — start empty'}
@@ -61,7 +72,7 @@ Views: ${plan.views.join(', ')} (use state-based navigation, max ${plan.views.le
 Data Collections: ${plan.data_collections.map(c => `${c.name}(${c.fields.join(', ')})`).join('; ')}
 Features: ${plan.features.join(', ')}
 ${plan.warnings.length > 0 ? `WARNINGS: ${plan.warnings.join('. ')}` : ''}
-
+${gameInstructions}
 IMPORTANT CONSTRAINTS FROM PLAN:
 - Maximum ${plan.views.length} views/tabs. Do NOT add more.
 - Maximum ${plan.data_collections.length} data collections. Do NOT add more.

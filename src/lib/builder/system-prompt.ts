@@ -143,6 +143,71 @@ const [currentView, setCurrentView] = useState<'feed' | 'profile' | 'settings'>(
 \`\`\`
 This is the ONLY way to navigate between views. URL routing will show 404.
 
+### GAME / INTERACTIVE APP PATTERNS
+When the user asks for a game, virtual world, or interactive app, use these React-native techniques:
+
+#### 2D Canvas Game Loop (for movement, virtual worlds, simple games):
+\`\`\`tsx
+const canvasRef = useRef<HTMLCanvasElement>(null);
+const [playerPos, setPlayerPos] = useState({ x: 200, y: 200 });
+const keysRef = useRef<Set<string>>(new Set());
+
+// Keyboard input
+useEffect(() => {
+  const handleKeyDown = (e: KeyboardEvent) => keysRef.current.add(e.key.toLowerCase());
+  const handleKeyUp = (e: KeyboardEvent) => keysRef.current.delete(e.key.toLowerCase());
+  window.addEventListener('keydown', handleKeyDown);
+  window.addEventListener('keyup', handleKeyUp);
+  return () => { window.removeEventListener('keydown', handleKeyDown); window.removeEventListener('keyup', handleKeyUp); };
+}, []);
+
+// Game loop
+useEffect(() => {
+  let animId: number;
+  const speed = 3;
+  function gameLoop() {
+    setPlayerPos(prev => {
+      let { x, y } = prev;
+      if (keysRef.current.has('w') || keysRef.current.has('arrowup')) y -= speed;
+      if (keysRef.current.has('s') || keysRef.current.has('arrowdown')) y += speed;
+      if (keysRef.current.has('a') || keysRef.current.has('arrowleft')) x -= speed;
+      if (keysRef.current.has('d') || keysRef.current.has('arrowright')) x += speed;
+      return { x: Math.max(0, Math.min(780, x)), y: Math.max(0, Math.min(580, y)) };
+    });
+    animId = requestAnimationFrame(gameLoop);
+  }
+  animId = requestAnimationFrame(gameLoop);
+  return () => cancelAnimationFrame(animId);
+}, []);
+
+// Canvas rendering
+useEffect(() => {
+  const ctx = canvasRef.current?.getContext('2d');
+  if (!ctx) return;
+  ctx.clearRect(0, 0, 800, 600);
+  // Draw background, objects, player
+  ctx.fillStyle = '#4ade80';
+  ctx.fillRect(0, 0, 800, 600);
+  ctx.font = '32px serif';
+  ctx.fillText('🐧', playerPos.x, playerPos.y);
+}, [playerPos]);
+
+<canvas ref={canvasRef} width={800} height={600} className="rounded-xl border" />
+\`\`\`
+
+#### When to use canvas vs HTML:
+- Virtual worlds, movement games, drawing apps → use <canvas> with game loop
+- Card games, board games, puzzle games → use HTML divs with click handlers and CSS transitions
+- Quiz games, trivia, text adventures → use regular React components
+
+#### Game-specific rules:
+- Use emoji for characters/sprites (🐧🏠🌳⭐🎣🍕) — they render on canvas with fillText
+- Use requestAnimationFrame for smooth animation, NOT setInterval
+- Keyboard: WASD + arrow keys for movement
+- Keep game state in useRef (not useState) for performance in the game loop — only setState for rendering
+- Collision detection: simple bounding box (Math.abs(a.x - b.x) < size)
+- Rooms/levels: change background and object positions via state
+
 ### Authentication Pattern (ONLY when the user asks for auth/users/accounts)
 Do NOT add auth unless the user specifically asks for user accounts, login, sign up, or authentication.
 

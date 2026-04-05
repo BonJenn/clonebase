@@ -34,6 +34,7 @@ Return ONLY valid JSON:
 {
   "app_name": "Short App Name (2-4 words)",
   "description": "One sentence description",
+  "app_type": "standard|game|interactive",
   "needs_auth": true/false,
   "views": ["feed", "profile", "settings"],
   "data_collections": [{"name": "posts", "fields": ["title", "content", "author", "likes", "created_at"]}],
@@ -44,8 +45,12 @@ Return ONLY valid JSON:
 }
 
 Rules:
+- app_type: "game" for games/virtual worlds/interactive simulations (use canvas + game loop), "interactive" for drawing/animation apps, "standard" for everything else
 - needs_auth: true if the app has user accounts, personal data, or multi-user interaction
 - seed_data: true for content viewers (galleries, dashboards), false for blank canvas apps (todo, journal)
+- For games: describe the game mechanics in features (movement, collision, scoring, rooms/levels)
+- For virtual worlds (Club Penguin, Habbo, etc.): use 2D top-down canvas with WASD movement, rooms, and emoji sprites. NOT 3D. NOT just chat rooms with buttons.
+- Real-time multiplayer is NOT possible — simulate with NPC characters instead
 - complexity: simple (1-2 views, 1 collection), medium (3-4 views, 2-3 collections), complex (5+ views, 4+ collections)
 - warnings: flag things like "real-time multiplayer requires WebSocket which isn't supported", "3D graphics not possible in this environment"
 - Keep views to maximum 5. If the user asks for too much, simplify.
