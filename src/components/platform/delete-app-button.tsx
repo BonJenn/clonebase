@@ -40,10 +40,10 @@ export function DeleteAppButton({ templateId, appName }: DeleteAppButtonProps) {
     <button
       onClick={handleDelete}
       disabled={deleting}
-      className="text-xs text-gray-400 hover:text-red-600 transition-colors disabled:opacity-50"
+      className="h-6 w-6 flex items-center justify-center rounded-full bg-gray-100 text-gray-500 hover:bg-red-100 hover:text-red-600 transition-colors disabled:opacity-50 text-sm"
       title="Delete app"
     >
-      {deleting ? '...' : '✕'}
+      {deleting ? '…' : '✕'}
     </button>
   );
 }
