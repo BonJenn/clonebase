@@ -45,7 +45,7 @@ export default async function BuilderPage({
         admin_code: generated.admin_code,
         api_handler_code: generated.api_handler_code,
       } : null}
-      existingMessages={(generated?.conversation_history as { role: 'user' | 'assistant'; content: string }[]) || []}
+      existingMessages={((generated?.conversation_history || []) as Array<{ role: string; content: string }>).map(m => ({ role: m.role as 'user' | 'assistant', content: m.content }))}
     />
   );
 }
