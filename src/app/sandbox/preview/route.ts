@@ -112,29 +112,56 @@ window.__SDK__ = {
     };
   },
 
-  // useTenantAuth hook (mock — simulates logged-in user in preview)
+  // useTenantAuth hook (mock — realistic auth simulation in preview)
   useTenantAuth: function() {
-    var _state = React.useState({ id: 'preview-user-id', email: 'preview@example.com', user_metadata: { name: 'Preview User' } });
-    var user = _state[0];
-    var setUser = _state[1];
+    var _userState = React.useState(null);
+    var user = _userState[0];
+    var setUser = _userState[1];
+    var _errorState = React.useState(null);
+    var error = _errorState[0];
+    var setError = _errorState[1];
+
+    // In-memory account store (shared across renders)
+    if (!window.__authAccounts) window.__authAccounts = {};
 
     return {
       user: user,
       loading: false,
-      error: null,
+      error: error,
       signUp: function(email, password, metadata) {
-        setUser({ id: 'user-' + Date.now(), email: email, user_metadata: metadata || { name: email.split('@')[0] } });
+        setError(null);
+        if (window.__authAccounts[email]) {
+          setError('An account with this email already exists.');
+          return Promise.resolve(false);
+        }
+        var newUser = { id: 'user-' + Date.now(), email: email, user_metadata: metadata || { name: email.split('@')[0] } };
+        window.__authAccounts[email] = { user: newUser, password: password };
+        setUser(newUser);
         return Promise.resolve(true);
       },
-      signIn: function(email) {
-        setUser({ id: 'user-' + Date.now(), email: email, user_metadata: { name: email.split('@')[0] } });
+      signIn: function(email, password) {
+        setError(null);
+        var account = window.__authAccounts[email];
+        if (!account) {
+          setError('No account found with this email. Please sign up first.');
+          return Promise.resolve(false);
+        }
+        if (account.password !== password) {
+          setError('Incorrect password.');
+          return Promise.resolve(false);
+        }
+        setUser(account.user);
         return Promise.resolve(true);
       },
       signOut: function() {
         setUser(null);
+        setError(null);
         return Promise.resolve();
       },
-      resetPassword: function() { return Promise.resolve(true); },
+      resetPassword: function() {
+        setError(null);
+        return Promise.resolve(true);
+      },
     };
   },
 };
