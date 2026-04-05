@@ -55,6 +55,46 @@ export function DataPanel({ templateId }: DataPanelProps) {
   const activeRows = collections[activeCollection] || [];
   const collectionNames = Object.keys(collections);
 
+  function exportData(format: 'json' | 'csv') {
+    const data = format === 'json' ? exportAsJson() : exportAsCsv();
+    const blob = new Blob([data], { type: format === 'json' ? 'application/json' : 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${activeCollection || 'data'}.${format}`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  function exportAsJson(): string {
+    if (activeCollection) {
+      return JSON.stringify(activeRows.map(r => r.data), null, 2);
+    }
+    const all: Record<string, unknown[]> = {};
+    for (const [name, rows] of Object.entries(collections)) {
+      all[name] = rows.map(r => r.data);
+    }
+    return JSON.stringify(all, null, 2);
+  }
+
+  function exportAsCsv(): string {
+    const rows = activeRows;
+    if (rows.length === 0) return '';
+    const allKeys = new Set<string>();
+    rows.forEach(r => Object.keys(r.data).forEach(k => allKeys.add(k)));
+    const keys = Array.from(allKeys);
+    const header = keys.join(',');
+    const lines = rows.map(r =>
+      keys.map(k => {
+        const val = r.data[k];
+        const str = val === null || val === undefined ? '' : String(val);
+        return str.includes(',') || str.includes('"') || str.includes('\n')
+          ? `"${str.replace(/"/g, '""')}"` : str;
+      }).join(',')
+    );
+    return [header, ...lines].join('\n');
+  }
+
   function sendToIframe(message: Record<string, unknown>) {
     const iframe = document.querySelector('iframe[title="App Preview"]') as HTMLIFrameElement;
     if (iframe?.contentWindow) {
@@ -125,13 +165,21 @@ export function DataPanel({ templateId }: DataPanelProps) {
       {/* Actions bar */}
       <div className="flex items-center justify-between px-4 py-2 border-b border-gray-100">
         <span className="text-xs text-gray-500">{activeRows.length} records</span>
-        <Button
-          size="sm"
-          variant="secondary"
-          onClick={() => setAddingTo(addingTo === activeCollection ? null : activeCollection)}
-        >
-          {addingTo === activeCollection ? 'Cancel' : '+ Add Record'}
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button size="sm" variant="ghost" onClick={() => exportData('json')}>
+            Export JSON
+          </Button>
+          <Button size="sm" variant="ghost" onClick={() => exportData('csv')}>
+            Export CSV
+          </Button>
+          <Button
+            size="sm"
+            variant="secondary"
+            onClick={() => setAddingTo(addingTo === activeCollection ? null : activeCollection)}
+          >
+            {addingTo === activeCollection ? 'Cancel' : '+ Add Record'}
+          </Button>
+        </div>
       </div>
 
       {/* Add record form */}
