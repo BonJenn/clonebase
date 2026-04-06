@@ -111,7 +111,7 @@ export default function BuilderLandingPage() {
             required
           />
           <div className="flex items-center justify-between bg-gray-50 px-6 py-3">
-            <p className="text-xs text-gray-400">Tip: The more detail you give, the better the result</p>
+            <p className="text-xs text-gray-400">Tip: Paste a Figma URL to build from a design, or describe what you want</p>
             <Button type="submit" loading={loading} className="bg-indigo-600 hover:bg-indigo-500">
               {loading ? 'Creating...' : 'Generate App →'}
             </Button>

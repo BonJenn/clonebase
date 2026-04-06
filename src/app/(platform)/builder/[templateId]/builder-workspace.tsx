@@ -92,12 +92,35 @@ export function BuilderWorkspace({
     setActiveView('preview');
 
     try {
+      // Detect Figma URLs and fetch the design first
+      let figmaContext = '';
+      const figmaMatch = content.match(/figma\.com\/(?:file|design)\/[a-zA-Z0-9]+[^\s]*/);
+      if (figmaMatch) {
+        try {
+          const figmaRes = await fetch('/api/builder/figma', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ figma_url: figmaMatch[0] }),
+          });
+          const figmaData = await figmaRes.json();
+          if (figmaData.description) {
+            figmaContext = `\n\n[FIGMA DESIGN DETECTED - Build the app to match this design exactly]\n${figmaData.description}`;
+          }
+        } catch {
+          // Continue without Figma data
+        }
+      }
+
+      const finalMessages = figmaContext
+        ? [...updatedMessages.slice(0, -1), { role: 'user' as const, content: content + figmaContext }]
+        : updatedMessages;
+
       const res = await fetch('/api/builder/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           template_id: templateId,
-          messages: updatedMessages,
+          messages: finalMessages,
         }),
       });
 
