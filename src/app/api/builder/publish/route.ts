@@ -64,16 +64,29 @@ export async function POST(request: NextRequest) {
     .update(updates)
     .eq('id', template_id);
 
-  // Update pricing if provided
+  // Update pricing if provided — explicit update or insert since template_pricing
+  // doesn't have a unique constraint on template_id
   if (pricing_type) {
     const validType = pricing_type === 'one_time' ? 'one_time' : 'free';
-    await supabase
+    const priceCents = validType === 'one_time' ? Math.max(100, Math.round(price_cents || 0)) : 0;
+
+    const { data: existingPricing } = await supabase
       .from('template_pricing')
-      .upsert({
+      .select('id')
+      .eq('template_id', template_id)
+      .limit(1);
+
+    if (existingPricing?.length) {
+      await (supabase.from('template_pricing') as any)
+        .update({ pricing_type: validType, price_cents: priceCents })
+        .eq('template_id', template_id);
+    } else {
+      await (supabase.from('template_pricing') as any).insert({
         template_id,
         pricing_type: validType,
-        price_cents: validType === 'one_time' ? Math.max(100, Math.round(price_cents || 0)) : 0,
-      }, { onConflict: 'template_id' });
+        price_cents: priceCents,
+      });
+    }
   }
 
   return NextResponse.json({
