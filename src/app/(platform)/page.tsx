@@ -1,14 +1,16 @@
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
+import { AuroraRippleGrid } from '@/components/aurora-ripple-grid';
 
 export default function HomePage() {
   return (
     <div className="flex flex-col">
       {/* Hero */}
-      <section className="relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-gray-950 via-gray-900 to-indigo-950" />
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_rgba(99,102,241,0.15),transparent_50%)]" />
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,_rgba(168,85,247,0.1),transparent_50%)]" />
+      <section className="relative isolate overflow-hidden transform-gpu">
+        <div className="absolute inset-0 bg-gradient-to-br from-gray-950 via-gray-900 to-indigo-950 transform-gpu" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_rgba(99,102,241,0.15),transparent_50%)] transform-gpu" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,_rgba(168,85,247,0.1),transparent_50%)] transform-gpu" />
+        <AuroraRippleGrid />
 
         <div className="relative mx-auto max-w-7xl px-4 py-24 sm:px-6 sm:py-32 lg:px-8 lg:py-40">
           <div className="max-w-3xl">
@@ -118,7 +120,7 @@ export default function HomePage() {
       </section>
 
       {/* Marketplace / Cloning */}
-      <section className="bg-white py-24">
+      <section className="isolate bg-white py-24">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="grid gap-16 lg:grid-cols-2 items-center">
             <div>
@@ -206,7 +208,7 @@ export default function HomePage() {
       </section>
 
       {/* Features */}
-      <section className="bg-gray-50 py-24">
+      <section className="isolate bg-gray-50 py-24">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="grid gap-16 lg:grid-cols-2 lg:gap-24 items-center">
             <div>

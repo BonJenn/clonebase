@@ -20,7 +20,7 @@ export function Navbar() {
   }
 
   return (
-    <nav className={`sticky top-0 z-50 ${isHome ? 'bg-gray-950/80 border-gray-800' : 'bg-white/80 border-gray-200'} border-b backdrop-blur-sm`}>
+    <nav className={`sticky top-0 z-50 isolate transform-gpu ${isHome ? 'bg-gray-950/80 border-gray-800' : 'bg-white/80 border-gray-200'} border-b backdrop-blur-sm`}>
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="flex h-16 items-center justify-between">
           <div className="flex items-center gap-8">
