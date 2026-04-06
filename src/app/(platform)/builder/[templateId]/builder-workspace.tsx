@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { ChatPanel } from '@/components/builder/chat-panel';
-import { LivePreview } from '@/components/builder/live-preview';
+import { LivePreview, type ElementEditEvent, type ElementSelectedEvent } from '@/components/builder/live-preview';
 import { CodePreview } from '@/components/builder/code-preview';
 import { DataPanel } from '@/components/builder/data-panel';
 import { MediaPanel } from '@/components/builder/media-panel';
@@ -45,6 +45,7 @@ export function BuilderWorkspace({
   const [componentName, setComponentName] = useState('Page');
   const [showAnimation, setShowAnimation] = useState(false);
   const [lastFailedMessage, setLastFailedMessage] = useState<string | null>(null);
+  const [selectedElement, setSelectedElement] = useState<ElementSelectedEvent | null>(null);
 
   // Transpile code for preview whenever it changes
   const transpile = useCallback(async (pageCode: string) => {
@@ -83,6 +84,67 @@ export function BuilderWorkspace({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Handle inline text/image edits from the preview iframe.
+  const handleElementEdited = useCallback(async (event: ElementEditEvent) => {
+    if (!code) return;
+
+    let newValue: string | undefined;
+
+    if (event.kind === 'text') {
+      newValue = event.newValue;
+      if (newValue === undefined || newValue === event.oldValue) return;
+    } else if (event.kind === 'image' && event.file) {
+      // Upload the file first to get a public URL
+      const formData = new FormData();
+      formData.append('file', event.file);
+      formData.append('tenant_id', `builder-${templateId}`);
+      try {
+        const uploadRes = await fetch('/api/upload', { method: 'POST', body: formData });
+        const uploadData = await uploadRes.json();
+        if (!uploadRes.ok || !uploadData.url) {
+          console.error('Upload failed:', uploadData.error);
+          return;
+        }
+        newValue = uploadData.url;
+      } catch (err) {
+        console.error('Upload error:', err);
+        return;
+      }
+    } else {
+      return;
+    }
+
+    // Patch the source code via the edit endpoint
+    try {
+      const res = await fetch('/api/builder/edit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          template_id: templateId,
+          edit_id: event.editId,
+          kind: event.kind,
+          new_value: newValue,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        console.error('Edit failed:', data.error);
+        return;
+      }
+      if (data.page_code && data.page_code !== code.page_code) {
+        const updatedCode = { ...code, page_code: data.page_code };
+        setCode(updatedCode);
+        await transpile(data.page_code);
+      }
+    } catch (err) {
+      console.error('Edit error:', err);
+    }
+  }, [code, templateId, transpile]);
+
+  const handleElementSelected = useCallback((event: ElementSelectedEvent) => {
+    setSelectedElement(event);
+  }, []);
+
   async function handleSend(content: string) {
     const userMessage: Message = { role: 'user', content };
     const updatedMessages = [...messages, userMessage];
@@ -90,6 +152,10 @@ export function BuilderWorkspace({
     setGenerating(true);
     setShowAnimation(true);
     setActiveView('preview');
+
+    // Snapshot the selected element so it survives clearing
+    const elementContext = selectedElement;
+    setSelectedElement(null);
 
     try {
       // Detect Figma URLs and fetch the design first
@@ -121,6 +187,9 @@ export function BuilderWorkspace({
         body: JSON.stringify({
           template_id: templateId,
           messages: finalMessages,
+          element_context: elementContext
+            ? { editId: elementContext.editId, tag: elementContext.tag, text: elementContext.text }
+            : undefined,
         }),
       });
 
@@ -257,6 +326,8 @@ export function BuilderWorkspace({
             generating={generating}
             canRetry={!!lastFailedMessage}
             onRetry={() => lastFailedMessage && handleSend(lastFailedMessage)}
+            selectedElement={selectedElement}
+            onClearSelectedElement={() => setSelectedElement(null)}
           />
         </div>
 
@@ -272,6 +343,8 @@ export function BuilderWorkspace({
             <LivePreview
               transpiledCode={transpiledCode}
               componentName={componentName}
+              onElementEdited={handleElementEdited}
+              onElementSelected={handleElementSelected}
             />
           </div>
           {activeView === 'code' && (

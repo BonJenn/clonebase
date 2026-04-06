@@ -27,7 +27,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Template not found' }, { status: 404 });
   }
 
-  const pricing = (template.pricing as { pricing_type: string; price_cents: number }[])?.[0];
+  // Supabase returns pricing as either an object (unique FK) or array — handle both
+  const pricingRaw = template.pricing as { pricing_type: string; price_cents: number } | { pricing_type: string; price_cents: number }[];
+  const pricing = Array.isArray(pricingRaw) ? pricingRaw[0] : pricingRaw;
   if (!pricing || pricing.pricing_type === 'free') {
     return NextResponse.json({ error: 'This template is free — clone it directly' }, { status: 400 });
   }

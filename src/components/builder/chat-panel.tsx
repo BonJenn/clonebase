@@ -8,15 +8,23 @@ interface Message {
   content: string;
 }
 
+interface SelectedElement {
+  editId: string;
+  tag: string;
+  text: string;
+}
+
 interface ChatPanelProps {
   messages: Message[];
   onSend: (message: string) => void;
   generating: boolean;
   onRetry?: () => void;
   canRetry?: boolean;
+  selectedElement?: SelectedElement | null;
+  onClearSelectedElement?: () => void;
 }
 
-export function ChatPanel({ messages, onSend, generating, onRetry, canRetry }: ChatPanelProps) {
+export function ChatPanel({ messages, onSend, generating, onRetry, canRetry, selectedElement, onClearSelectedElement }: ChatPanelProps) {
   const [input, setInput] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -84,11 +92,32 @@ export function ChatPanel({ messages, onSend, generating, onRetry, canRetry }: C
 
       {/* Input */}
       <form onSubmit={handleSubmit} className="border-t border-gray-200 p-4">
+        {selectedElement && (
+          <div className="mb-2 flex items-center gap-2 rounded-lg border border-pink-200 bg-pink-50 px-3 py-1.5 text-xs">
+            <span className="font-medium text-pink-700">Editing:</span>
+            <span className="rounded bg-white px-1.5 py-0.5 font-mono text-[10px] text-pink-700">{`<${selectedElement.tag}>`}</span>
+            {selectedElement.text && (
+              <span className="truncate text-pink-900">&ldquo;{selectedElement.text}&rdquo;</span>
+            )}
+            <button
+              type="button"
+              onClick={onClearSelectedElement}
+              className="ml-auto text-pink-500 hover:text-pink-700"
+              aria-label="Clear selection"
+            >
+              ✕
+            </button>
+          </div>
+        )}
         <div className="flex gap-2">
           <input
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder={messages.length === 0 ? 'e.g., Build me a recipe sharing app...' : 'e.g., Add a dark mode toggle...'}
+            placeholder={
+              selectedElement
+                ? 'e.g., make this red and bigger...'
+                : messages.length === 0 ? 'e.g., Build me a recipe sharing app...' : 'e.g., Add a dark mode toggle...'
+            }
             className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
             disabled={generating}
           />

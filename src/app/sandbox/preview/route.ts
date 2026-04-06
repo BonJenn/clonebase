@@ -11,10 +11,31 @@ export async function GET() {
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/react@18/umd/react.production.min.js" crossorigin="anonymous"></script>
   <script src="https://cdn.jsdelivr.net/npm/react-dom@18/umd/react-dom.production.min.js" crossorigin="anonymous"></script>
-  <style>body { margin: 0; }</style>
+  <style>
+    body { margin: 0; }
+    /* Edit mode visual affordances — only active when body.edit-mode is set */
+    body.edit-mode [data-edit-id] {
+      cursor: pointer;
+      outline-offset: 2px;
+      transition: outline-color 0.1s ease;
+    }
+    body.edit-mode [data-edit-id]:hover {
+      outline: 2px dashed rgb(99, 102, 241);
+    }
+    body.edit-mode [data-edit-id][contenteditable="true"] {
+      outline: 2px solid rgb(99, 102, 241) !important;
+      background: rgba(99, 102, 241, 0.05);
+      cursor: text;
+    }
+    body.edit-mode [data-edit-id].clonebase-selected {
+      outline: 2px solid rgb(236, 72, 153) !important;
+      outline-offset: 2px;
+    }
+  </style>
 </head>
 <body>
   <div id="root"></div>
+  <input type="file" id="clonebase-image-input" accept="image/*" style="display:none" />
   <script>
 // --- SDK Shims (flat — each hook is a direct property on window.__SDK__) ---
 var dataStore = {};
@@ -251,12 +272,172 @@ function sendDataSnapshot() {
   window.parent.postMessage({ type: 'data-snapshot', collections: snapshot }, '*');
 }
 
+// --- Edit Mode ---
+var editMode = false;
+var pendingImageEditId = null;
+
+function setEditMode(enabled) {
+  editMode = !!enabled;
+  if (editMode) {
+    document.body.classList.add('edit-mode');
+  } else {
+    document.body.classList.remove('edit-mode');
+    // Clear any pending edits or selections
+    var editing = document.querySelector('[contenteditable="true"][data-edit-id]');
+    if (editing) editing.removeAttribute('contenteditable');
+    var selected = document.querySelector('[data-edit-id].clonebase-selected');
+    if (selected) selected.classList.remove('clonebase-selected');
+  }
+}
+
+function findEditableAncestor(el) {
+  while (el && el !== document.body) {
+    if (el.getAttribute && el.getAttribute('data-edit-id')) return el;
+    el = el.parentNode;
+  }
+  return null;
+}
+
+// Click handler runs in CAPTURE phase so it intercepts before app onClick handlers fire
+document.addEventListener('click', function(e) {
+  if (!editMode) return;
+  var target = findEditableAncestor(e.target);
+  if (!target) return;
+
+  // Shift+click → click-to-prompt selection (any element)
+  if (e.shiftKey) {
+    e.preventDefault();
+    e.stopPropagation();
+    // Clear previous selection
+    var prev = document.querySelector('[data-edit-id].clonebase-selected');
+    if (prev) prev.classList.remove('clonebase-selected');
+    target.classList.add('clonebase-selected');
+    var editId = target.getAttribute('data-edit-id');
+    var tag = target.tagName.toLowerCase();
+    var text = (target.textContent || '').trim().slice(0, 60);
+    window.parent.postMessage({
+      type: 'element-selected',
+      editId: editId,
+      tag: tag,
+      text: text,
+    }, '*');
+    return;
+  }
+
+  // Image swap
+  if (target.tagName === 'IMG') {
+    e.preventDefault();
+    e.stopPropagation();
+    pendingImageEditId = target.getAttribute('data-edit-id');
+    var input = document.getElementById('clonebase-image-input');
+    input.value = '';
+    input.click();
+    return;
+  }
+
+  // Text edit — only for text-only elements
+  // Skip if the element has child elements (other than just text nodes)
+  var hasOnlyText = true;
+  for (var i = 0; i < target.childNodes.length; i++) {
+    if (target.childNodes[i].nodeType !== Node.TEXT_NODE) {
+      hasOnlyText = false;
+      break;
+    }
+  }
+  if (!hasOnlyText) {
+    // Element has child elements — treat as click-to-prompt selection instead
+    e.preventDefault();
+    e.stopPropagation();
+    var prevSel = document.querySelector('[data-edit-id].clonebase-selected');
+    if (prevSel) prevSel.classList.remove('clonebase-selected');
+    target.classList.add('clonebase-selected');
+    window.parent.postMessage({
+      type: 'element-selected',
+      editId: target.getAttribute('data-edit-id'),
+      tag: target.tagName.toLowerCase(),
+      text: (target.textContent || '').trim().slice(0, 60),
+    }, '*');
+    return;
+  }
+
+  e.preventDefault();
+  e.stopPropagation();
+  var origText = target.textContent;
+  target.setAttribute('contenteditable', 'true');
+  target.dataset.clonebaseOrigText = origText;
+  target.focus();
+  // Select all text in the element
+  var range = document.createRange();
+  range.selectNodeContents(target);
+  var sel = window.getSelection();
+  sel.removeAllRanges();
+  sel.addRange(range);
+}, true);
+
+// Commit text edits on blur
+document.addEventListener('blur', function(e) {
+  if (!editMode) return;
+  var target = e.target;
+  if (!target || !target.getAttribute || target.getAttribute('contenteditable') !== 'true') return;
+  if (!target.getAttribute('data-edit-id')) return;
+
+  target.removeAttribute('contenteditable');
+  var newText = target.textContent;
+  var origText = target.dataset.clonebaseOrigText || '';
+  delete target.dataset.clonebaseOrigText;
+
+  if (newText !== origText) {
+    window.parent.postMessage({
+      type: 'element-edited',
+      kind: 'text',
+      editId: target.getAttribute('data-edit-id'),
+      oldValue: origText,
+      newValue: newText,
+    }, '*');
+  }
+}, true);
+
+// Prevent Enter from inserting newlines in editable text — commit instead
+document.addEventListener('keydown', function(e) {
+  if (!editMode) return;
+  var target = e.target;
+  if (!target || !target.getAttribute || target.getAttribute('contenteditable') !== 'true') return;
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    target.blur();
+  } else if (e.key === 'Escape') {
+    e.preventDefault();
+    // Revert
+    target.textContent = target.dataset.clonebaseOrigText || target.textContent;
+    target.blur();
+  }
+}, true);
+
+// Image input change handler
+document.getElementById('clonebase-image-input').addEventListener('change', function(e) {
+  var file = e.target.files && e.target.files[0];
+  if (!file || !pendingImageEditId) return;
+  var editId = pendingImageEditId;
+  pendingImageEditId = null;
+  // Pass the File via postMessage — modern browsers support structured cloning Files
+  window.parent.postMessage({
+    type: 'element-edited',
+    kind: 'image',
+    editId: editId,
+    file: file,
+  }, '*');
+});
+
 window.addEventListener('message', function(event) {
   if (!event.data || !event.data.type) return;
 
   switch (event.data.type) {
     case 'render':
       renderComponent(event.data.code, event.data.componentName || 'Page');
+      break;
+
+    case 'set-edit-mode':
+      setEditMode(event.data.enabled);
       break;
 
     case 'request-data':

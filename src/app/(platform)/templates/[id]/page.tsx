@@ -26,7 +26,9 @@ export default async function TemplateDetailPage({ params }: TemplateDetailProps
   if (!template) notFound();
 
   const tpl = template as AppTemplate & { creator: { display_name: string; avatar_url: string | null } };
-  const price = tpl.pricing;
+  // Supabase returns pricing as either an object or array — normalize to object
+  const priceRaw = tpl.pricing as unknown;
+  const price = (Array.isArray(priceRaw) ? priceRaw[0] : priceRaw) as { pricing_type: string; price_cents: number } | undefined;
   const isFree = !price || price.pricing_type === 'free';
   const integrations = tpl.integration_definitions || [];
 
