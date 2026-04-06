@@ -12,9 +12,11 @@ interface ChatPanelProps {
   messages: Message[];
   onSend: (message: string) => void;
   generating: boolean;
+  onRetry?: () => void;
+  canRetry?: boolean;
 }
 
-export function ChatPanel({ messages, onSend, generating }: ChatPanelProps) {
+export function ChatPanel({ messages, onSend, generating, onRetry, canRetry }: ChatPanelProps) {
   const [input, setInput] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -65,6 +67,16 @@ export function ChatPanel({ messages, onSend, generating }: ChatPanelProps) {
                 </div>
               </div>
             </div>
+          </div>
+        )}
+        {canRetry && !generating && (
+          <div className="flex justify-start">
+            <button
+              onClick={onRetry}
+              className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-500 transition-colors"
+            >
+              🔄 Retry
+            </button>
           </div>
         )}
         <div ref={messagesEndRef} />

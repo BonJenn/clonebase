@@ -44,6 +44,7 @@ export function BuilderWorkspace({
   const [showPublish, setShowPublish] = useState(false);
   const [componentName, setComponentName] = useState('Page');
   const [showAnimation, setShowAnimation] = useState(false);
+  const [lastFailedMessage, setLastFailedMessage] = useState<string | null>(null);
 
   // Transpile code for preview whenever it changes
   const transpile = useCallback(async (pageCode: string) => {
@@ -105,11 +106,15 @@ export function BuilderWorkspace({
       if (!res.ok) {
         setMessages([...updatedMessages, {
           role: 'assistant',
-          content: `Error: ${data.error || 'Generation failed'}`,
+          content: `Something went wrong: ${data.error || 'Generation failed'}. Tap "Retry" or rephrase your request.`,
         }]);
+        setLastFailedMessage(content);
         setGenerating(false);
+        setShowAnimation(false);
         return;
       }
+
+      setLastFailedMessage(null);
 
       // Update code
       const newCode: GeneratedCode = {
@@ -138,8 +143,9 @@ export function BuilderWorkspace({
     } catch {
       setMessages([...updatedMessages, {
         role: 'assistant',
-        content: 'Network error. Please try again.',
+        content: 'Network error — the request timed out or failed. Tap "Retry" or try a simpler request.',
       }]);
+      setLastFailedMessage(content);
       setShowAnimation(false);
     }
 
@@ -147,7 +153,16 @@ export function BuilderWorkspace({
   }
 
   return (
-    <div className="flex h-[calc(100vh-4rem)] flex-col">
+    <>
+    {/* Mobile message */}
+    <div className="flex h-[calc(100vh-4rem)] items-center justify-center p-8 text-center sm:hidden">
+      <div>
+        <p className="text-4xl">💻</p>
+        <h2 className="mt-4 text-xl font-bold text-gray-900">Desktop Required</h2>
+        <p className="mt-2 text-gray-600">The app builder needs a larger screen. Open this page on a desktop or laptop.</p>
+      </div>
+    </div>
+    <div className="hidden sm:flex h-[calc(100vh-4rem)] flex-col">
       {/* Toolbar */}
       <div className="flex items-center justify-between border-b border-gray-200 bg-white px-4 py-2">
         <h2 className="text-sm font-medium text-gray-700 truncate">{templateName}</h2>
@@ -217,6 +232,8 @@ export function BuilderWorkspace({
             messages={messages}
             onSend={handleSend}
             generating={generating}
+            canRetry={!!lastFailedMessage}
+            onRetry={() => lastFailedMessage && handleSend(lastFailedMessage)}
           />
         </div>
 
@@ -259,5 +276,6 @@ export function BuilderWorkspace({
         />
       )}
     </div>
+    </>
   );
 }
