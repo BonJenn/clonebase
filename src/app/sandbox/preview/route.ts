@@ -11,6 +11,7 @@ export async function GET() {
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/react@18/umd/react.production.min.js" crossorigin="anonymous"></script>
   <script src="https://cdn.jsdelivr.net/npm/react-dom@18/umd/react-dom.production.min.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js" crossorigin="anonymous"></script>
   <style>
     body { margin: 0; }
     /* Edit mode visual affordances — only active when body.edit-mode is set */
@@ -428,6 +429,60 @@ document.getElementById('clonebase-image-input').addEventListener('change', func
   }, '*');
 });
 
+// --- Screenshot capture via html2canvas ---
+// Used by the publish flow to generate a preview thumbnail stored as preview_url
+// on the template. Runs inside the sandboxed iframe so we have direct DOM access.
+function captureScreenshot(requestId) {
+  if (typeof html2canvas !== 'function') {
+    window.parent.postMessage({
+      type: 'capture-result',
+      requestId: requestId,
+      error: 'html2canvas not loaded',
+    }, '*');
+    return;
+  }
+  // Disable edit-mode visual affordances during capture so outlines/hover rings
+  // don't appear in the screenshot.
+  var wasEditMode = document.body.classList.contains('edit-mode');
+  if (wasEditMode) document.body.classList.remove('edit-mode');
+
+  html2canvas(document.body, {
+    backgroundColor: '#ffffff',
+    scale: 1,
+    logging: false,
+    useCORS: true,
+    allowTaint: true,
+    // Cap the captured area so huge scrolling pages don't produce massive PNGs
+    windowWidth: Math.min(document.documentElement.scrollWidth, 1600),
+    windowHeight: Math.min(document.documentElement.scrollHeight, 1200),
+  }).then(function(canvas) {
+    if (wasEditMode) document.body.classList.add('edit-mode');
+    try {
+      var dataUrl = canvas.toDataURL('image/png');
+      window.parent.postMessage({
+        type: 'capture-result',
+        requestId: requestId,
+        dataUrl: dataUrl,
+        width: canvas.width,
+        height: canvas.height,
+      }, '*');
+    } catch (err) {
+      window.parent.postMessage({
+        type: 'capture-result',
+        requestId: requestId,
+        error: 'toDataURL failed: ' + err.message,
+      }, '*');
+    }
+  }).catch(function(err) {
+    if (wasEditMode) document.body.classList.add('edit-mode');
+    window.parent.postMessage({
+      type: 'capture-result',
+      requestId: requestId,
+      error: 'html2canvas failed: ' + (err && err.message ? err.message : String(err)),
+    }, '*');
+  });
+}
+
 window.addEventListener('message', function(event) {
   if (!event.data || !event.data.type) return;
 
@@ -442,6 +497,10 @@ window.addEventListener('message', function(event) {
 
     case 'request-data':
       sendDataSnapshot();
+      break;
+
+    case 'capture':
+      captureScreenshot(event.data.requestId);
       break;
 
     case 'data-insert': {

@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { ChatPanel } from '@/components/builder/chat-panel';
-import { LivePreview, type ElementEditEvent, type ElementSelectedEvent } from '@/components/builder/live-preview';
+import { LivePreview, type ElementEditEvent, type ElementSelectedEvent, type LivePreviewHandle } from '@/components/builder/live-preview';
 import { CodePreview } from '@/components/builder/code-preview';
 import { DataPanel } from '@/components/builder/data-panel';
 import { MediaPanel } from '@/components/builder/media-panel';
@@ -47,6 +47,7 @@ export function BuilderWorkspace({
   const [showAnimation, setShowAnimation] = useState(false);
   const [lastFailedMessage, setLastFailedMessage] = useState<string | null>(null);
   const [selectedElement, setSelectedElement] = useState<ElementSelectedEvent | null>(null);
+  const livePreviewRef = useRef<LivePreviewHandle>(null);
 
   // Transpile code for preview whenever it changes
   const transpile = useCallback(async (pageCode: string) => {
@@ -346,6 +347,7 @@ export function BuilderWorkspace({
               </div>
             )}
             <LivePreview
+              ref={livePreviewRef}
               transpiledCode={transpiledCode}
               componentName={componentName}
               onElementEdited={handleElementEdited}
@@ -374,6 +376,7 @@ export function BuilderWorkspace({
           templateId={templateId}
           templateName={templateName}
           onClose={() => setShowPublish(false)}
+          capturePreview={() => livePreviewRef.current?.capturePreview() ?? Promise.resolve(null)}
         />
       )}
     </div>

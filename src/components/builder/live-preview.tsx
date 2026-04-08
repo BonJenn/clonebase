@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useEffect, useState, useCallback } from 'react';
+import { useRef, useEffect, useState, useCallback, forwardRef, useImperativeHandle } from 'react';
 
 export interface ElementEditEvent {
   kind: 'text' | 'image';
@@ -16,6 +16,15 @@ export interface ElementSelectedEvent {
   text: string;
 }
 
+export interface LivePreviewHandle {
+  /**
+   * Captures a screenshot of the current preview via html2canvas running inside
+   * the sandbox iframe. Resolves with a base64 PNG data URL, or null on failure.
+   * Used by the publish flow to generate the template's preview_url.
+   */
+  capturePreview(): Promise<string | null>;
+}
+
 interface LivePreviewProps {
   transpiledCode: string | null;
   componentName: string;
@@ -23,11 +32,40 @@ interface LivePreviewProps {
   onElementSelected?: (event: ElementSelectedEvent) => void;
 }
 
-export function LivePreview({ transpiledCode, componentName, onElementEdited, onElementSelected }: LivePreviewProps) {
+export const LivePreview = forwardRef<LivePreviewHandle, LivePreviewProps>(function LivePreview(
+  { transpiledCode, componentName, onElementEdited, onElementSelected },
+  forwardedRef
+) {
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const [sandboxReady, setSandboxReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [editMode, setEditMode] = useState(false);
+
+  // Pending capture requests — resolved when the matching capture-result arrives
+  const captureResolvers = useRef(new Map<string, (dataUrl: string | null) => void>());
+
+  useImperativeHandle(forwardedRef, () => ({
+    async capturePreview() {
+      const iframe = iframeRef.current;
+      if (!iframe?.contentWindow || !sandboxReady) return null;
+
+      return new Promise<string | null>((resolve) => {
+        const requestId = `cap-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+        captureResolvers.current.set(requestId, resolve);
+
+        iframe.contentWindow!.postMessage({ type: 'capture', requestId }, '*');
+
+        // Safety timeout: html2canvas usually takes 1-3s on typical apps.
+        // After 10s, assume it failed and resolve null.
+        setTimeout(() => {
+          if (captureResolvers.current.has(requestId)) {
+            captureResolvers.current.delete(requestId);
+            resolve(null);
+          }
+        }, 10_000);
+      });
+    },
+  }), [sandboxReady]);
 
   const handleMessage = useCallback((event: MessageEvent) => {
     const data = event.data;
@@ -38,6 +76,12 @@ export function LivePreview({ transpiledCode, componentName, onElementEdited, on
       setError(null);
     } else if (data.type === 'preview-error') {
       setError(data.error);
+    } else if (data.type === 'capture-result') {
+      const resolver = captureResolvers.current.get(data.requestId);
+      if (resolver) {
+        captureResolvers.current.delete(data.requestId);
+        resolver(data.error ? null : data.dataUrl || null);
+      }
     } else if (data.type === 'element-edited') {
       onElementEdited?.({
         kind: data.kind,
@@ -125,4 +169,4 @@ export function LivePreview({ transpiledCode, componentName, onElementEdited, on
       />
     </div>
   );
-}
+});

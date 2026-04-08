@@ -10,9 +10,26 @@ interface PublishDialogProps {
   templateId: string;
   templateName: string;
   onClose: () => void;
+  /**
+   * Captures a screenshot of the live preview iframe. Called before publishing
+   * so the resulting PNG can be uploaded and saved as the template's preview_url.
+   * Returns a base64 PNG data URL, or null if capture failed.
+   */
+  capturePreview?: () => Promise<string | null>;
 }
 
-export function PublishDialog({ templateId, templateName, onClose }: PublishDialogProps) {
+/** Convert a data URL to a File for uploading via FormData. */
+function dataUrlToFile(dataUrl: string, filename: string): File | null {
+  const match = dataUrl.match(/^data:([^;]+);base64,(.+)$/);
+  if (!match) return null;
+  const mime = match[1];
+  const binary = atob(match[2]);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  return new File([bytes], filename, { type: mime });
+}
+
+export function PublishDialog({ templateId, templateName, onClose, capturePreview }: PublishDialogProps) {
   const router = useRouter();
   const [name, setName] = useState(templateName);
   const [description, setDescription] = useState('');
@@ -20,6 +37,7 @@ export function PublishDialog({ templateId, templateName, onClose }: PublishDial
   const [pricingType, setPricingType] = useState<'free' | 'one_time'>('free');
   const [priceAmount, setPriceAmount] = useState('');
   const [loading, setLoading] = useState(false);
+  const [status, setStatus] = useState('');
   const [error, setError] = useState('');
 
   async function handlePublish(e: React.FormEvent) {
@@ -27,6 +45,36 @@ export function PublishDialog({ templateId, templateName, onClose }: PublishDial
     setError('');
     setLoading(true);
 
+    // Capture + upload a preview screenshot before publishing. Non-fatal: if
+    // either step fails we still publish without a preview_url.
+    let previewUrl: string | null = null;
+    if (capturePreview) {
+      try {
+        setStatus('Capturing preview...');
+        const dataUrl = await capturePreview();
+        if (dataUrl) {
+          setStatus('Uploading preview...');
+          const file = dataUrlToFile(dataUrl, `${templateId}.png`);
+          if (file) {
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('template_id', templateId);
+            const uploadRes = await fetch('/api/builder/upload-preview', {
+              method: 'POST',
+              body: formData,
+            });
+            if (uploadRes.ok) {
+              const uploadData = await uploadRes.json();
+              previewUrl = uploadData.url || null;
+            }
+          }
+        }
+      } catch {
+        // Non-fatal: continue publishing without a preview
+      }
+    }
+
+    setStatus('Publishing...');
     const res = await fetch('/api/builder/publish', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -37,12 +85,14 @@ export function PublishDialog({ templateId, templateName, onClose }: PublishDial
         category,
         pricing_type: pricingType,
         price_cents: pricingType === 'one_time' ? Math.round(parseFloat(priceAmount || '0') * 100) : 0,
+        preview_url: previewUrl,
       }),
     });
 
     const data = await res.json();
     if (!res.ok) {
       setError(data.validation_errors?.join('\n') || data.error || 'Failed to publish');
+      setStatus('');
       setLoading(false);
       return;
     }
@@ -115,6 +165,10 @@ export function PublishDialog({ templateId, templateName, onClose }: PublishDial
               />
             )}
           </div>
+
+          {loading && status && (
+            <p className="text-xs text-gray-500">{status}</p>
+          )}
 
           <div className="flex gap-3 pt-2">
             <Button type="button" variant="secondary" className="flex-1" onClick={onClose}>Cancel</Button>

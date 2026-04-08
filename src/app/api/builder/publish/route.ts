@@ -8,7 +8,7 @@ export async function POST(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const { template_id, name, description, category, pricing_type, price_cents } = await request.json();
+  const { template_id, name, description, category, pricing_type, price_cents, preview_url } = await request.json();
   if (!template_id) return NextResponse.json({ error: 'template_id is required' }, { status: 400 });
 
   // Verify ownership
@@ -58,6 +58,11 @@ export async function POST(request: NextRequest) {
   if (name) updates.name = name.trim();
   if (description) updates.description = description.trim();
   if (category) updates.category = category;
+  // preview_url is uploaded ahead of the publish call via /api/builder/upload-preview.
+  // Allow explicit null to clear an existing preview.
+  if (typeof preview_url === 'string' || preview_url === null) {
+    updates.preview_url = preview_url;
+  }
 
   await supabase
     .from('app_templates')
