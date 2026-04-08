@@ -6,7 +6,20 @@ import { planApp } from '@/lib/builder/planner';
 import { researchTopic, searchImages } from '@/lib/builder/researcher';
 import { detectBlueprint, formatBlueprintForPrompt } from '@/lib/builder/app-blueprints';
 
-export const maxDuration = 120;
+// Function timeout. GPT-4.1 with max_tokens: 16384 on a ~3K token system prompt
+// routinely takes 60-90s; complex generations can push 120s. We set this to 300
+// (Vercel's current default max on Pro) to give first-gen + an optional bug-fix
+// retry room to complete without hitting a platform 504.
+export const maxDuration = 300;
+
+// Per-request OpenAI timeouts. These are strictly less than maxDuration so that
+// a hanging OpenAI call errors cleanly instead of starving the function budget.
+const PRIMARY_CALL_TIMEOUT_MS = 200_000;
+const RETRY_CALL_TIMEOUT_MS = 90_000;
+
+// When bug-fix retry is about to fire, we only proceed if there's enough budget
+// left to realistically complete a second call + db writes.
+const RETRY_MIN_BUDGET_MS = 100_000;
 
 let _openai: OpenAI | null = null;
 function getOpenAI() {
@@ -62,6 +75,10 @@ function calculateDrift(oldCode: string, newCode: string): { ratio: number; chan
 
 // POST /api/builder/generate — Generate or iterate on template code
 export async function POST(request: NextRequest) {
+  const startTime = Date.now();
+  const elapsed = () => Date.now() - startTime;
+  const remaining = () => (maxDuration * 1000) - elapsed();
+
   const supabase = await createServerSupabaseClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -242,20 +259,36 @@ IMPORTANT CONSTRAINTS FROM PLAN:
 
   // Rough token estimate (~4 chars per token) — useful for spotting prompt bloat.
   const approxTokens = Math.round(systemPrompt.length / 4);
-  console.log(`[builder] system prompt: ${systemPrompt.length} chars / ~${approxTokens} tokens (game=${(plan as unknown as { app_type?: string } | null)?.app_type === 'game'}, auth=${plan?.needs_auth === true}, research=${plan?.needs_research === true}, bugfix=${isBugFix})`);
+  console.log(`[builder] t+${elapsed()}ms system prompt: ${systemPrompt.length} chars / ~${approxTokens} tokens (model=${model}, game=${(plan as unknown as { app_type?: string } | null)?.app_type === 'game'}, auth=${plan?.needs_auth === true}, research=${plan?.needs_research === true}, bugfix=${isBugFix}, blueprint=${blueprint?.id || 'none'})`);
 
-  const response = await getOpenAI().chat.completions.create({
-    model,
-    max_tokens: 16384,
-    temperature: isBugFix ? 0.1 : 0.7, // Near-deterministic for bug fixes — minimum drift
-    messages: [
-      { role: 'system', content: systemPrompt },
-      ...conversationMessages.map((m: { role: string; content: string }) => ({
-        role: m.role as 'user' | 'assistant',
-        content: m.content,
-      })),
-    ],
-  });
+  let response;
+  try {
+    response = await getOpenAI().chat.completions.create(
+      {
+        model,
+        max_tokens: 16384,
+        temperature: isBugFix ? 0.1 : 0.7, // Near-deterministic for bug fixes — minimum drift
+        messages: [
+          { role: 'system', content: systemPrompt },
+          ...conversationMessages.map((m: { role: string; content: string }) => ({
+            role: m.role as 'user' | 'assistant',
+            content: m.content,
+          })),
+        ],
+      },
+      { timeout: PRIMARY_CALL_TIMEOUT_MS }
+    );
+  } catch (err) {
+    const message = (err as Error).message || 'OpenAI call failed';
+    console.log(`[builder] t+${elapsed()}ms primary call FAILED: ${message}`);
+    return NextResponse.json(
+      { error: message.includes('timeout') || message.includes('aborted')
+        ? 'The generation took too long. Try a simpler request or break it into smaller steps.'
+        : `Generation failed: ${message}` },
+      { status: 504 }
+    );
+  }
+  console.log(`[builder] t+${elapsed()}ms primary call complete`);
 
   const textContent = response.choices[0]?.message?.content;
   if (!textContent) {
@@ -278,7 +311,14 @@ IMPORTANT CONSTRAINTS FROM PLAN:
   if (isBugFix && existing?.page_code && generated.page_code) {
     const drift = calculateDrift(existing.page_code, generated.page_code);
     if (drift.total >= MIN_FILE_LINES && drift.ratio > DRIFT_THRESHOLD) {
-      const feedbackMessage = `STOP. Your previous response changed ${Math.round(drift.ratio * 100)}% of page_code (${drift.changed} of ${drift.total} lines are new or modified). The user reported ONE specific bug. A correct bug fix changes 1-15 lines, not ${drift.changed}.
+      // Budget check: only retry if we have enough time left to realistically
+      // complete the second call + db writes. Otherwise we'd just 504 anyway.
+      if (remaining() < RETRY_MIN_BUDGET_MS) {
+        console.log(`[builder] t+${elapsed()}ms SKIPPING retry — only ${remaining()}ms left (need ${RETRY_MIN_BUDGET_MS}ms). Drift was ${Math.round(drift.ratio * 100)}%.`);
+      } else {
+        console.log(`[builder] t+${elapsed()}ms triggering retry (drift=${Math.round(drift.ratio * 100)}%, ${drift.changed}/${drift.total} lines changed)`);
+
+        const feedbackMessage = `STOP. Your previous response changed ${Math.round(drift.ratio * 100)}% of page_code (${drift.changed} of ${drift.total} lines are new or modified). The user reported ONE specific bug. A correct bug fix changes 1-15 lines, not ${drift.changed}.
 
 Look at the current code in the system prompt above. Find the EXACT lines that cause the reported bug. Output the WHOLE file again, but BYTE-FOR-BYTE identical to the current code EXCEPT for those few lines.
 
@@ -286,30 +326,42 @@ Do not refactor. Do not rename. Do not restyle. Do not "improve" anything. Do no
 
 Return the JSON now.`;
 
-      const retryResponse = await getOpenAI().chat.completions.create({
-        model,
-        max_tokens: 16384,
-        temperature: 0,
-        messages: [
-          { role: 'system', content: systemPrompt },
-          ...conversationMessages.map((m: { role: string; content: string }) => ({
-            role: m.role as 'user' | 'assistant',
-            content: m.content,
-          })),
-          { role: 'assistant', content: textContent },
-          { role: 'user', content: feedbackMessage },
-        ],
-      });
+        try {
+          const retryResponse = await getOpenAI().chat.completions.create(
+            {
+              model,
+              max_tokens: 16384,
+              temperature: 0,
+              messages: [
+                { role: 'system', content: systemPrompt },
+                ...conversationMessages.map((m: { role: string; content: string }) => ({
+                  role: m.role as 'user' | 'assistant',
+                  content: m.content,
+                })),
+                { role: 'assistant', content: textContent },
+                { role: 'user', content: feedbackMessage },
+              ],
+            },
+            { timeout: Math.min(RETRY_CALL_TIMEOUT_MS, Math.max(20_000, remaining() - 20_000)) }
+          );
 
-      const retryContent = retryResponse.choices[0]?.message?.content;
-      if (retryContent) {
-        const retryParsed = parseGenerated(retryContent);
-        if (retryParsed?.page_code) {
-          const retryDrift = calculateDrift(existing.page_code, retryParsed.page_code);
-          // Only accept retry if it actually drifted less
-          if (retryDrift.ratio < drift.ratio) {
-            generated = retryParsed;
+          const retryContent = retryResponse.choices[0]?.message?.content;
+          if (retryContent) {
+            const retryParsed = parseGenerated(retryContent);
+            if (retryParsed?.page_code) {
+              const retryDrift = calculateDrift(existing.page_code, retryParsed.page_code);
+              // Only accept retry if it actually drifted less
+              if (retryDrift.ratio < drift.ratio) {
+                console.log(`[builder] t+${elapsed()}ms retry accepted (drift ${Math.round(drift.ratio * 100)}% → ${Math.round(retryDrift.ratio * 100)}%)`);
+                generated = retryParsed;
+              } else {
+                console.log(`[builder] t+${elapsed()}ms retry rejected (drift did not improve: ${Math.round(retryDrift.ratio * 100)}%)`);
+              }
+            }
           }
+        } catch (retryErr) {
+          // Retry failure is non-fatal — keep the original response and continue
+          console.log(`[builder] t+${elapsed()}ms retry failed, keeping original: ${(retryErr as Error).message}`);
         }
       }
     }
