@@ -19,7 +19,7 @@ export async function POST(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const { template_id, messages } = await request.json();
+  const { template_id, messages, element_context } = await request.json();
   if (!template_id || !messages?.length) {
     return NextResponse.json({ error: 'template_id and messages are required' }, { status: 400 });
   }
@@ -130,18 +130,53 @@ IMPORTANT CONSTRAINTS FROM PLAN:
   const systemPrompt = buildSystemPrompt(existing || undefined);
   const model = isFirstGeneration ? 'gpt-4.1' : 'gpt-4.1-mini';
 
+  // If the user has selected a specific element via click-to-prompt, instruct
+  // the model to modify only that element.
+  let elementContextPrompt = '';
+  if (element_context && typeof element_context === 'object' && element_context.editId) {
+    const safeEditId = String(element_context.editId).slice(0, 100);
+    const safeTag = String(element_context.tag || 'element').slice(0, 30);
+    const safeText = String(element_context.text || '').slice(0, 200);
+    elementContextPrompt = `
+
+## TARGETED ELEMENT EDIT
+The user has selected a specific element in the preview. They want to modify ONLY this element:
+- data-edit-id: "${safeEditId}"
+- tag: <${safeTag}>
+- current text: "${safeText}"
+
+CRITICAL: Locate the element with data-edit-id="${safeEditId}" in the current page_code and apply the user's request to ONLY that element. Do NOT regenerate or restructure other parts of the page. Return the FULL updated page_code with only the targeted change applied. Preserve all existing data-edit-id attributes.`;
+  }
+
   // For follow-ups, only send the last few messages to stay within token limits
   // The existing code is already in the system prompt via buildSystemPrompt
   const conversationMessages = isFirstGeneration
     ? messages
     : messages.slice(-6); // Last 3 exchanges max
 
+  // Detect bug fix mode from the latest user message
+  const latestUserMessage = [...messages].reverse().find((m: { role: string }) => m.role === 'user')?.content || '';
+  const bugFixKeywords = /\b(bug|broken|doesn'?t work|isn'?t working|not working|fix|error|crash|crashes|wrong|fails?|can'?t|won'?t|nothing happens|stopped working)\b/i;
+  const isBugFix = bugFixKeywords.test(latestUserMessage);
+
+  const bugFixContext = isBugFix ? `
+
+## ⚠️ BUG FIX MODE ACTIVE ⚠️
+The user is reporting a bug. You MUST:
+1. Carefully read the current code in the system prompt
+2. Find the specific function/component the user is complaining about
+3. Trace through the code path to find the bug
+4. Fix ONLY that bug — do not change anything else
+5. Preserve all other code, design, data, and features identically
+6. In the explanation, clearly state what was wrong and what you changed
+` : '';
+
   const response = await getOpenAI().chat.completions.create({
     model,
     max_tokens: 16384,
-    temperature: 0.7,
+    temperature: isBugFix ? 0.2 : 0.7, // Lower temperature for bug fixes — more focused, less creative
     messages: [
-      { role: 'system', content: systemPrompt + planContext },
+      { role: 'system', content: systemPrompt + planContext + elementContextPrompt + bugFixContext },
       ...conversationMessages.map((m: { role: string; content: string }) => ({
         role: m.role as 'user' | 'assistant',
         content: m.content,
