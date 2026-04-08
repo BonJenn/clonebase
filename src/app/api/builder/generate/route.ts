@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import OpenAI from 'openai';
-import { buildSystemPrompt } from '@/lib/builder/system-prompt';
+import { composePrompt } from '@/lib/builder/prompts';
 import { planApp } from '@/lib/builder/planner';
 import { researchTopic, searchImages } from '@/lib/builder/researcher';
 
@@ -99,7 +99,7 @@ export async function POST(request: NextRequest) {
   if (isFirstGeneration) {
     plan = await planApp(messages[0].content);
     const planAny = plan as unknown as Record<string, unknown>;
-    const appType = planAny.app_type || 'standard';
+    const appType = (planAny.app_type as string) || 'standard';
 
     // Research step: if the planner detected a real business/topic, look it up
     let researchContext = '';
@@ -188,29 +188,10 @@ IMPORTANT CONSTRAINTS FROM PLAN:
   }
 
   // PASS 2: Generate the code
-  const systemPrompt = buildSystemPrompt(existing || undefined);
   const model = isFirstGeneration ? 'gpt-4.1' : 'gpt-4.1-mini';
 
-  // If the user has selected a specific element via click-to-prompt, instruct
-  // the model to modify only that element.
-  let elementContextPrompt = '';
-  if (element_context && typeof element_context === 'object' && element_context.editId) {
-    const safeEditId = String(element_context.editId).slice(0, 100);
-    const safeTag = String(element_context.tag || 'element').slice(0, 30);
-    const safeText = String(element_context.text || '').slice(0, 200);
-    elementContextPrompt = `
-
-## TARGETED ELEMENT EDIT
-The user has selected a specific element in the preview. They want to modify ONLY this element:
-- data-edit-id: "${safeEditId}"
-- tag: <${safeTag}>
-- current text: "${safeText}"
-
-CRITICAL: Locate the element with data-edit-id="${safeEditId}" in the current page_code and apply the user's request to ONLY that element. Do NOT regenerate or restructure other parts of the page. Return the FULL updated page_code with only the targeted change applied. Preserve all existing data-edit-id attributes.`;
-  }
-
-  // For follow-ups, only send the last few messages to stay within token limits
-  // The existing code is already in the system prompt via buildSystemPrompt
+  // For follow-ups, only send the last few messages to stay within token limits.
+  // The existing code is already in the system prompt via composePrompt.
   const conversationMessages = isFirstGeneration
     ? messages
     : messages.slice(-6); // Last 3 exchanges max
@@ -220,45 +201,28 @@ CRITICAL: Locate the element with data-edit-id="${safeEditId}" in the current pa
   const bugFixKeywords = /\b(bug|broken|doesn'?t work|isn'?t working|not working|fix|error|crash|crashes|wrong|fails?|can'?t|won'?t|nothing happens|stopped working)\b/i;
   const isBugFix = bugFixKeywords.test(latestUserMessage);
 
-  const bugFixContext = isBugFix ? `
+  // Compose the system prompt from topical sections. Conditional sections (games,
+  // auth, business, bug-fix) are only included when their flags fire. Dynamic
+  // per-request context (current code, plan, element selection) is appended last
+  // so the stable prefix can be reused by OpenAI's prompt cache.
+  const systemPrompt = composePrompt({
+    plan,
+    isBugFix,
+    currentCode: existing,
+    elementContext: element_context,
+    planContext,
+  });
 
-## ⚠️ BUG FIX MODE ACTIVE — MAXIMUM CODE PRESERVATION ⚠️
-The user is reporting a bug. The current code is in your context above under "## CURRENT CODE".
-
-You MUST:
-1. **READ the current code carefully.** Find the EXACT function or handler the user is complaining about.
-2. **TRACE the bug.** Walk through the code path: what does the user do, what handler fires, what state changes, where does it break?
-3. **IDENTIFY the minimum fix.** What is the smallest possible diff that fixes this specific bug? Most fixes are 1-15 lines.
-4. **OUTPUT the WHOLE files but keep them BYTE-FOR-BYTE identical except for the minimum fix:**
-   - Same imports in the same order
-   - Same component, function, and variable names
-   - Same JSX structure, same className strings, same children
-   - Same helper functions (do not rename, refactor, or extract)
-   - Same comments and whitespace
-   - Same state shapes
-5. **If admin_code or api_handler_code are NOT related to the bug**, output them EXACTLY as they appear in the current code above. Copy them verbatim. Do not regenerate, do not "improve", do not reformat.
-6. **VERIFY your fix mentally** by replaying the broken path with the fix applied.
-7. **EXPLAIN the fix precisely**: name the function and the change. Example: "handleSave was missing await on insert(). Added await on line 47. Nothing else changed."
-
-⛔ FORBIDDEN in bug fix mode:
-- Refactoring code that wasn't broken
-- Renaming variables, functions, or components
-- Restyling, recoloring, or rearranging the layout
-- Reordering imports or consolidating them
-- Adding features the user didn't ask for
-- Rewriting unrelated files when only one file has the bug
-
-If you change MORE than ~30 lines for a single reported bug, you are doing it wrong. Go back, find the actual minimum fix, and output that instead.
-
-The user reported ONE specific problem. Fix THAT problem. Nothing else.
-` : '';
+  // Rough token estimate (~4 chars per token) — useful for spotting prompt bloat.
+  const approxTokens = Math.round(systemPrompt.length / 4);
+  console.log(`[builder] system prompt: ${systemPrompt.length} chars / ~${approxTokens} tokens (game=${(plan as unknown as { app_type?: string } | null)?.app_type === 'game'}, auth=${plan?.needs_auth === true}, research=${plan?.needs_research === true}, bugfix=${isBugFix})`);
 
   const response = await getOpenAI().chat.completions.create({
     model,
     max_tokens: 16384,
     temperature: isBugFix ? 0.1 : 0.7, // Near-deterministic for bug fixes — minimum drift
     messages: [
-      { role: 'system', content: systemPrompt + planContext + elementContextPrompt + bugFixContext },
+      { role: 'system', content: systemPrompt },
       ...conversationMessages.map((m: { role: string; content: string }) => ({
         role: m.role as 'user' | 'assistant',
         content: m.content,
@@ -300,7 +264,7 @@ Return the JSON now.`;
         max_tokens: 16384,
         temperature: 0,
         messages: [
-          { role: 'system', content: systemPrompt + planContext + elementContextPrompt + bugFixContext },
+          { role: 'system', content: systemPrompt },
           ...conversationMessages.map((m: { role: string; content: string }) => ({
             role: m.role as 'user' | 'assistant',
             content: m.content,
