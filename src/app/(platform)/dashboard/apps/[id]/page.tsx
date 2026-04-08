@@ -50,14 +50,14 @@ export default async function AppManagementPage({ params }: { params: Promise<{ 
       </nav>
 
       {/* Header */}
-      <div className="flex items-start justify-between">
-        <div className="flex items-center gap-4">
-          <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-indigo-100 text-indigo-600 text-xl font-bold">
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+        <div className="flex items-center gap-3 sm:gap-4 min-w-0">
+          <div className="flex h-12 w-12 sm:h-14 sm:w-14 items-center justify-center rounded-xl bg-indigo-100 text-indigo-600 text-lg sm:text-xl font-bold shrink-0">
             {template.name.charAt(0).toUpperCase()}
           </div>
-          <div>
-            <h1 className="text-2xl font-bold">{template.name}</h1>
-            <div className="mt-1 flex items-center gap-2">
+          <div className="min-w-0">
+            <h1 className="text-xl sm:text-2xl font-bold truncate">{template.name}</h1>
+            <div className="mt-1 flex items-center gap-2 flex-wrap">
               <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
                 isPublished ? 'bg-green-50 text-green-700' : 'bg-yellow-50 text-yellow-700'
               }`}>
@@ -69,20 +69,20 @@ export default async function AppManagementPage({ params }: { params: Promise<{ 
             </div>
           </div>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
           <DeleteAppButton templateId={id} appName={template.name} redirectTo="/dashboard" />
-          <Link href={`/builder/${id}`}>
-            <Button>Edit App</Button>
+          <Link href={`/builder/${id}`} className="flex-1 sm:flex-none">
+            <Button className="w-full sm:w-auto">Edit App</Button>
           </Link>
         </div>
       </div>
 
       {template.description && (
-        <p className="mt-4 text-gray-600">{template.description}</p>
+        <p className="mt-4 text-sm sm:text-base text-gray-600">{template.description}</p>
       )}
 
       {/* Quick actions */}
-      <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+      <div className="mt-6 sm:mt-8 grid gap-3 sm:gap-4 grid-cols-2 sm:grid-cols-3 lg:grid-cols-5">
         <Link
           href={`/builder/${id}`}
           className="rounded-xl border border-gray-200 bg-white p-5 hover:shadow-md transition-shadow"

@@ -65,24 +65,24 @@ export function StorageBrowser({ files, tenantId }: StorageBrowserProps) {
   return (
     <div className="mt-6">
       {/* Stats */}
-      <div className="grid grid-cols-3 gap-4">
-        <div className="rounded-xl border border-gray-200 bg-white p-4">
-          <p className="text-xs text-gray-500">Total Files</p>
-          <p className="mt-1 text-xl font-bold">{files.length}</p>
+      <div className="grid grid-cols-3 gap-2 sm:gap-4">
+        <div className="rounded-xl border border-gray-200 bg-white p-3 sm:p-4">
+          <p className="text-[10px] sm:text-xs text-gray-500">Total Files</p>
+          <p className="mt-1 text-lg sm:text-xl font-bold">{files.length}</p>
         </div>
-        <div className="rounded-xl border border-gray-200 bg-white p-4">
-          <p className="text-xs text-gray-500">Storage Used</p>
-          <p className="mt-1 text-xl font-bold">{formatSize(totalSize)}</p>
+        <div className="rounded-xl border border-gray-200 bg-white p-3 sm:p-4">
+          <p className="text-[10px] sm:text-xs text-gray-500">Storage Used</p>
+          <p className="mt-1 text-lg sm:text-xl font-bold">{formatSize(totalSize)}</p>
         </div>
-        <div className="rounded-xl border border-gray-200 bg-white p-4">
-          <p className="text-xs text-gray-500">Images / Docs</p>
-          <p className="mt-1 text-xl font-bold">{imageCount} / {docCount}</p>
+        <div className="rounded-xl border border-gray-200 bg-white p-3 sm:p-4">
+          <p className="text-[10px] sm:text-xs text-gray-500">Images / Docs</p>
+          <p className="mt-1 text-lg sm:text-xl font-bold">{imageCount} / {docCount}</p>
         </div>
       </div>
 
       {/* Toolbar */}
-      <div className="mt-6 flex items-center justify-between">
-        <div className="flex gap-2">
+      <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap gap-2">
           {(['all', 'images', 'documents'] as const).map(f => (
             <button
               key={f}
@@ -113,7 +113,7 @@ export function StorageBrowser({ files, tenantId }: StorageBrowserProps) {
 
       {/* Grid view */}
       {view === 'grid' ? (
-        <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+        <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
           {filtered.map((file) => (
             <button
               key={file.name}
@@ -136,7 +136,7 @@ export function StorageBrowser({ files, tenantId }: StorageBrowserProps) {
         </div>
       ) : (
         /* List view */
-        <div className="mt-4 overflow-hidden rounded-xl border border-gray-200">
+        <div className="mt-4 overflow-x-auto rounded-xl border border-gray-200">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
@@ -184,8 +184,8 @@ export function StorageBrowser({ files, tenantId }: StorageBrowserProps) {
 
       {/* File preview modal */}
       {selected && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" onClick={() => setSelected(null)}>
-          <div className="w-full max-w-2xl rounded-xl bg-white p-6 shadow-2xl mx-4" onClick={e => e.stopPropagation()}>
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 p-0 sm:p-4" onClick={() => setSelected(null)}>
+          <div className="w-full max-w-2xl rounded-t-xl sm:rounded-xl bg-white p-4 sm:p-6 shadow-2xl max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
             <div className="flex items-start justify-between">
               <div className="min-w-0">
                 <h3 className="font-semibold truncate">{selected.name.split('-').slice(1).join('-') || selected.name}</h3>
@@ -207,11 +207,11 @@ export function StorageBrowser({ files, tenantId }: StorageBrowserProps) {
               )}
             </div>
 
-            <div className="mt-4 flex gap-3">
+            <div className="mt-4 flex flex-col sm:flex-row gap-3">
               <a href={selected.url} target="_blank" rel="noopener noreferrer" className="flex-1">
                 <Button className="w-full">Download</Button>
               </a>
-              <Button variant="secondary" onClick={() => {
+              <Button variant="secondary" className="w-full sm:w-auto" onClick={() => {
                 navigator.clipboard.writeText(selected.url);
               }}>
                 Copy URL

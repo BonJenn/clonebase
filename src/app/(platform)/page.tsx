@@ -12,38 +12,38 @@ export default function HomePage() {
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,_rgba(168,85,247,0.1),transparent_50%)] transform-gpu" />
         <AuroraRippleGrid />
 
-        <div className="relative mx-auto max-w-7xl px-4 py-24 sm:px-6 sm:py-32 lg:px-8 lg:py-40">
+        <div className="relative mx-auto max-w-7xl px-4 py-16 sm:px-6 sm:py-32 lg:px-8 lg:py-40">
           <div className="max-w-3xl">
-            <div className="inline-flex items-center rounded-full border border-indigo-500/30 bg-indigo-500/10 px-4 py-1.5 text-sm text-indigo-300">
+            <div className="inline-flex items-center rounded-full border border-indigo-500/30 bg-indigo-500/10 px-3 py-1.5 text-xs sm:text-sm text-indigo-300">
               <span className="mr-2">✨</span> Describe it. Build it. Ship it.
             </div>
 
-            <h1 className="mt-6 text-5xl font-bold tracking-tight text-white sm:text-6xl lg:text-7xl">
+            <h1 className="mt-6 text-4xl font-bold tracking-tight text-white sm:text-6xl lg:text-7xl">
               Build software{' '}
               <span className="bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
                 with words.
               </span>
             </h1>
 
-            <p className="mt-6 max-w-xl text-lg leading-8 text-gray-400">
+            <p className="mt-6 max-w-xl text-base sm:text-lg leading-7 sm:leading-8 text-gray-400">
               Describe the app you want in plain English. Our AI builds it in seconds — complete with
               real data, authentication, file uploads, and a live URL. No coding required.
             </p>
 
-            <div className="mt-10 flex flex-col sm:flex-row items-start gap-4">
-              <Link href="/builder">
-                <Button size="lg" className="text-base px-8 py-4 bg-indigo-600 hover:bg-indigo-500">
+            <div className="mt-8 sm:mt-10 flex flex-col sm:flex-row items-stretch sm:items-start gap-3 sm:gap-4">
+              <Link href="/builder" className="w-full sm:w-auto">
+                <Button size="lg" className="w-full sm:w-auto text-base px-6 sm:px-8 py-4 bg-indigo-600 hover:bg-indigo-500">
                   Start Building — It&apos;s Free
                 </Button>
               </Link>
-              <Link href="/marketplace">
-                <Button size="lg" variant="secondary" className="text-base px-8 py-4 border-gray-700 bg-gray-800/50 text-gray-300 hover:bg-gray-800">
+              <Link href="/marketplace" className="w-full sm:w-auto">
+                <Button size="lg" variant="secondary" className="w-full sm:w-auto text-base px-6 sm:px-8 py-4 border-gray-700 bg-gray-800/50 text-gray-300 hover:bg-gray-800">
                   Browse Apps
                 </Button>
               </Link>
             </div>
 
-            <div className="mt-8 flex items-center gap-6 text-sm text-gray-500">
+            <div className="mt-8 flex flex-wrap items-center gap-x-4 gap-y-2 sm:gap-6 text-xs sm:text-sm text-gray-500">
               <span className="flex items-center gap-1.5"><span className="text-green-500">●</span> No credit card</span>
               <span className="flex items-center gap-1.5"><span className="text-green-500">●</span> Ships instantly</span>
               <span className="flex items-center gap-1.5"><span className="text-green-500">●</span> Free subdomain</span>
@@ -53,7 +53,7 @@ export default function HomePage() {
       </section>
 
       {/* How it works */}
-      <section className="bg-white py-24">
+      <section className="bg-white py-16 sm:py-24">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="text-center">
             <h2 className="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">
@@ -91,7 +91,7 @@ export default function HomePage() {
       </section>
 
       {/* What you can build */}
-      <section className="bg-gray-50 py-24">
+      <section className="bg-gray-50 py-16 sm:py-24">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="text-center">
             <h2 className="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">
@@ -100,7 +100,7 @@ export default function HomePage() {
             <p className="mt-4 text-lg text-gray-600">Real apps, not toy demos. Here&apos;s what people are building.</p>
           </div>
 
-          <div className="mt-16 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="mt-10 sm:mt-16 grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
             {[
               { emoji: '🍕', title: 'Restaurant Websites', desc: 'Full menu, locations, hours, reviews — pulled from real data.', color: 'orange' },
               { emoji: '📝', title: 'Blog Platforms', desc: 'User accounts, rich text posts, comments, likes.', color: 'sky' },
@@ -120,17 +120,17 @@ export default function HomePage() {
       </section>
 
       {/* Marketplace / Cloning */}
-      <section className="isolate bg-white py-24">
+      <section className="isolate bg-white py-16 sm:py-24">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="grid gap-16 lg:grid-cols-2 items-center">
+          <div className="grid gap-10 lg:gap-16 lg:grid-cols-2 items-center">
             <div>
-              <div className="inline-flex items-center rounded-full bg-purple-100 px-4 py-1.5 text-sm font-medium text-purple-700">
+              <div className="inline-flex items-center rounded-full bg-purple-100 px-3 py-1.5 text-xs sm:text-sm font-medium text-purple-700">
                 🔁 The Marketplace
               </div>
-              <h2 className="mt-6 text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">
+              <h2 className="mt-6 text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight text-gray-900">
                 Clone any app.<br />Sell yours.
               </h2>
-              <p className="mt-4 text-lg text-gray-600 leading-relaxed">
+              <p className="mt-4 text-base sm:text-lg text-gray-600 leading-relaxed">
                 Every app on Clonebase can be published to the marketplace. Other users can clone your app
                 in one click — they get their own copy with a unique subdomain, fresh data, and full customization.
               </p>
@@ -208,11 +208,11 @@ export default function HomePage() {
       </section>
 
       {/* Features */}
-      <section className="isolate bg-gray-50 py-24">
+      <section className="isolate bg-gray-50 py-16 sm:py-24">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="grid gap-16 lg:grid-cols-2 lg:gap-24 items-center">
+          <div className="grid gap-10 lg:gap-24 lg:grid-cols-2 items-center">
             <div>
-              <h2 className="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">
+              <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight text-gray-900">
                 Everything a real app needs.<br />Built in.
               </h2>
               <dl className="mt-10 space-y-6">
@@ -258,7 +258,7 @@ export default function HomePage() {
       </section>
 
       {/* CTA */}
-      <section className="bg-gradient-to-r from-indigo-600 to-purple-600 py-20">
+      <section className="bg-gradient-to-r from-indigo-600 to-purple-600 py-16 sm:py-20">
         <div className="mx-auto max-w-4xl px-4 text-center sm:px-6 lg:px-8">
           <h2 className="text-3xl font-bold tracking-tight text-white sm:text-4xl">
             Your app is one sentence away.

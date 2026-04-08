@@ -73,8 +73,8 @@ export default function AppSettingsPage() {
   }
 
   return (
-    <div className="mx-auto max-w-2xl px-4 py-8 sm:px-6 lg:px-8">
-      <nav className="mb-6 text-sm text-gray-500">
+    <div className="mx-auto max-w-2xl px-4 py-6 sm:py-8 sm:px-6 lg:px-8">
+      <nav className="mb-4 sm:mb-6 text-xs sm:text-sm text-gray-500 flex flex-wrap items-center">
         <Link href="/dashboard" className="hover:text-gray-700">Dashboard</Link>
         <span className="mx-2">/</span>
         <Link href={`/dashboard/apps/${id}`} className="hover:text-gray-700">App</Link>
@@ -82,8 +82,8 @@ export default function AppSettingsPage() {
         <span className="text-gray-900">Settings</span>
       </nav>
 
-      <h1 className="text-2xl font-bold">App Settings</h1>
-      <p className="mt-1 text-gray-600">Update your app&apos;s name, description, and category.</p>
+      <h1 className="text-xl sm:text-2xl font-bold">App Settings</h1>
+      <p className="mt-1 text-sm sm:text-base text-gray-600">Update your app&apos;s name, description, and category.</p>
 
       <form onSubmit={handleSave} className="mt-8 space-y-6">
         {error && <div className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</div>}
@@ -103,7 +103,7 @@ export default function AppSettingsPage() {
             onChange={(e) => setDescription(e.target.value)}
             placeholder="What does this app do?"
             rows={3}
-            className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+            className="block w-full rounded-lg border border-gray-300 px-3 py-2.5 text-base focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
           />
         </div>
 
@@ -112,7 +112,7 @@ export default function AppSettingsPage() {
           <select
             value={category}
             onChange={(e) => setCategory(e.target.value)}
-            className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+            className="block w-full rounded-lg border border-gray-300 px-3 py-2.5 text-base"
           >
             <option value="">None</option>
             {['AI Tools', 'E-Commerce', 'SaaS', 'Marketing', 'Portfolio', 'Blog', 'Dashboard', 'Social', 'Productivity', 'Other'].map(cat => (
@@ -121,12 +121,12 @@ export default function AppSettingsPage() {
           </select>
         </div>
 
-        <div className="flex gap-3">
-          <Button type="submit" loading={saving} disabled={!name.trim()}>
-            {saving ? 'Saving...' : 'Save Settings'}
-          </Button>
-          <Button type="button" variant="secondary" onClick={() => router.push(`/dashboard/apps/${id}`)}>
+        <div className="flex flex-col-reverse sm:flex-row gap-3">
+          <Button type="button" variant="secondary" className="w-full sm:w-auto" onClick={() => router.push(`/dashboard/apps/${id}`)}>
             Cancel
+          </Button>
+          <Button type="submit" loading={saving} disabled={!name.trim()} className="w-full sm:w-auto">
+            {saving ? 'Saving...' : 'Save Settings'}
           </Button>
         </div>
       </form>

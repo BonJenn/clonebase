@@ -47,12 +47,12 @@ export default async function TemplateDetailPage({ params }: TemplateDetailProps
   }
 
   return (
-    <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
+    <div className="mx-auto max-w-4xl px-4 py-6 sm:py-8 sm:px-6 lg:px-8">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold">{tpl.name}</h1>
-          <p className="mt-1 text-gray-600">
+        <div className="min-w-0">
+          <h1 className="text-2xl sm:text-3xl font-bold break-words">{tpl.name}</h1>
+          <p className="mt-1 text-sm sm:text-base text-gray-600">
             by {tpl.creator?.display_name || 'Unknown'}
           </p>
           {tpl.category && (
@@ -61,7 +61,7 @@ export default async function TemplateDetailPage({ params }: TemplateDetailProps
             </span>
           )}
         </div>
-        <div className="flex flex-col items-end gap-2">
+        <div className="flex flex-row sm:flex-col items-center sm:items-end justify-between sm:justify-start gap-3 sm:gap-2 shrink-0">
           <span className="text-2xl font-bold">
             {isFree ? 'Free' : `$${(price!.price_cents / 100).toFixed(2)}`}
           </span>
@@ -77,27 +77,27 @@ export default async function TemplateDetailPage({ params }: TemplateDetailProps
       </div>
 
       {/* Preview */}
-      <div className="mt-8 aspect-video rounded-xl bg-gradient-to-br from-indigo-50 to-purple-50 flex items-center justify-center overflow-hidden">
+      <div className="mt-6 sm:mt-8 aspect-video rounded-xl bg-gradient-to-br from-indigo-50 to-purple-50 flex items-center justify-center overflow-hidden">
         {tpl.preview_url ? (
           <img src={tpl.preview_url} alt={tpl.name} className="w-full h-full object-cover" />
         ) : (
-          <span className="text-6xl text-indigo-200">{tpl.name.charAt(0).toUpperCase()}</span>
+          <span className="text-5xl sm:text-6xl text-indigo-200">{tpl.name.charAt(0).toUpperCase()}</span>
         )}
       </div>
 
       {/* Description */}
-      <div className="mt-8">
+      <div className="mt-6 sm:mt-8">
         <h2 className="text-lg font-semibold">About this template</h2>
-        <p className="mt-2 text-gray-600 whitespace-pre-wrap">
+        <p className="mt-2 text-sm sm:text-base text-gray-600 whitespace-pre-wrap">
           {tpl.long_description || tpl.description || 'No description provided.'}
         </p>
       </div>
 
       {/* Required Integrations */}
       {integrations.length > 0 && (
-        <div className="mt-8">
+        <div className="mt-6 sm:mt-8">
           <h2 className="text-lg font-semibold">Required Integrations</h2>
-          <div className="mt-3 grid gap-3 sm:grid-cols-2">
+          <div className="mt-3 grid gap-3 grid-cols-1 sm:grid-cols-2">
             {integrations.map((integ) => (
               <div key={integ.id} className="rounded-lg border border-gray-200 bg-white p-4">
                 <div className="flex items-center gap-2">
@@ -117,7 +117,7 @@ export default async function TemplateDetailPage({ params }: TemplateDetailProps
       )}
 
       {/* Stats */}
-      <div className="mt-8 flex gap-6 text-sm text-gray-500">
+      <div className="mt-6 sm:mt-8 flex flex-wrap gap-x-6 gap-y-2 text-xs sm:text-sm text-gray-500">
         <span>{tpl.clone_count} clones</span>
         {tpl.review_count > 0 && (
           <span className="flex items-center gap-1">

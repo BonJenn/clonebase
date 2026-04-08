@@ -100,7 +100,7 @@ export default async function AnalyticsPage({
           </p>
 
           {/* Summary cards */}
-          <div className="mt-6 grid gap-4 sm:grid-cols-3">
+          <div className="mt-6 grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-3">
             <div className="rounded-xl border border-gray-200 bg-white p-5">
               <p className="text-sm text-gray-500">Page Views</p>
               <p className="mt-1 text-2xl font-bold">{totalViews.toLocaleString()}</p>
@@ -119,7 +119,7 @@ export default async function AnalyticsPage({
           {dailyData.length > 0 ? (
             <section className="mt-8">
               <h2 className="text-lg font-semibold">Daily Activity</h2>
-              <div className="mt-4 overflow-hidden rounded-xl border border-gray-200">
+              <div className="mt-4 overflow-x-auto rounded-xl border border-gray-200">
                 <table className="min-w-full divide-y divide-gray-200">
                   <thead className="bg-gray-50">
                     <tr>

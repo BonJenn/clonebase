@@ -38,18 +38,18 @@ export default async function DashboardPage() {
     .order('created_at', { ascending: false });
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-      <div className="flex items-center justify-between">
+    <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <h1 className="text-2xl font-bold">Dashboard</h1>
-        <div className="flex items-center gap-3">
-          <Link href="/dashboard/analytics">
-            <Button variant="secondary">Analytics</Button>
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+          <Link href="/dashboard/analytics" className="flex-1 sm:flex-none">
+            <Button variant="secondary" className="w-full sm:w-auto">Analytics</Button>
           </Link>
-          <Link href="/dashboard/earnings">
-            <Button variant="secondary">Earnings</Button>
+          <Link href="/dashboard/earnings" className="flex-1 sm:flex-none">
+            <Button variant="secondary" className="w-full sm:w-auto">Earnings</Button>
           </Link>
-          <Link href="/builder">
-            <Button>Build an App</Button>
+          <Link href="/builder" className="flex-1 sm:flex-none">
+            <Button className="w-full sm:w-auto">Build an App</Button>
           </Link>
         </div>
       </div>
@@ -71,7 +71,7 @@ export default async function DashboardPage() {
             </div>
           </div>
         ) : (
-          <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="mt-4 grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
             {/* Vibecoded apps */}
             {(myApps as AppTemplate[])?.map((app) => (
               <div key={app.id} className="relative rounded-xl border border-gray-200 bg-white p-5 hover:shadow-md transition-shadow">
@@ -134,7 +134,7 @@ export default async function DashboardPage() {
       {templates && templates.length > 0 && (
         <section className="mt-12">
           <h2 className="text-lg font-semibold text-gray-900">My Templates</h2>
-          <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="mt-4 grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
             {(templates as AppTemplate[]).map((tpl) => (
               <Link
                 key={tpl.id}

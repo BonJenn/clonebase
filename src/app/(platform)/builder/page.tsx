@@ -87,17 +87,17 @@ export default function BuilderLandingPage() {
   }
 
   return (
-    <div className="mx-auto max-w-4xl px-4 py-16 sm:px-6 lg:px-8">
+    <div className="mx-auto max-w-4xl px-4 py-10 sm:py-16 sm:px-6 lg:px-8">
       <div className="text-center">
-        <h1 className="text-4xl font-bold tracking-tight text-gray-900 sm:text-5xl">
+        <h1 className="text-3xl font-bold tracking-tight text-gray-900 sm:text-5xl">
           What do you want to build?
         </h1>
-        <p className="mt-4 text-lg text-gray-500">
+        <p className="mt-4 text-base sm:text-lg text-gray-500 px-2">
           Describe your app, website, or tool. Be as specific as you want.
         </p>
       </div>
 
-      <form onSubmit={handleStart} className="mt-10">
+      <form onSubmit={handleStart} className="mt-8 sm:mt-10">
         {error && (
           <div className="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</div>
         )}
@@ -107,12 +107,12 @@ export default function BuilderLandingPage() {
             onChange={(e) => setPrompt(e.target.value)}
             placeholder="Build me a restaurant website for Tony's Pizza with the full menu, locations, hours, and customer reviews..."
             rows={4}
-            className="block w-full border-0 px-6 py-5 text-gray-900 text-lg placeholder:text-gray-400 focus:ring-0 resize-none"
+            className="block w-full border-0 px-4 sm:px-6 py-4 sm:py-5 text-gray-900 text-base sm:text-lg placeholder:text-gray-400 focus:ring-0 resize-none"
             required
           />
-          <div className="flex items-center justify-between bg-gray-50 px-6 py-3">
-            <p className="text-xs text-gray-400">Tip: Paste a Figma URL to build from a design, or describe what you want</p>
-            <Button type="submit" loading={loading} className="bg-indigo-600 hover:bg-indigo-500">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-gray-50 px-4 sm:px-6 py-3">
+            <p className="text-xs text-gray-400 order-2 sm:order-1">Tip: Paste a Figma URL to build from a design, or describe what you want</p>
+            <Button type="submit" loading={loading} className="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-500 order-1 sm:order-2">
               {loading ? 'Creating...' : 'Generate App →'}
             </Button>
           </div>
@@ -120,9 +120,9 @@ export default function BuilderLandingPage() {
       </form>
 
       {/* Try these */}
-      <div className="mt-12">
+      <div className="mt-10 sm:mt-12">
         <p className="text-center text-sm font-medium text-gray-400 mb-4">TRY THESE</p>
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
           {[
             { emoji: '🍕', title: 'Restaurant Website', prompt: 'Look up a popular pizza restaurant near me and build a beautiful website with the full menu, all locations, hours, and reviews' },
             { emoji: '📝', title: 'Blogging Platform', prompt: 'Build me a blogging platform where users can sign up, write posts with rich text, and comment on each other\'s posts' },
@@ -148,9 +148,9 @@ export default function BuilderLandingPage() {
 
       {/* Recent drafts */}
       {drafts.length > 0 && (
-        <div className="mt-16">
+        <div className="mt-12 sm:mt-16">
           <h2 className="text-lg font-semibold text-gray-900">Continue working on</h2>
-          <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="mt-4 grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
             {drafts.map((draft) => (
               <Link
                 key={draft.id}

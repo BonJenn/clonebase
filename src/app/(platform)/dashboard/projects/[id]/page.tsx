@@ -50,26 +50,26 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
   const connectedIntegrations = typedIntegrations.filter(i => i.status === 'connected');
 
   return (
-    <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
+    <div className="mx-auto max-w-4xl px-4 py-6 sm:py-8 sm:px-6 lg:px-8">
       {/* Breadcrumb */}
-      <nav className="mb-6 text-sm text-gray-500">
+      <nav className="mb-4 sm:mb-6 text-xs sm:text-sm text-gray-500 flex flex-wrap items-center">
         <Link href="/dashboard" className="hover:text-gray-700">Dashboard</Link>
         <span className="mx-2">/</span>
-        <span className="text-gray-900">{inst.name}</span>
+        <span className="text-gray-900 truncate max-w-[200px]">{inst.name}</span>
       </nav>
 
       {/* Header */}
-      <div className="flex items-start justify-between">
-        <div className="flex items-center gap-4">
-          <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-indigo-100 text-indigo-600 text-xl font-bold">
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+        <div className="flex items-center gap-3 sm:gap-4 min-w-0">
+          <div className="flex h-12 w-12 sm:h-14 sm:w-14 items-center justify-center rounded-xl bg-indigo-100 text-indigo-600 text-lg sm:text-xl font-bold shrink-0">
             {inst.name.charAt(0).toUpperCase()}
           </div>
-          <div>
-            <h1 className="text-2xl font-bold">{inst.name}</h1>
-            <p className="text-sm text-gray-500">{inst.tenant.slug}.clonebase.app</p>
+          <div className="min-w-0">
+            <h1 className="text-xl sm:text-2xl font-bold truncate">{inst.name}</h1>
+            <p className="text-xs sm:text-sm text-gray-500 truncate">{inst.tenant.slug}.clonebase.app</p>
           </div>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center justify-between sm:justify-end gap-3 shrink-0">
           <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium
             ${inst.status === 'active' ? 'bg-green-50 text-green-700' : 'bg-yellow-50 text-yellow-700'}`}>
             {inst.status}
@@ -81,7 +81,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
       </div>
 
       {/* Info Cards */}
-      <div className="mt-8 grid gap-4 sm:grid-cols-2">
+      <div className="mt-6 sm:mt-8 grid gap-4 grid-cols-1 sm:grid-cols-2">
         {/* Template Source */}
         <div className="rounded-xl border border-gray-200 bg-white p-5">
           <h3 className="text-sm font-medium text-gray-500">Template</h3>
@@ -115,24 +115,24 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
 
       {/* Integrations */}
       {typedIntegrations.length > 0 && (
-        <section className="mt-8">
+        <section className="mt-6 sm:mt-8">
           <h2 className="text-lg font-semibold">Integrations</h2>
           <div className="mt-4 space-y-3">
             {typedIntegrations.map((integration) => (
-              <div key={integration.id} className="flex items-center justify-between rounded-xl border border-gray-200 bg-white p-4">
-                <div className="flex items-center gap-3">
-                  <div className={`h-2.5 w-2.5 rounded-full ${
+              <div key={integration.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 rounded-xl border border-gray-200 bg-white p-4">
+                <div className="flex items-start gap-3 min-w-0">
+                  <div className={`h-2.5 w-2.5 rounded-full mt-1.5 shrink-0 ${
                     integration.status === 'connected' ? 'bg-green-500' :
                     integration.status === 'error' ? 'bg-red-500' : 'bg-gray-300'
                   }`} />
-                  <div>
+                  <div className="min-w-0">
                     <p className="font-medium">{integration.definition?.name}</p>
                     {integration.definition?.description && (
                       <p className="text-sm text-gray-500">{integration.definition.description}</p>
                     )}
                   </div>
                 </div>
-                <span className={`text-xs font-medium ${
+                <span className={`text-xs font-medium shrink-0 ${
                   integration.status === 'connected' ? 'text-green-700' :
                   integration.status === 'error' ? 'text-red-700' : 'text-gray-500'
                 }`}>
@@ -147,8 +147,8 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
               <a href={isProd
                 ? `${prodOrigin}/setup?tenant_id=${inst.tenant_id}`
                 : `/setup?tenant=${inst.tenant.slug}&tenant_id=${inst.tenant_id}`
-              }>
-                <Button variant="secondary">Configure Integrations</Button>
+              } className="inline-block w-full sm:w-auto">
+                <Button variant="secondary" className="w-full sm:w-auto">Configure Integrations</Button>
               </a>
             </div>
           )}

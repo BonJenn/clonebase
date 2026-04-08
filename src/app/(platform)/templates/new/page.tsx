@@ -57,9 +57,9 @@ export default function CreateTemplatePage() {
   }
 
   return (
-    <div className="mx-auto max-w-2xl px-4 py-8 sm:px-6 lg:px-8">
-      <h1 className="text-2xl font-bold">Create a New Template</h1>
-      <p className="mt-1 text-gray-600">Design a web app template others can clone.</p>
+    <div className="mx-auto max-w-2xl px-4 py-6 sm:py-8 sm:px-6 lg:px-8">
+      <h1 className="text-xl sm:text-2xl font-bold">Create a New Template</h1>
+      <p className="mt-1 text-sm sm:text-base text-gray-600">Design a web app template others can clone.</p>
 
       <form onSubmit={handleSubmit} className="mt-8 space-y-6">
         {error && (
@@ -90,7 +90,7 @@ export default function CreateTemplatePage() {
           <select
             value={category}
             onChange={(e) => setCategory(e.target.value)}
-            className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+            className="block w-full rounded-lg border border-gray-300 px-3 py-2.5 text-base text-gray-900 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
           >
             <option value="">Select a category</option>
             {TEMPLATE_CATEGORIES.map((cat) => (
@@ -106,7 +106,7 @@ export default function CreateTemplatePage() {
             onChange={(e) => setDescription(e.target.value)}
             placeholder="Describe what your template does..."
             rows={4}
-            className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 placeholder:text-gray-400 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+            className="block w-full rounded-lg border border-gray-300 px-3 py-2.5 text-base text-gray-900 placeholder:text-gray-400 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
           />
         </div>
 
@@ -152,11 +152,11 @@ export default function CreateTemplatePage() {
           )}
         </div>
 
-        <div className="flex gap-3">
-          <Button type="button" variant="secondary" onClick={() => router.back()}>
+        <div className="flex flex-col-reverse sm:flex-row gap-3">
+          <Button type="button" variant="secondary" onClick={() => router.back()} className="w-full sm:w-auto">
             Cancel
           </Button>
-          <Button type="submit" loading={loading}>
+          <Button type="submit" loading={loading} className="w-full sm:w-auto">
             Create Template
           </Button>
         </div>

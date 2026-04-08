@@ -35,25 +35,25 @@ export default async function MarketplacePage({ searchParams }: MarketplacePageP
   const { data: templates } = await query;
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+    <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
       <div className="text-center">
-        <h1 className="text-3xl font-bold">Template Marketplace</h1>
-        <p className="mt-2 text-gray-600">Production-ready apps you can clone in one click</p>
+        <h1 className="text-2xl sm:text-3xl font-bold">Template Marketplace</h1>
+        <p className="mt-2 text-sm sm:text-base text-gray-600 px-4">Production-ready apps you can clone in one click</p>
       </div>
 
       {/* Search */}
-      <form className="mt-8 flex justify-center">
+      <form className="mt-6 sm:mt-8 flex justify-center">
         <input
           name="q"
           type="search"
           defaultValue={q}
           placeholder="Search templates..."
-          className="w-full max-w-md rounded-lg border border-gray-300 px-4 py-2.5 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+          className="w-full max-w-md rounded-lg border border-gray-300 px-4 py-3 text-base focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
         />
       </form>
 
       {/* Sort options */}
-      <div className="mt-6 flex justify-center gap-4 text-sm">
+      <div className="mt-6 flex flex-wrap justify-center gap-3 sm:gap-4 text-xs sm:text-sm">
         {([['popular', 'Most Popular'], ['newest', 'Newest'], ['top-rated', 'Top Rated']] as const).map(([key, label]) => (
           <a
             key={key}
@@ -93,7 +93,7 @@ export default async function MarketplacePage({ searchParams }: MarketplacePageP
           <p className="mt-1 text-sm">Try a different search or category</p>
         </div>
       ) : (
-        <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="mt-8 sm:mt-10 grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
           {(templates as AppTemplate[]).map((template) => (
             <TemplateCard key={template.id} template={template} />
           ))}

@@ -70,8 +70,8 @@ export default function IntegrationsPage() {
   }
 
   return (
-    <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
-      <nav className="mb-6 text-sm text-gray-500">
+    <div className="mx-auto max-w-4xl px-4 py-6 sm:py-8 sm:px-6 lg:px-8">
+      <nav className="mb-4 sm:mb-6 text-xs sm:text-sm text-gray-500 flex flex-wrap items-center">
         <Link href="/dashboard" className="hover:text-gray-700">Dashboard</Link>
         <span className="mx-2">/</span>
         <Link href={`/dashboard/apps/${templateId}`} className="hover:text-gray-700">App</Link>
@@ -79,8 +79,8 @@ export default function IntegrationsPage() {
         <span className="text-gray-900">Integrations</span>
       </nav>
 
-      <h1 className="text-2xl font-bold">Integrations & API Keys</h1>
-      <p className="mt-1 text-gray-600">Manage external service connections for your app.</p>
+      <h1 className="text-xl sm:text-2xl font-bold">Integrations & API Keys</h1>
+      <p className="mt-1 text-sm sm:text-base text-gray-600">Manage external service connections for your app.</p>
 
       {message && (
         <div className={`mt-4 rounded-lg p-3 text-sm ${message.includes('success') ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
@@ -101,21 +101,21 @@ export default function IntegrationsPage() {
       ) : (
         <div className="mt-6 space-y-4">
           {integrations.map((integration) => (
-            <div key={integration.id} className="rounded-xl border border-gray-200 bg-white p-5">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className={`h-3 w-3 rounded-full ${
+            <div key={integration.id} className="rounded-xl border border-gray-200 bg-white p-4 sm:p-5">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <div className="flex items-start gap-3 min-w-0">
+                  <div className={`h-3 w-3 rounded-full mt-1.5 shrink-0 ${
                     integration.status === 'connected' ? 'bg-green-500' :
                     integration.status === 'error' ? 'bg-red-500' : 'bg-gray-300'
                   }`} />
-                  <div>
+                  <div className="min-w-0">
                     <h3 className="font-semibold">{integration.definition?.name}</h3>
                     {integration.definition?.description && (
                       <p className="text-sm text-gray-500">{integration.definition.description}</p>
                     )}
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center justify-between sm:justify-end gap-2 shrink-0">
                   <span className={`text-xs font-medium ${
                     integration.status === 'connected' ? 'text-green-700' : 'text-gray-500'
                   }`}>
@@ -149,7 +149,7 @@ export default function IntegrationsPage() {
                     />
                   ))}
                   <p className="text-xs text-gray-400">Keys are encrypted and stored securely. Never exposed to the browser.</p>
-                  <Button onClick={() => handleSave(integration.id)} loading={saving}>
+                  <Button onClick={() => handleSave(integration.id)} loading={saving} className="w-full sm:w-auto">
                     Save & Connect
                   </Button>
                 </div>
