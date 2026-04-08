@@ -432,54 +432,82 @@ document.getElementById('clonebase-image-input').addEventListener('change', func
 // --- Screenshot capture via html2canvas ---
 // Used by the publish flow to generate a preview thumbnail stored as preview_url
 // on the template. Runs inside the sandboxed iframe so we have direct DOM access.
+//
+// CRITICAL: this iframe is sandbox="allow-scripts" with NO allow-same-origin,
+// which means it's a null-origin context. Any image without CORS headers will
+// taint the canvas, and toDataURL() will throw SecurityError.
+//
+// Strategy: use allowTaint: false + useCORS: true. html2canvas will attempt
+// CORS fetches for every image, and silently skip (blank placeholder) any that
+// fail. The canvas stays clean and toDataURL succeeds. Screenshots may show
+// blank areas where non-CORS images would be, but at least we get SOMETHING.
 function captureScreenshot(requestId) {
+  function respond(payload) {
+    window.parent.postMessage(
+      Object.assign({ type: 'capture-result', requestId: requestId }, payload),
+      '*'
+    );
+  }
+
   if (typeof html2canvas !== 'function') {
-    window.parent.postMessage({
-      type: 'capture-result',
-      requestId: requestId,
-      error: 'html2canvas not loaded',
-    }, '*');
+    console.error('[clonebase] html2canvas not loaded — CDN blocked or slow?');
+    respond({ error: 'html2canvas library not loaded' });
     return;
   }
+
   // Disable edit-mode visual affordances during capture so outlines/hover rings
   // don't appear in the screenshot.
   var wasEditMode = document.body.classList.contains('edit-mode');
   if (wasEditMode) document.body.classList.remove('edit-mode');
+
+  // Preemptively convert any <img> elements to blank placeholders if they
+  // haven't loaded with CORS — prevents taint. html2canvas will redraw from
+  // the cleaned DOM.
+  var scrollW = Math.min(document.documentElement.scrollWidth || 1280, 1600);
+  var scrollH = Math.min(document.documentElement.scrollHeight || 800, 1200);
 
   html2canvas(document.body, {
     backgroundColor: '#ffffff',
     scale: 1,
     logging: false,
     useCORS: true,
-    allowTaint: true,
-    // Cap the captured area so huge scrolling pages don't produce massive PNGs
-    windowWidth: Math.min(document.documentElement.scrollWidth, 1600),
-    windowHeight: Math.min(document.documentElement.scrollHeight, 1200),
+    allowTaint: false, // keep canvas clean so toDataURL works
+    imageTimeout: 3000,
+    width: scrollW,
+    height: scrollH,
+    windowWidth: scrollW,
+    windowHeight: scrollH,
+    // Ignore the floating file input we use for image editing
+    ignoreElements: function(el) {
+      return el && el.id === 'clonebase-image-input';
+    },
   }).then(function(canvas) {
     if (wasEditMode) document.body.classList.add('edit-mode');
     try {
-      var dataUrl = canvas.toDataURL('image/png');
-      window.parent.postMessage({
-        type: 'capture-result',
-        requestId: requestId,
-        dataUrl: dataUrl,
-        width: canvas.width,
-        height: canvas.height,
-      }, '*');
+      // Downscale huge canvases before encoding — previews don't need to be 1600px wide
+      var MAX_W = 1280;
+      var finalCanvas = canvas;
+      if (canvas.width > MAX_W) {
+        var ratio = MAX_W / canvas.width;
+        var scaled = document.createElement('canvas');
+        scaled.width = MAX_W;
+        scaled.height = Math.round(canvas.height * ratio);
+        var ctx = scaled.getContext('2d');
+        ctx.drawImage(canvas, 0, 0, scaled.width, scaled.height);
+        finalCanvas = scaled;
+      }
+      var dataUrl = finalCanvas.toDataURL('image/png');
+      console.log('[clonebase] capture ok', finalCanvas.width + 'x' + finalCanvas.height, Math.round(dataUrl.length / 1024) + 'KB');
+      respond({ dataUrl: dataUrl, width: finalCanvas.width, height: finalCanvas.height });
     } catch (err) {
-      window.parent.postMessage({
-        type: 'capture-result',
-        requestId: requestId,
-        error: 'toDataURL failed: ' + err.message,
-      }, '*');
+      console.error('[clonebase] toDataURL failed — canvas tainted by cross-origin content', err);
+      respond({ error: 'toDataURL failed (likely cross-origin image taint): ' + err.message });
     }
   }).catch(function(err) {
     if (wasEditMode) document.body.classList.add('edit-mode');
-    window.parent.postMessage({
-      type: 'capture-result',
-      requestId: requestId,
-      error: 'html2canvas failed: ' + (err && err.message ? err.message : String(err)),
-    }, '*');
+    var msg = err && err.message ? err.message : String(err);
+    console.error('[clonebase] html2canvas threw', err);
+    respond({ error: 'html2canvas failed: ' + msg });
   });
 }
 

@@ -46,16 +46,21 @@ export function PublishDialog({ templateId, templateName, onClose, capturePrevie
     setLoading(true);
 
     // Capture + upload a preview screenshot before publishing. Non-fatal: if
-    // either step fails we still publish without a preview_url.
+    // either step fails we still publish (without a preview_url) but we log
+    // the reason so it's visible in the console.
     let previewUrl: string | null = null;
     if (capturePreview) {
       try {
         setStatus('Capturing preview...');
         const dataUrl = await capturePreview();
-        if (dataUrl) {
+        if (!dataUrl) {
+          console.warn('[publish] preview capture returned null — see iframe console for details');
+        } else {
           setStatus('Uploading preview...');
           const file = dataUrlToFile(dataUrl, `${templateId}.png`);
-          if (file) {
+          if (!file) {
+            console.warn('[publish] could not convert dataUrl to File');
+          } else {
             const formData = new FormData();
             formData.append('file', file);
             formData.append('template_id', templateId);
@@ -66,11 +71,15 @@ export function PublishDialog({ templateId, templateName, onClose, capturePrevie
             if (uploadRes.ok) {
               const uploadData = await uploadRes.json();
               previewUrl = uploadData.url || null;
+              console.log('[publish] preview uploaded:', previewUrl);
+            } else {
+              const errText = await uploadRes.text().catch(() => '');
+              console.warn('[publish] preview upload failed:', uploadRes.status, errText);
             }
           }
         }
-      } catch {
-        // Non-fatal: continue publishing without a preview
+      } catch (err) {
+        console.warn('[publish] preview capture/upload error (non-fatal):', err);
       }
     }
 
