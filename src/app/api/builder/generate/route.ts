@@ -93,13 +93,27 @@ CRITICAL INSTRUCTIONS FOR BUSINESS WEBSITES:
     }
     const designTheme = planAny.design_theme || 'light';
     const primaryColor = planAny.primary_color || 'indigo';
+    const mobileFirst = planAny.mobile_first === true;
     const gameInstructions = appType === 'game' ? `
 APP TYPE: GAME — Use <canvas> with requestAnimationFrame game loop.
 - Render characters as emoji on canvas (fillText)
-- WASD/arrow keys for movement
+- WASD/arrow keys for movement (preventDefault to stop scrolling)
+- ALSO include touch controls (D-pad buttons visible only on mobile via sm:hidden)
 - Use useRef for game state (position, velocity) — only useState for UI state
 - Collision detection with bounding boxes
 - This is a 2D game, NOT a form-based app. The main view should be a canvas.
+- Canvas must be responsive: w-full max-w-[800px] aspect-[4/3]
+` : '';
+
+    const mobileInstructions = mobileFirst ? `
+MOBILE-FIRST APP REQUESTED:
+- Wrap in max-w-sm mx-auto for phone-shaped layout
+- Bottom tab bar navigation (fixed bottom-0) with 4-5 icons
+- Use card stack layouts, NOT grids
+- All buttons h-12+ for tap targets
+- Inputs use text-base (16px) to prevent iOS zoom
+- Mimic native mobile patterns (swipe-to-dismiss, pull-to-refresh feel)
+- pb-[env(safe-area-inset-bottom)] on fixed bottom elements
 ` : '';
 
     planContext = `
@@ -116,6 +130,7 @@ Data Collections: ${plan.data_collections.map(c => `${c.name}(${c.fields.join(',
 Features: ${plan.features.join(', ')}
 ${plan.warnings.length > 0 ? `WARNINGS: ${plan.warnings.join('. ')}` : ''}
 ${gameInstructions}
+${mobileInstructions}
 ${researchContext}
 IMPORTANT CONSTRAINTS FROM PLAN:
 - Maximum ${plan.views.length} views/tabs. Do NOT add more.

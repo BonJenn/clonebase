@@ -10,6 +10,7 @@ export interface AppPlan {
   app_name: string;
   description: string;
   needs_auth: boolean;
+  mobile_first?: boolean;
   needs_research: boolean;
   research_query: string;
   views: string[];
@@ -40,6 +41,7 @@ Return ONLY valid JSON:
   "design_theme": "dark|light|colorful|minimal",
   "primary_color": "emerald|rose|violet|sky|amber|slate|fuchsia|orange|teal|cyan",
   "needs_auth": true/false,
+  "mobile_first": true/false,
   "views": ["feed", "profile", "settings"],
   "data_collections": [{"name": "posts", "fields": ["title", "content", "author", "likes", "created_at"]}],
   "features": ["create posts", "like posts", "user profiles", "search"],
@@ -56,6 +58,7 @@ Design rules:
 
 Rules:
 - app_type: "game" for games/virtual worlds/interactive simulations (use canvas + game loop), "interactive" for drawing/animation apps, "standard" for everything else
+- mobile_first: TRUE if the user mentions "mobile", "phone", "iPhone", "Android", "mobile app", "swipe", "tap" — design as a phone app with bottom nav, card stacks, full-bleed mobile layout. FALSE for normal websites that just need to be responsive.
 - needs_auth — be smart about this:
   TRUE: social apps, apps where "users" post/share/interact, blogs with authors, messaging, dating, any app where people have accounts or profiles, games with save progress, apps with "my" data (my recipes, my workouts)
   FALSE: single-user tools (calculator, timer, converter), public content viewers (dashboard, gallery with no user posting), simple utilities, games without accounts, anonymous apps

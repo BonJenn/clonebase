@@ -286,6 +286,41 @@ useEffect(() => {
 - Keep game state in useRef (not useState) for performance in the game loop — only setState for rendering
 - Collision detection: simple bounding box (Math.abs(a.x - b.x) < size)
 - Rooms/levels: change background and object positions via state
+- ALWAYS include mobile touch controls — most users play on phones. See touch controls pattern below.
+
+#### Touch controls for games (REQUIRED for any game with movement):
+\`\`\`tsx
+// Add a virtual joystick / D-pad for mobile in addition to keyboard
+<div className="fixed bottom-6 left-6 grid grid-cols-3 gap-1 sm:hidden touch-none select-none">
+  <div />
+  <button
+    onTouchStart={() => keysRef.current.add('arrowup')}
+    onTouchEnd={() => keysRef.current.delete('arrowup')}
+    className="h-12 w-12 rounded-lg bg-black/40 text-white text-xl"
+  >↑</button>
+  <div />
+  <button
+    onTouchStart={() => keysRef.current.add('arrowleft')}
+    onTouchEnd={() => keysRef.current.delete('arrowleft')}
+    className="h-12 w-12 rounded-lg bg-black/40 text-white text-xl"
+  >←</button>
+  <div />
+  <button
+    onTouchStart={() => keysRef.current.add('arrowright')}
+    onTouchEnd={() => keysRef.current.delete('arrowright')}
+    className="h-12 w-12 rounded-lg bg-black/40 text-white text-xl"
+  >→</button>
+  <div />
+  <button
+    onTouchStart={() => keysRef.current.add('arrowdown')}
+    onTouchEnd={() => keysRef.current.delete('arrowdown')}
+    className="h-12 w-12 rounded-lg bg-black/40 text-white text-xl"
+  >↓</button>
+  <div />
+</div>
+// Action buttons (jump, shoot, etc.) on the right side, also sm:hidden
+\`\`\`
+The canvas should also scale to fit mobile screens: \`className="w-full max-w-[800px] aspect-[4/3] rounded-xl border touch-none"\`
 
 ### Authentication Pattern (ONLY when the user asks for auth/users/accounts)
 Do NOT add auth unless the user specifically asks for user accounts, login, sign up, or authentication.
@@ -589,6 +624,29 @@ DO NOT make every app look the same. Choose a design theme that matches the app'
 - Smooth transitions (transition-all duration-200)
 - Responsive grid (grid-cols-1 sm:grid-cols-2 lg:grid-cols-3)
 - Proper spacing (consistent p-4/p-5/p-6, gap-4)
+
+### MOBILE-FIRST — every app MUST work on phones
+Most users open apps on their phone. Design mobile-first, then enhance for desktop.
+
+Mandatory mobile rules:
+- Tap targets ≥ 44px (h-11 minimum on buttons, no tiny icons)
+- Inputs use \`text-base\` (16px+) — anything smaller triggers iOS zoom
+- Bottom-anchored primary actions on mobile (sticky bottom bar with main CTA)
+- Layouts stack vertically by default, expand to multi-column on \`sm:\` and \`lg:\`
+- Use \`flex-col sm:flex-row\` patterns, never the reverse
+- Modals: full-screen on mobile (\`fixed inset-0\`), centered on desktop
+- Navigation: bottom tab bar on mobile (\`fixed bottom-0\`), top nav on desktop (\`sm:static\`)
+- No hover-only interactions — everything must work with tap
+- Touch-friendly spacing: \`gap-3\` minimum between tap targets
+- Use \`safe-area-inset\` padding for fixed bottom elements: \`pb-[env(safe-area-inset-bottom)]\`
+- Test mentally: would my mom be able to use this on her iPhone?
+
+If the user explicitly says "mobile app", "iPhone", "Android", or "phone app":
+- Use a phone-shaped frame: \`max-w-sm mx-auto min-h-screen\`
+- Bottom tab bar navigation (4-5 icons max)
+- Card stack layouts, not grids
+- Large emoji/icons, generous spacing
+- Mimic native iOS/Android patterns
 
 ### BUSINESS WEBSITE DESIGN (when building a website for a real business)
 Design like a world-class agency. These websites must look PROFESSIONAL, not like a template:

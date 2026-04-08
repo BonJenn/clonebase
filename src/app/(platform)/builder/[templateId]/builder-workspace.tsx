@@ -7,6 +7,7 @@ import { CodePreview } from '@/components/builder/code-preview';
 import { DataPanel } from '@/components/builder/data-panel';
 import { MediaPanel } from '@/components/builder/media-panel';
 import { GeneratingAnimation } from '@/components/builder/generating-animation';
+import { MobileBuilder } from '@/components/builder/mobile-builder';
 import { PublishDialog } from '@/components/builder/publish-dialog';
 import { Button } from '@/components/ui/button';
 
@@ -246,14 +247,18 @@ export function BuilderWorkspace({
 
   return (
     <>
-    {/* Mobile message */}
-    <div className="flex h-[calc(100vh-4rem)] items-center justify-center p-8 text-center sm:hidden">
-      <div>
-        <p className="text-4xl">💻</p>
-        <h2 className="mt-4 text-xl font-bold text-gray-900">Desktop Required</h2>
-        <p className="mt-2 text-gray-600">The app builder needs a larger screen. Open this page on a desktop or laptop.</p>
-      </div>
-    </div>
+    {/* Mobile builder — simplified chat + preview toggle */}
+    <MobileBuilder
+      templateName={templateName}
+      messages={messages}
+      onSend={handleSend}
+      generating={generating}
+      showAnimation={showAnimation}
+      transpiledCode={transpiledCode}
+      componentName={componentName}
+      canRetry={!!lastFailedMessage}
+      onRetry={() => lastFailedMessage && handleSend(lastFailedMessage)}
+    />
     <div className="hidden sm:flex h-[calc(100vh-4rem)] flex-col">
       {/* Toolbar */}
       <div className="flex items-center justify-between border-b border-gray-200 bg-white px-4 py-2">
