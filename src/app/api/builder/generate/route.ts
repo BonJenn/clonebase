@@ -100,12 +100,29 @@ export async function POST(request: NextRequest) {
 
   // First, see if the prompt matches a known app blueprint (Tinder, Instagram, etc).
   // Blueprints are pre-curated specs that produce higher-quality clones than the
-  // generic planner can. When matched, we skip the planner and use the blueprint
-  // as the plan context.
+  // generic planner can. When matched, we skip the planner OpenAI call and synthesize
+  // a plan from the blueprint so composePrompt enables the right conditional sections
+  // (games, auth, etc).
   const blueprint = isFirstGeneration ? detectBlueprint(messages[0].content) : null;
 
   if (isFirstGeneration && blueprint) {
     planContext = formatBlueprintForPrompt(blueprint);
+    plan = {
+      app_name: blueprint.app_name,
+      description: blueprint.tagline,
+      needs_auth: blueprint.needs_auth,
+      mobile_first: blueprint.mobile_first,
+      needs_research: false,
+      research_query: '',
+      views: blueprint.views,
+      data_collections: blueprint.data_collections,
+      features: blueprint.must_have_features,
+      seed_data: true,
+      complexity: 'medium',
+      warnings: [],
+    } as Awaited<ReturnType<typeof planApp>>;
+    // app_type is read by composePrompt to enable the GAMES section
+    (plan as unknown as Record<string, unknown>).app_type = blueprint.category === 'game' ? 'game' : 'standard';
   } else if (isFirstGeneration) {
     plan = await planApp(messages[0].content);
     const planAny = plan as unknown as Record<string, unknown>;
