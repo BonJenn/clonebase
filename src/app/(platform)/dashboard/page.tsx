@@ -45,6 +45,9 @@ export default async function DashboardPage() {
           <Link href="/dashboard/analytics" className="flex-1 sm:flex-none">
             <Button variant="secondary" className="w-full sm:w-auto">Analytics</Button>
           </Link>
+          <Link href="/dashboard/payments" className="flex-1 sm:flex-none">
+            <Button variant="secondary" className="w-full sm:w-auto">Payments</Button>
+          </Link>
           <Link href="/dashboard/earnings" className="flex-1 sm:flex-none">
             <Button variant="secondary" className="w-full sm:w-auto">Earnings</Button>
           </Link>

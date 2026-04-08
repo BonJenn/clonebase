@@ -1936,10 +1936,61 @@ export function detectBlueprint(prompt: string): AppBlueprint | null {
 }
 
 /**
+ * For ecommerce blueprints, we auto-append guidance on wiring Stripe Checkout
+ * through the useStripeCheckout hook. The hook handles the Connect flow,
+ * platform fee, and order recording — the generated app just needs to call it
+ * from the checkout button.
+ */
+const ECOMMERCE_PAYMENTS_ADDENDUM = `
+
+**Payment checkout — use useStripeCheckout:**
+This is an ecommerce app, so the checkout button MUST use the real Stripe integration, not a fake "Thanks for your order" alert.
+
+\`\`\`tsx
+import { useStripeCheckout } from '@/sdk/use-stripe-checkout';
+
+function CartView({ items }) {
+  const { checkout, loading, error } = useStripeCheckout();
+
+  async function handleCheckout() {
+    await checkout(
+      items.map(item => ({
+        name: item.name,
+        description: item.description,
+        amount_cents: Math.round(item.price * 100),
+        quantity: item.quantity,
+        image_url: item.image_url,
+      }))
+    );
+    // The hook redirects to Stripe Checkout. After payment, the customer
+    // comes back to the app and the order is written to the 'orders' collection
+    // automatically by the platform webhook — don't write it yourself.
+  }
+
+  return (
+    <div>
+      {/* ... cart items ... */}
+      <button onClick={handleCheckout} disabled={loading || items.length === 0}>
+        {loading ? 'Redirecting...' : 'Checkout'}
+      </button>
+      {error && (
+        <p className="text-red-600 text-sm mt-2">
+          {error.toLowerCase().includes('connect') ? 'The store owner needs to connect Stripe at /dashboard/payments before accepting payments.' : error}
+        </p>
+      )}
+    </div>
+  );
+}
+\`\`\`
+
+The admin view should read from \`useTenantData('orders')\` to show recent sales. Do NOT manually insert into the orders collection from the cart — the platform webhook does it after successful payment.`;
+
+/**
  * Format a blueprint as a system-prompt section the model can follow.
  * This is injected into the generator's context when a blueprint matches.
  */
 export function formatBlueprintForPrompt(blueprint: AppBlueprint): string {
+  const paymentsAddendum = blueprint.category === 'ecommerce' ? ECOMMERCE_PAYMENTS_ADDENDUM : '';
   return `
 ## REFERENCE BLUEPRINT — "${blueprint.name}"
 The user is asking for a ${blueprint.name} clone. Use this blueprint as your starting point. Follow it closely — it represents the canonical version of this app type.
@@ -1973,6 +2024,7 @@ ${blueprint.seed_data_hint}
 
 **Pitfalls to avoid:**
 ${blueprint.pitfalls}
+${paymentsAddendum}
 
 ⚠️ This blueprint is the gold standard for this app. Do not deviate from the design theme, primary color, or core interactions. The user expects a recognizable clone of ${blueprint.name}.
 `;

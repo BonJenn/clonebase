@@ -14,12 +14,19 @@ import { useTenant } from '@/sdk/tenant-context';
 import { useTenantData } from '@/sdk/use-tenant-data';
 import { useFileUpload } from '@/sdk/use-file-upload';
 import { useTenantAuth } from '@/sdk/use-tenant-auth';
+import { useStripeCheckout } from '@/sdk/use-stripe-checkout';
 \`\`\`
 
 ### useTenant() → { tenantId, tenantSlug, tenantName, instanceId, templateSlug, config }
 ### useTenantData<T>(collection) → { data: T[], loading, error, insert(item), update(id, changes), remove(id), refresh() }
 ### useFileUpload() → { upload(file: File): Promise<{ url, path, filename } | null>, uploading, error }
 ### useTenantAuth() → { user, loading, error, signUp(email, password, metadata?), signIn(email, password), signOut(), resetPassword(email), updatePassword(newPassword), updateProfile(metadata) }
+### useStripeCheckout() → { checkout(lineItems, options?), loading, error }
+Use ONLY for apps that need to accept real money (ecom stores, paid services, bookings, digital goods).
+- lineItems: \`[{ name, amount_cents, quantity, description?, image_url? }]\` — amount_cents ≥ 50
+- Calling \`checkout()\` redirects the customer to Stripe Checkout. After payment they come back to the app and the order appears in the \`orders\` collection (write-through handled by the platform webhook).
+- The tenant owner must have connected their Stripe account at /dashboard/payments; if not, checkout() returns an error string in \`error\`. Show that error to the user with "Store owner needs to connect Stripe".
+- Clonebase takes a 3% platform fee automatically.
 
 You can use MULTIPLE collections for richer data (e.g., "profiles" + "matches" + "messages").
 
