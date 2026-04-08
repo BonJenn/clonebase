@@ -4,6 +4,7 @@ import OpenAI from 'openai';
 import { composePrompt } from '@/lib/builder/prompts';
 import { planApp } from '@/lib/builder/planner';
 import { researchTopic, searchImages } from '@/lib/builder/researcher';
+import { detectBlueprint, formatBlueprintForPrompt } from '@/lib/builder/app-blueprints';
 
 export const maxDuration = 120;
 
@@ -96,7 +97,16 @@ export async function POST(request: NextRequest) {
   // PASS 1: Plan the app (first generation only)
   let planContext = '';
   let plan = null;
-  if (isFirstGeneration) {
+
+  // First, see if the prompt matches a known app blueprint (Tinder, Instagram, etc).
+  // Blueprints are pre-curated specs that produce higher-quality clones than the
+  // generic planner can. When matched, we skip the planner and use the blueprint
+  // as the plan context.
+  const blueprint = isFirstGeneration ? detectBlueprint(messages[0].content) : null;
+
+  if (isFirstGeneration && blueprint) {
+    planContext = formatBlueprintForPrompt(blueprint);
+  } else if (isFirstGeneration) {
     plan = await planApp(messages[0].content);
     const planAny = plan as unknown as Record<string, unknown>;
     const appType = (planAny.app_type as string) || 'standard';
