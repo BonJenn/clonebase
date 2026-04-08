@@ -220,10 +220,19 @@ const canvasRef = useRef<HTMLCanvasElement>(null);
 const [playerPos, setPlayerPos] = useState({ x: 200, y: 200 });
 const keysRef = useRef<Set<string>>(new Set());
 
-// Keyboard input
+// Keyboard input — IMPORTANT: preventDefault on game keys so they don't scroll the page
+const GAME_KEYS = ['arrowup', 'arrowdown', 'arrowleft', 'arrowright', 'w', 'a', 's', 'd', ' ', 'spacebar'];
 useEffect(() => {
-  const handleKeyDown = (e: KeyboardEvent) => keysRef.current.add(e.key.toLowerCase());
-  const handleKeyUp = (e: KeyboardEvent) => keysRef.current.delete(e.key.toLowerCase());
+  const handleKeyDown = (e: KeyboardEvent) => {
+    const k = e.key.toLowerCase();
+    if (GAME_KEYS.includes(k)) e.preventDefault(); // stops arrow keys from scrolling
+    keysRef.current.add(k);
+  };
+  const handleKeyUp = (e: KeyboardEvent) => {
+    const k = e.key.toLowerCase();
+    if (GAME_KEYS.includes(k)) e.preventDefault();
+    keysRef.current.delete(k);
+  };
   window.addEventListener('keydown', handleKeyDown);
   window.addEventListener('keyup', handleKeyUp);
   return () => { window.removeEventListener('keydown', handleKeyDown); window.removeEventListener('keyup', handleKeyUp); };
@@ -272,6 +281,8 @@ useEffect(() => {
 - Use emoji for characters/sprites (🐧🏠🌳⭐🎣🍕) — they render on canvas with fillText
 - Use requestAnimationFrame for smooth animation, NOT setInterval
 - Keyboard: WASD + arrow keys for movement
+- ALWAYS call e.preventDefault() in keydown for arrow keys and spacebar — otherwise they scroll the page and ruin the game
+- Use a GAME_KEYS array (see example above) and preventDefault when any game key is pressed
 - Keep game state in useRef (not useState) for performance in the game loop — only setState for rendering
 - Collision detection: simple bounding box (Math.abs(a.x - b.x) < size)
 - Rooms/levels: change background and object positions via state
