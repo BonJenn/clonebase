@@ -13,6 +13,52 @@ function getOpenAI() {
   return _openai;
 }
 
+interface GeneratedCode {
+  page_code: string;
+  admin_code?: string | null;
+  api_handler_code?: string | null;
+  component_files?: Record<string, string>;
+  explanation?: string;
+  suggested_integrations?: Array<Record<string, unknown>>;
+}
+
+// Parse the model's JSON response, with a regex fallback for truncated output.
+function parseGenerated(textContent: string): GeneratedCode | null {
+  let jsonStr = textContent.trim();
+  const fenceMatch = jsonStr.match(/```(?:json)?\s*([\s\S]*?)```/);
+  if (fenceMatch) jsonStr = fenceMatch[1].trim();
+  try {
+    return JSON.parse(jsonStr);
+  } catch {
+    const pageMatch = jsonStr.match(/"page_code"\s*:\s*"((?:[^"\\]|\\.)*)"/);
+    const adminMatch = jsonStr.match(/"admin_code"\s*:\s*"((?:[^"\\]|\\.)*)"/);
+    const explanationMatch = jsonStr.match(/"explanation"\s*:\s*"((?:[^"\\]|\\.)*)"/);
+    if (pageMatch) {
+      return {
+        page_code: pageMatch[1].replace(/\\n/g, '\n').replace(/\\"/g, '"').replace(/\\\\/g, '\\'),
+        admin_code: adminMatch ? adminMatch[1].replace(/\\n/g, '\n').replace(/\\"/g, '"').replace(/\\\\/g, '\\') : null,
+        api_handler_code: null,
+        explanation: explanationMatch ? explanationMatch[1] : 'Code generated.',
+      };
+    }
+    return null;
+  }
+}
+
+// Compute the fraction of lines in newCode that don't appear in oldCode.
+// Used in bug-fix mode as a soft signal that the model rewrote unrelated code.
+function calculateDrift(oldCode: string, newCode: string): { ratio: number; changed: number; total: number } {
+  if (!oldCode || !newCode) return { ratio: 0, changed: 0, total: 0 };
+  const oldLines = new Set(oldCode.split('\n').map(l => l.trim()).filter(Boolean));
+  const newLines = newCode.split('\n').map(l => l.trim()).filter(Boolean);
+  if (newLines.length === 0) return { ratio: 1, changed: 0, total: 0 };
+  let changed = 0;
+  for (const line of newLines) {
+    if (!oldLines.has(line)) changed++;
+  }
+  return { ratio: changed / newLines.length, changed, total: newLines.length };
+}
+
 // POST /api/builder/generate — Generate or iterate on template code
 export async function POST(request: NextRequest) {
   const supabase = await createServerSupabaseClient();
@@ -176,20 +222,41 @@ CRITICAL: Locate the element with data-edit-id="${safeEditId}" in the current pa
 
   const bugFixContext = isBugFix ? `
 
-## ⚠️ BUG FIX MODE ACTIVE ⚠️
-The user is reporting a bug. You MUST:
-1. Carefully read the current code in the system prompt
-2. Find the specific function/component the user is complaining about
-3. Trace through the code path to find the bug
-4. Fix ONLY that bug — do not change anything else
-5. Preserve all other code, design, data, and features identically
-6. In the explanation, clearly state what was wrong and what you changed
+## ⚠️ BUG FIX MODE ACTIVE — MAXIMUM CODE PRESERVATION ⚠️
+The user is reporting a bug. The current code is in your context above under "## CURRENT CODE".
+
+You MUST:
+1. **READ the current code carefully.** Find the EXACT function or handler the user is complaining about.
+2. **TRACE the bug.** Walk through the code path: what does the user do, what handler fires, what state changes, where does it break?
+3. **IDENTIFY the minimum fix.** What is the smallest possible diff that fixes this specific bug? Most fixes are 1-15 lines.
+4. **OUTPUT the WHOLE files but keep them BYTE-FOR-BYTE identical except for the minimum fix:**
+   - Same imports in the same order
+   - Same component, function, and variable names
+   - Same JSX structure, same className strings, same children
+   - Same helper functions (do not rename, refactor, or extract)
+   - Same comments and whitespace
+   - Same state shapes
+5. **If admin_code or api_handler_code are NOT related to the bug**, output them EXACTLY as they appear in the current code above. Copy them verbatim. Do not regenerate, do not "improve", do not reformat.
+6. **VERIFY your fix mentally** by replaying the broken path with the fix applied.
+7. **EXPLAIN the fix precisely**: name the function and the change. Example: "handleSave was missing await on insert(). Added await on line 47. Nothing else changed."
+
+⛔ FORBIDDEN in bug fix mode:
+- Refactoring code that wasn't broken
+- Renaming variables, functions, or components
+- Restyling, recoloring, or rearranging the layout
+- Reordering imports or consolidating them
+- Adding features the user didn't ask for
+- Rewriting unrelated files when only one file has the bug
+
+If you change MORE than ~30 lines for a single reported bug, you are doing it wrong. Go back, find the actual minimum fix, and output that instead.
+
+The user reported ONE specific problem. Fix THAT problem. Nothing else.
 ` : '';
 
   const response = await getOpenAI().chat.completions.create({
     model,
     max_tokens: 16384,
-    temperature: isBugFix ? 0.2 : 0.7, // Lower temperature for bug fixes — more focused, less creative
+    temperature: isBugFix ? 0.1 : 0.7, // Near-deterministic for bug fixes — minimum drift
     messages: [
       { role: 'system', content: systemPrompt + planContext + elementContextPrompt + bugFixContext },
       ...conversationMessages.map((m: { role: string; content: string }) => ({
@@ -204,37 +271,57 @@ The user is reporting a bug. You MUST:
     return NextResponse.json({ error: 'No response from model' }, { status: 500 });
   }
 
-  // Parse the JSON response — handle truncated output
-  let generated;
-  try {
-    let jsonStr = textContent.trim();
-    const fenceMatch = jsonStr.match(/```(?:json)?\s*([\s\S]*?)```/);
-    if (fenceMatch) jsonStr = fenceMatch[1].trim();
-
-    try {
-      generated = JSON.parse(jsonStr);
-    } catch {
-      const pageMatch = jsonStr.match(/"page_code"\s*:\s*"((?:[^"\\]|\\.)*)"/);
-      const adminMatch = jsonStr.match(/"admin_code"\s*:\s*"((?:[^"\\]|\\.)*)"/);
-      const explanationMatch = jsonStr.match(/"explanation"\s*:\s*"((?:[^"\\]|\\.)*)"/);
-
-      if (pageMatch) {
-        generated = {
-          page_code: pageMatch[1].replace(/\\n/g, '\n').replace(/\\"/g, '"').replace(/\\\\/g, '\\'),
-          admin_code: adminMatch ? adminMatch[1].replace(/\\n/g, '\n').replace(/\\"/g, '"').replace(/\\\\/g, '\\') : null,
-          api_handler_code: null,
-          explanation: explanationMatch ? explanationMatch[1] : 'Code generated.',
-        };
-      } else {
-        return NextResponse.json({ error: 'Failed to parse generated code. Try a simpler request.' }, { status: 500 });
-      }
-    }
-  } catch {
-    return NextResponse.json({ error: 'Failed to parse generated code. Try again.' }, { status: 500 });
+  let generated = parseGenerated(textContent);
+  if (!generated) {
+    return NextResponse.json({ error: 'Failed to parse generated code. Try a simpler request.' }, { status: 500 });
   }
-
   if (!generated.page_code) {
     return NextResponse.json({ error: 'Generated code missing page_code' }, { status: 500 });
+  }
+
+  // BUG FIX MODE diff guard: if the model rewrote a large fraction of the file
+  // for what should be a small bug fix, retry once with explicit feedback.
+  // Threshold is intentionally lenient (35%) so legitimate medium fixes pass through.
+  const DRIFT_THRESHOLD = 0.35;
+  const MIN_FILE_LINES = 30; // Don't bother on tiny files
+  if (isBugFix && existing?.page_code && generated.page_code) {
+    const drift = calculateDrift(existing.page_code, generated.page_code);
+    if (drift.total >= MIN_FILE_LINES && drift.ratio > DRIFT_THRESHOLD) {
+      const feedbackMessage = `STOP. Your previous response changed ${Math.round(drift.ratio * 100)}% of page_code (${drift.changed} of ${drift.total} lines are new or modified). The user reported ONE specific bug. A correct bug fix changes 1-15 lines, not ${drift.changed}.
+
+Look at the current code in the system prompt above. Find the EXACT lines that cause the reported bug. Output the WHOLE file again, but BYTE-FOR-BYTE identical to the current code EXCEPT for those few lines.
+
+Do not refactor. Do not rename. Do not restyle. Do not "improve" anything. Do not regenerate admin_code or api_handler_code if they aren't related to the bug — copy them verbatim from the current code.
+
+Return the JSON now.`;
+
+      const retryResponse = await getOpenAI().chat.completions.create({
+        model,
+        max_tokens: 16384,
+        temperature: 0,
+        messages: [
+          { role: 'system', content: systemPrompt + planContext + elementContextPrompt + bugFixContext },
+          ...conversationMessages.map((m: { role: string; content: string }) => ({
+            role: m.role as 'user' | 'assistant',
+            content: m.content,
+          })),
+          { role: 'assistant', content: textContent },
+          { role: 'user', content: feedbackMessage },
+        ],
+      });
+
+      const retryContent = retryResponse.choices[0]?.message?.content;
+      if (retryContent) {
+        const retryParsed = parseGenerated(retryContent);
+        if (retryParsed?.page_code) {
+          const retryDrift = calculateDrift(existing.page_code, retryParsed.page_code);
+          // Only accept retry if it actually drifted less
+          if (retryDrift.ratio < drift.ratio) {
+            generated = retryParsed;
+          }
+        }
+      }
+    }
   }
 
   // Persist to database
