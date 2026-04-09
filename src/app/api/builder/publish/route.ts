@@ -66,17 +66,19 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Template not found' }, { status: 404 });
   }
 
-  // Fetch current generated code
+  // Fetch current generated code (and its version — we'll pin the creator's
+  // instance to this version so their live URL serves what they just published).
   const { data: generated } = await supabase
     .from('generated_templates')
-    .select('page_code, admin_code, api_handler_code')
+    .select('page_code, admin_code, api_handler_code, version')
     .eq('template_id', template_id)
     .eq('is_current', true)
-    .single();
+    .single() as { data: { page_code: string; admin_code: string | null; api_handler_code: string | null; version: number } | null };
 
   if (!generated) {
     return NextResponse.json({ error: 'No generated code found' }, { status: 400 });
   }
+  const currentVersion = generated.version;
 
   // Validate the code
   const validation = validateTemplateCode({
@@ -170,6 +172,13 @@ export async function POST(request: NextRequest) {
           .update({ name: name.trim() })
           .eq('id', tenantId);
       }
+
+      // Auto-upgrade the creator's own instance to the version they just
+      // published. Other owners' clones stay pinned to whatever version they
+      // were on until they explicitly upgrade.
+      await (supabase.from('app_instances') as any)
+        .update({ template_version: currentVersion })
+        .eq('id', reusableInstance.id);
     } else {
       // First-time deploy: we need a valid, unique slug
       const rawSlug = (typeof requestedSlug === 'string' && requestedSlug.trim()) || '';
@@ -220,6 +229,8 @@ export async function POST(request: NextRequest) {
           name: name?.trim() || 'My App',
           status: 'active',
           config_snapshot: {},
+          template_version: currentVersion,
+          original_clone_version: currentVersion,
         })
         .select('id')
         .single() as { data: { id: string } | null; error: { message: string } | null };
@@ -271,6 +282,7 @@ export async function POST(request: NextRequest) {
     live_url: liveUrl,
     deployed: !!deploy_to_url,
     is_private: isPrivate,
+    version: currentVersion,
     marketplace_url: list_on_marketplace ? `/templates/${template_id}` : null,
     listed_on_marketplace: !!list_on_marketplace,
     warnings: validation.warnings,

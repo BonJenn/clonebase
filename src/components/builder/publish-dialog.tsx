@@ -16,6 +16,12 @@ interface PublishDialogProps {
    * Returns a base64 PNG data URL, or null if capture failed.
    */
   capturePreview?: () => Promise<string | null>;
+  /**
+   * Fired when the publish API returns success. Used by the builder workspace
+   * to flip its primary button from "Publish" to "Update" once an instance
+   * exists.
+   */
+  onPublished?: (info: { instance_id: string | null; slug: string | null }) => void;
 }
 
 interface PublishResult {
@@ -47,7 +53,7 @@ function slugify(input: string): string {
     .slice(0, 63);
 }
 
-export function PublishDialog({ templateId, templateName, onClose, capturePreview }: PublishDialogProps) {
+export function PublishDialog({ templateId, templateName, onClose, capturePreview, onPublished }: PublishDialogProps) {
   const router = useRouter();
   const [name, setName] = useState(templateName);
   const [description, setDescription] = useState('');
@@ -195,6 +201,8 @@ export function PublishDialog({ templateId, templateName, onClose, capturePrevie
       deployed: !!data.deployed,
       is_private: !!data.is_private,
     });
+    // Notify parent so it can flip its primary button from Publish → Update
+    onPublished?.({ instance_id: data.instance_id || null, slug: data.slug || null });
     router.refresh();
   }
 

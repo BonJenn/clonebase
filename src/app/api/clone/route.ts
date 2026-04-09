@@ -97,6 +97,18 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Failed to create tenant: ' + tenantError.message }, { status: 500 });
   }
 
+  // Look up the current template version so we can pin the clone to it.
+  // The clone stays on this version until the owner explicitly upgrades,
+  // even if the original creator publishes newer versions.
+  const { data: currentVersionRow } = await supabase
+    .from('generated_templates')
+    .select('version')
+    .eq('template_id', template.id)
+    .eq('is_current', true)
+    .limit(1)
+    .maybeSingle() as { data: { version: number } | null };
+  const pinnedVersion = currentVersionRow?.version || null;
+
   // 2. Create app instance with a snapshot of the template config
   const { data: instance, error: instanceError } = await supabase
     .from('app_instances')
@@ -105,6 +117,8 @@ export async function POST(request: NextRequest) {
       template_id: template.id,
       name: name.trim(),
       status: 'active',
+      template_version: pinnedVersion,
+      original_clone_version: pinnedVersion,
       config_snapshot: {
         ui_config: template.ui_config,
         api_config: template.api_config,

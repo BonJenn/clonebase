@@ -25,17 +25,17 @@ export default async function TenantCatchAllPage({ params }: { params: Promise<{
 
   const { data: instance } = await supabase
     .from('app_instances')
-    .select('id, template_id, template:app_templates(slug, source_type)')
+    .select('id, template_id, template_version, template:app_templates(slug, source_type)')
     .eq('tenant_id', tenant.id)
     .eq('status', 'active')
-    .single() as { data: { id: string; template_id: string; template: { slug: string; source_type: string } } | null };
+    .single() as { data: { id: string; template_id: string; template_version: number | null; template: { slug: string; source_type: string } } | null };
 
   if (!instance) notFound();
 
   const tpl = instance.template as unknown as { slug: string; source_type: string };
 
   if (tpl.source_type === 'generated') {
-    const generated = await loadGeneratedCode(instance.template_id);
+    const generated = await loadGeneratedCode(instance.template_id, instance.template_version);
     if (!generated) notFound();
 
     // Pick the right code based on route

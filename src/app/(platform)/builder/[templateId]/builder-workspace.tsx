@@ -22,12 +22,18 @@ interface GeneratedCode {
   api_handler_code: string | null;
 }
 
+interface ExistingInstance {
+  id: string;
+  slug: string;
+}
+
 interface BuilderWorkspaceProps {
   templateId: string;
   templateName: string;
   initialPrompt: string | null;
   existingCode: GeneratedCode | null;
   existingMessages: Message[];
+  existingInstance: ExistingInstance | null;
 }
 
 export function BuilderWorkspace({
@@ -36,6 +42,7 @@ export function BuilderWorkspace({
   initialPrompt,
   existingCode,
   existingMessages,
+  existingInstance,
 }: BuilderWorkspaceProps) {
   const [messages, setMessages] = useState<Message[]>(existingMessages);
   const [code, setCode] = useState<GeneratedCode | null>(existingCode);
@@ -48,6 +55,14 @@ export function BuilderWorkspace({
   const [lastFailedMessage, setLastFailedMessage] = useState<string | null>(null);
   const [selectedElement, setSelectedElement] = useState<ElementSelectedEvent | null>(null);
   const livePreviewRef = useRef<LivePreviewHandle>(null);
+
+  // Instance tracks the creator's own deployment. Once they've published
+  // once, the primary button flips from "Publish" to "Update" for one-click
+  // redeploys without reopening the full dialog.
+  const [instance, setInstance] = useState<ExistingInstance | null>(existingInstance);
+  const [settingsMenuOpen, setSettingsMenuOpen] = useState(false);
+  const [updating, setUpdating] = useState(false);
+  const [updateToast, setUpdateToast] = useState<string | null>(null);
 
   // Transpile code for preview whenever it changes
   const transpile = useCallback(async (pageCode: string) => {
@@ -246,6 +261,79 @@ export function BuilderWorkspace({
     setGenerating(false);
   }
 
+  // One-click update: push the latest draft to the existing deployment
+  // without reopening the publish dialog. Used for "Update" button after
+  // the first publish. Skips the preview capture for speed — the screenshot
+  // can be refreshed by clicking "Edit publish settings" later if needed.
+  async function handleQuickUpdate() {
+    if (!instance) return;
+    setUpdating(true);
+    setUpdateToast(null);
+
+    // Capture a fresh preview screenshot (non-fatal on failure)
+    let previewUrl: string | null = null;
+    try {
+      const dataUrl = await livePreviewRef.current?.capturePreview();
+      if (dataUrl) {
+        const match = dataUrl.match(/^data:([^;]+);base64,(.+)$/);
+        if (match) {
+          const binary = atob(match[2]);
+          const bytes = new Uint8Array(binary.length);
+          for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+          const file = new File([bytes], `${templateId}.png`, { type: match[1] });
+          const formData = new FormData();
+          formData.append('file', file);
+          formData.append('template_id', templateId);
+          const uploadRes = await fetch('/api/builder/upload-preview', {
+            method: 'POST',
+            body: formData,
+          });
+          if (uploadRes.ok) {
+            const uploadData = await uploadRes.json();
+            previewUrl = uploadData.url || null;
+          }
+        }
+      }
+    } catch (err) {
+      console.warn('[builder] quick-update preview capture failed (non-fatal):', err);
+    }
+
+    // Re-publish with minimal fields — the server reuses the existing tenant
+    // so slug, password, marketplace settings are untouched.
+    const res = await fetch('/api/builder/publish', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        template_id: templateId,
+        name: templateName,
+        preview_url: previewUrl,
+        deploy_to_url: true,
+        // Re-publish keeps existing marketplace + private state unchanged by
+        // sending undefined for those fields; the server's reuse-instance
+        // path doesn't touch visibility/password unless explicitly set.
+      }),
+    });
+
+    const data = await res.json();
+    if (!res.ok) {
+      setUpdateToast(`⚠️ ${data.error || 'Update failed'}`);
+      setUpdating(false);
+      setTimeout(() => setUpdateToast(null), 4000);
+      return;
+    }
+
+    setUpdateToast(`✓ Updated to v${data.version}`);
+    setUpdating(false);
+    setTimeout(() => setUpdateToast(null), 3000);
+  }
+
+  function handleDialogClose() {
+    setShowPublish(false);
+    // After closing the publish dialog, assume an instance now exists if
+    // the user hit the success screen. We can't easily detect this from
+    // here, so trust the server state via a refresh.
+  }
+
   return (
     <>
     {/* Mobile builder — simplified chat + preview toggle */}
@@ -312,15 +400,88 @@ export function BuilderWorkspace({
           >
             Export
           </Button>
-          <Button
-            onClick={() => setShowPublish(true)}
-            disabled={!code}
-            variant="secondary"
-          >
-            Publish
-          </Button>
+          {instance ? (
+            // Already published once — primary action is a one-click update
+            <div className="relative flex items-center">
+              <Button
+                onClick={handleQuickUpdate}
+                disabled={!code || updating}
+                loading={updating}
+                variant="secondary"
+                className="rounded-r-none border-r-0"
+              >
+                Update
+              </Button>
+              <button
+                type="button"
+                onClick={() => setSettingsMenuOpen((v) => !v)}
+                disabled={!code || updating}
+                aria-label="Publish settings"
+                className="rounded-lg rounded-l-none border border-l-0 border-gray-300 bg-white px-2 py-2 text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="h-4 w-4">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+                </svg>
+              </button>
+              {settingsMenuOpen && (
+                <>
+                  <div className="fixed inset-0 z-30" onClick={() => setSettingsMenuOpen(false)} />
+                  <div className="absolute right-0 top-full z-40 mt-1 w-56 rounded-lg border border-gray-200 bg-white shadow-lg">
+                    <button
+                      type="button"
+                      onClick={() => { setSettingsMenuOpen(false); setShowPublish(true); }}
+                      className="block w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50"
+                    >
+                      Edit publish settings
+                    </button>
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        setSettingsMenuOpen(false);
+                        const url = `https://${instance.slug}.clonebase.app`;
+                        try {
+                          await navigator.clipboard.writeText(url);
+                          setUpdateToast('✓ Link copied');
+                          setTimeout(() => setUpdateToast(null), 2000);
+                        } catch {
+                          // noop
+                        }
+                      }}
+                      className="block w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50"
+                    >
+                      Copy live URL
+                    </button>
+                    <a
+                      href={`https://${instance.slug}.clonebase.app`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={() => setSettingsMenuOpen(false)}
+                      className="block w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50"
+                    >
+                      Open live app ↗
+                    </a>
+                  </div>
+                </>
+              )}
+            </div>
+          ) : (
+            <Button
+              onClick={() => setShowPublish(true)}
+              disabled={!code}
+              variant="secondary"
+            >
+              Publish
+            </Button>
+          )}
         </div>
       </div>
+
+      {/* Update toast */}
+      {updateToast && (
+        <div className="fixed right-4 top-20 z-50 rounded-lg bg-gray-900 px-4 py-2 text-sm text-white shadow-lg">
+          {updateToast}
+        </div>
+      )}
 
       {/* Split pane */}
       <div className="flex flex-1 overflow-hidden">
@@ -375,8 +536,13 @@ export function BuilderWorkspace({
         <PublishDialog
           templateId={templateId}
           templateName={templateName}
-          onClose={() => setShowPublish(false)}
+          onClose={handleDialogClose}
           capturePreview={() => livePreviewRef.current?.capturePreview() ?? Promise.resolve(null)}
+          onPublished={(info) => {
+            if (info.instance_id && info.slug) {
+              setInstance({ id: info.instance_id, slug: info.slug });
+            }
+          }}
         />
       )}
     </div>

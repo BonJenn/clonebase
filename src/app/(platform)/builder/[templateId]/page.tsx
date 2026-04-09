@@ -35,6 +35,18 @@ export default async function BuilderPage({
 
   const generated = generatedRows?.[0] || null;
 
+  // Look up the existing deployment (if any) so the builder can show
+  // "Update" instead of "Publish" and the workspace knows the live URL.
+  const { data: existingInstance } = await supabase
+    .from('app_instances')
+    .select('id, tenant:tenants!inner(slug, owner_id)')
+    .eq('template_id', templateId)
+    .maybeSingle() as { data: { id: string; tenant: { slug: string; owner_id: string } } | null };
+
+  const ownedInstance = existingInstance && existingInstance.tenant.owner_id === user.id
+    ? { id: existingInstance.id, slug: existingInstance.tenant.slug }
+    : null;
+
   return (
     <BuilderWorkspace
       templateId={templateId}
@@ -46,6 +58,7 @@ export default async function BuilderPage({
         api_handler_code: generated.api_handler_code,
       } : null}
       existingMessages={((generated?.conversation_history || []) as Array<{ role: string; content: string }>).map(m => ({ role: m.role as 'user' | 'assistant', content: m.content }))}
+      existingInstance={ownedInstance}
     />
   );
 }

@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { DeleteAppButton } from '@/components/platform/delete-app-button';
+import { InstanceVersionControl } from '@/components/platform/instance-version-control';
 import type { AppInstance, AppTemplate } from '@/types';
 
 export default async function DashboardPage() {
@@ -28,6 +29,27 @@ export default async function DashboardPage() {
       template:app_templates(id, name, slug, icon_url, source_type, preview_url)
     `)
     .order('created_at', { ascending: false });
+
+  // For each referenced template, look up the latest generated_templates version
+  // so we can show "Update available" when the creator has published newer code.
+  const instanceTemplateIds = Array.from(
+    new Set(
+      ((instances as (AppInstance & { template: { id: string } | null })[]) || [])
+        .map((i) => i.template?.id)
+        .filter((id): id is string => !!id)
+    )
+  );
+  const latestVersionByTemplate: Record<string, number> = {};
+  if (instanceTemplateIds.length > 0) {
+    const { data: latestRows } = await supabase
+      .from('generated_templates')
+      .select('template_id, version')
+      .in('template_id', instanceTemplateIds)
+      .eq('is_current', true) as { data: { template_id: string; version: number }[] | null };
+    for (const row of latestRows || []) {
+      latestVersionByTemplate[row.template_id] = row.version;
+    }
+  }
 
   // Fetch published templates (for marketplace, not generated drafts)
   const { data: templates } = await supabase
@@ -112,35 +134,56 @@ export default async function DashboardPage() {
             ))}
 
             {/* Cloned instances */}
-            {(instances as (AppInstance & { tenant: { slug: string }; template: AppTemplate })[])?.map((inst) => (
-              <Link key={inst.id} href={`/dashboard/projects/${inst.id}`} className="rounded-xl border border-gray-200 bg-white overflow-hidden hover:shadow-md transition-shadow block">
-                {/* Preview thumbnail from the parent template */}
-                <div className="aspect-video bg-gradient-to-br from-indigo-50 to-sky-50 flex items-center justify-center">
-                  {inst.template?.preview_url ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={inst.template.preview_url} alt={inst.name} className="w-full h-full object-cover" />
-                  ) : (
-                    <span className="text-5xl text-indigo-200">{inst.name.charAt(0).toUpperCase()}</span>
-                  )}
-                </div>
-                <div className="p-5">
-                  <div className="min-w-0">
-                    <h3 className="font-semibold truncate">{inst.name}</h3>
-                    <p className="text-xs text-gray-500 truncate">{inst.tenant.slug}.clonebase.app</p>
+            {(instances as (AppInstance & {
+              tenant: { slug: string };
+              template: AppTemplate;
+              template_version: number | null;
+            })[])?.map((inst) => {
+              const templateId = inst.template?.id;
+              const latestVersion = templateId ? latestVersionByTemplate[templateId] : undefined;
+              const currentVersion = inst.template_version;
+              const updateAvailable =
+                typeof currentVersion === 'number' &&
+                typeof latestVersion === 'number' &&
+                latestVersion > currentVersion;
+              return (
+                <Link key={inst.id} href={`/dashboard/projects/${inst.id}`} className="rounded-xl border border-gray-200 bg-white overflow-hidden hover:shadow-md transition-shadow block">
+                  {/* Preview thumbnail from the parent template */}
+                  <div className="aspect-video bg-gradient-to-br from-indigo-50 to-sky-50 flex items-center justify-center">
+                    {inst.template?.preview_url ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={inst.template.preview_url} alt={inst.name} className="w-full h-full object-cover" />
+                    ) : (
+                      <span className="text-5xl text-indigo-200">{inst.name.charAt(0).toUpperCase()}</span>
+                    )}
                   </div>
-                  <div className="mt-3 flex items-center justify-between">
-                    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
-                      inst.status === 'active' ? 'bg-green-50 text-green-700' : 'bg-yellow-50 text-yellow-700'
-                    }`}>
-                      {inst.status}
-                    </span>
-                    <span className="text-xs text-gray-400 truncate max-w-[150px]">
-                      Cloned from {inst.template?.name}
-                    </span>
+                  <div className="p-5">
+                    <div className="flex items-start justify-between gap-2 min-w-0">
+                      <div className="min-w-0">
+                        <h3 className="font-semibold truncate">{inst.name}</h3>
+                        <p className="text-xs text-gray-500 truncate">{inst.tenant.slug}.clonebase.app</p>
+                      </div>
+                      <InstanceVersionControl
+                        instanceId={inst.id}
+                        currentVersion={currentVersion}
+                        latestVersion={latestVersion ?? null}
+                        updateAvailable={updateAvailable}
+                      />
+                    </div>
+                    <div className="mt-3 flex items-center justify-between">
+                      <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
+                        inst.status === 'active' ? 'bg-green-50 text-green-700' : 'bg-yellow-50 text-yellow-700'
+                      }`}>
+                        {inst.status}
+                      </span>
+                      <span className="text-xs text-gray-400 truncate max-w-[150px]">
+                        Cloned from {inst.template?.name}
+                      </span>
+                    </div>
                   </div>
-                </div>
-              </Link>
-            ))}
+                </Link>
+              );
+            })}
           </div>
         )}
       </section>

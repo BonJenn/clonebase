@@ -69,10 +69,10 @@ async function handleRequest(
 
   const { data: instance } = await supabase
     .from('app_instances')
-    .select('template_id, template:app_templates(slug, source_type)')
+    .select('template_id, template_version, template:app_templates(slug, source_type)')
     .eq('tenant_id', tenant.id)
     .eq('status', 'active')
-    .single() as { data: { template_id: string; template: { slug: string; source_type: string } } | null };
+    .single() as { data: { template_id: string; template_version: number | null; template: { slug: string; source_type: string } } | null };
 
   if (!instance) {
     return NextResponse.json({ error: 'No active app instance' }, { status: 404 });
@@ -94,7 +94,7 @@ async function handleRequest(
 
   // Generated templates: load and execute API handler from DB
   if (tpl.source_type === 'generated') {
-    const generated = await loadGeneratedCode(instance.template_id);
+    const generated = await loadGeneratedCode(instance.template_id, instance.template_version);
     if (generated?.api_handler_code) {
       try {
         return await executeGeneratedHandler(generated.api_handler_code, request, {
