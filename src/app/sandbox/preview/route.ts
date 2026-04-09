@@ -410,11 +410,14 @@ function renderComponent(code, componentName) {
 // Send data snapshot to parent
 function sendDataSnapshot() {
   var snapshot = {};
+  var totalItems = 0;
   for (var key in dataStore) {
     snapshot[key] = dataStore[key].map(function(item) {
       return { id: item.id, collection: key, data: item, created_at: item.created_at || new Date().toISOString() };
     });
+    totalItems += snapshot[key].length;
   }
+  console.log('[sandbox] sendDataSnapshot — collections:', Object.keys(snapshot), 'total items:', totalItems, 'dataStore:', dataStore);
   window.parent.postMessage({ type: 'data-snapshot', collections: snapshot }, '*');
 }
 
