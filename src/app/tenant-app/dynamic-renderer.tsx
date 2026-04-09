@@ -1,10 +1,13 @@
 'use client';
 
 import { useMemo } from 'react';
+import Script from 'next/script';
 import { useTenant } from '@/sdk/tenant-context';
 import { useTenantData } from '@/sdk/use-tenant-data';
 import { useFileUpload } from '@/sdk/use-file-upload';
 import { useTenantAuth } from '@/sdk/use-tenant-auth';
+import { useStripeCheckout } from '@/sdk/use-stripe-checkout';
+import { Chart } from '@/sdk/chart';
 
 interface DynamicRendererProps {
   transpiledCode: string;
@@ -24,6 +27,8 @@ export function DynamicRenderer({ transpiledCode, componentName, tenantId, insta
         useTenantData,
         useFileUpload,
         useTenantAuth,
+        useStripeCheckout,
+        Chart,
         useIntegration: () => ({ call: async () => ({ ok: true, data: {} }), loading: false, error: null }),
       };
 
@@ -59,5 +64,16 @@ export function DynamicRenderer({ transpiledCode, componentName, tenantId, insta
     );
   }
 
-  return <Component tenantId={tenantId} instanceId={instanceId} />;
+  return (
+    <>
+      {/* ApexCharts loaded from CDN once per page for any generated code that
+          uses the Chart component. strategy="afterInteractive" lets the page
+          render first, then the script loads in parallel. */}
+      <Script
+        src="https://cdn.jsdelivr.net/npm/apexcharts@3.53.0/dist/apexcharts.min.js"
+        strategy="afterInteractive"
+      />
+      <Component tenantId={tenantId} instanceId={instanceId} />
+    </>
+  );
 }

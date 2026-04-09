@@ -14,6 +14,8 @@ export async function GET() {
   <!-- html2canvas-pro: fork of html2canvas with modern CSS support (oklch, color-mix, etc.)
        Tailwind 4+ uses oklch() color values which the original html2canvas chokes on. -->
   <script src="https://cdn.jsdelivr.net/npm/html2canvas-pro@1.5.8/dist/html2canvas-pro.min.js" crossorigin="anonymous"></script>
+  <!-- ApexCharts for beautiful line/bar/pie/donut/area/etc. charts in generated apps. -->
+  <script src="https://cdn.jsdelivr.net/npm/apexcharts@3.53.0/dist/apexcharts.min.js" crossorigin="anonymous"></script>
   <style>
     body { margin: 0; }
     /* Edit mode visual affordances — only active when body.edit-mode is set */
@@ -134,6 +136,142 @@ window.__SDK__ = {
       uploading: uploading,
       error: null,
     };
+  },
+
+  // Chart component — wraps ApexCharts (loaded from CDN above) in a React
+  // component with sensible defaults matching the design system lock.
+  // API mirrors src/sdk/chart.tsx so generated code works identically in
+  // the preview iframe and in production.
+  Chart: function(props) {
+    var containerRef = React.useRef(null);
+    var chartRef = React.useRef(null);
+    var serializedProps = JSON.stringify({
+      type: props.type,
+      series: props.series,
+      categories: props.categories,
+      labels: props.labels,
+      height: props.height,
+      colors: props.colors,
+      title: props.title,
+      stacked: props.stacked,
+      curve: props.curve,
+      horizontal: props.horizontal,
+      options: props.options,
+    });
+
+    React.useEffect(function() {
+      if (!containerRef.current) return;
+      var cancelled = false;
+      var interval = null;
+
+      function buildConfig() {
+        var type = props.type;
+        var height = props.height || 300;
+        var curve = props.curve || 'smooth';
+        var isPie = type === 'pie' || type === 'donut' || type === 'radialBar' || type === 'polarArea';
+        var defaults = {
+          chart: {
+            type: type,
+            height: height,
+            stacked: !!props.stacked,
+            fontFamily: 'inherit',
+            toolbar: { show: false },
+            zoom: { enabled: false },
+            animations: { enabled: true, speed: 400 },
+            background: 'transparent',
+          },
+          series: props.series,
+          colors: props.colors || ['#6366F1', '#8B5CF6', '#EC4899', '#F59E0B', '#10B981', '#06B6D4'],
+          grid: {
+            borderColor: '#E5E7EB',
+            strokeDashArray: 3,
+            padding: { top: 0, right: 0, bottom: 0, left: 8 },
+          },
+          stroke: {
+            curve: curve,
+            width: type === 'line' ? 2.5 : type === 'area' ? 2 : 0,
+          },
+          dataLabels: { enabled: false },
+          legend: {
+            position: isPie ? 'bottom' : 'top',
+            horizontalAlign: 'left',
+            fontFamily: 'inherit',
+            fontSize: '12px',
+            markers: { size: 6 },
+            itemMargin: { horizontal: 8, vertical: 4 },
+          },
+          tooltip: {
+            theme: 'light',
+            style: { fontFamily: 'inherit', fontSize: '12px' },
+          },
+          plotOptions: props.horizontal
+            ? { bar: { horizontal: true, borderRadius: 4 } }
+            : { bar: { borderRadius: 4, columnWidth: '60%' } },
+        };
+        if (type === 'area') {
+          defaults.fill = { type: 'gradient', gradient: { shadeIntensity: 0.4, opacityFrom: 0.5, opacityTo: 0.05 } };
+        }
+        if (props.categories) {
+          defaults.xaxis = {
+            categories: props.categories,
+            labels: { style: { colors: '#6B7280', fontSize: '11px', fontFamily: 'inherit' } },
+            axisBorder: { show: false },
+            axisTicks: { show: false },
+          };
+        }
+        defaults.yaxis = {
+          labels: { style: { colors: '#6B7280', fontSize: '11px', fontFamily: 'inherit' } },
+        };
+        if (props.labels) defaults.labels = props.labels;
+        if (props.title) defaults.title = { text: props.title, style: { fontFamily: 'inherit', fontSize: '14px', fontWeight: 500 } };
+        // Shallow merge passthrough options
+        if (props.options) {
+          for (var k in props.options) defaults[k] = props.options[k];
+        }
+        return defaults;
+      }
+
+      function init() {
+        if (cancelled) return;
+        if (!window.ApexCharts) {
+          // CDN still loading — poll briefly
+          interval = setInterval(function() {
+            if (cancelled) return;
+            if (window.ApexCharts) {
+              clearInterval(interval);
+              interval = null;
+              init();
+            }
+          }, 100);
+          return;
+        }
+        try {
+          if (chartRef.current) {
+            chartRef.current.destroy();
+            chartRef.current = null;
+          }
+          if (!containerRef.current) return;
+          var chart = new window.ApexCharts(containerRef.current, buildConfig());
+          chart.render();
+          chartRef.current = chart;
+        } catch (err) {
+          console.error('[sandbox chart] render failed', err);
+        }
+      }
+
+      init();
+
+      return function() {
+        cancelled = true;
+        if (interval) clearInterval(interval);
+        if (chartRef.current) {
+          try { chartRef.current.destroy(); } catch (e) {}
+          chartRef.current = null;
+        }
+      };
+    }, [serializedProps]);
+
+    return React.createElement('div', { ref: containerRef, className: 'w-full' });
   },
 
   // useTenantAuth hook (mock — persists across re-renders)

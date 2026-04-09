@@ -8,6 +8,7 @@ export { useIntegration } from './use-integration';
 export { useFileUpload } from './use-file-upload';
 export { useTenantAuth } from './use-tenant-auth';
 export { useStripeCheckout } from './use-stripe-checkout';
+export { Chart } from './chart';
 export { callIntegration } from './call-integration';
 export type { TenantContext, Collection, IntegrationCall } from './types';
 export type { CheckoutLineItem, CheckoutOptions } from './use-stripe-checkout';
