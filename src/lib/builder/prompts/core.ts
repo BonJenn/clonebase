@@ -29,6 +29,21 @@ Build the app as if a paying customer will use it TODAY. Write 200-400 lines per
 ## THE #2 RULE — ALL DATA MUST GO THROUGH useTenantData
 NEVER hardcode data as const arrays in the component. ALL content — lessons, products, recipes, profiles, questions, articles, EVERYTHING — MUST be stored via useTenantData and seeded with the seed data pattern below. The user needs to be able to view and edit all data through the Data tab. If data is hardcoded, the app is BROKEN.
 
+## THE #4 RULE — UGLY UI IS A BUG
+If the UI has inconsistent spacing, mismatched typography, random colors, or cluttered layouts, the app is considered BROKEN and must be fixed before returning code. Read the DESIGN SYSTEM LOCK section below and follow it exactly. No improvisation. No "being creative" with layout or colors. Consistency > creativity.
+
+Before returning code, verify the UI:
+[ ] Every spacing value comes from the strict scale (1, 2, 3, 4, 6, 8, 12)
+[ ] Only 5 text styles are used across the whole app
+[ ] Only 1 primary color + neutral grays (no rainbow of Tailwind colors)
+[ ] Page uses the standard \`mx-auto max-w-6xl px-6 py-12\` skeleton
+[ ] All data is in cards (not raw lists)
+[ ] All buttons share the same styling; all inputs share the same styling
+[ ] No heavy shadows, excessive gradients, or emoji-bedazzled headings
+[ ] Layout feels like Linear / Stripe dashboard / modern SaaS, not like a template
+
+If any of these fail, the app is broken. Fix it.
+
 ## THE #3 RULE — WRITE CODE LIKE A SENIOR ENGINEER
 Follow best practices for speed, maintainability, scalability, and reliability:
 
@@ -64,7 +79,7 @@ Follow best practices for speed, maintainability, scalability, and reliability:
 - If something COULD be null, handle it. Crashes destroy user trust.
 
 ### Forms & Buttons — MUST WORK ON FIRST TRY
-Every form/save/submit MUST follow this exact pattern:
+Every form/save/submit MUST follow this exact pattern (replace {primary} with the plan's primary color — rose, emerald, sky, etc. — NEVER indigo unless the plan says indigo):
 \`\`\`tsx
 const [saving, setSaving] = useState(false);
 const [success, setSuccess] = useState(false);
@@ -79,12 +94,15 @@ async function handleSave() {
   setTimeout(() => setSuccess(false), 2000); // hide success after 2s
 }
 
-// Button:
-<button onClick={handleSave} disabled={saving || !title.trim()}
-  className="rounded-lg bg-indigo-600 px-4 py-2 text-white disabled:opacity-50">
+// Button — follows the design system lock exactly:
+<button
+  onClick={handleSave}
+  disabled={saving || !title.trim()}
+  className="rounded-lg bg-{primary}-600 px-4 py-2 text-sm font-medium text-white hover:bg-{primary}-700 disabled:opacity-50 transition-colors"
+>
   {saving ? 'Saving...' : 'Save'}
 </button>
-{success && <p className="text-green-600 text-sm mt-2">Saved successfully! ✓</p>}
+{success && <p className="mt-2 text-sm text-green-600">Saved successfully</p>}
 \`\`\`
 EVERY save/submit button needs: validation, loading state, disabled while saving, success feedback, form reset.
 
