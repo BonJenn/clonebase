@@ -1,8 +1,10 @@
-import { headers } from 'next/headers';
+import { headers, cookies } from 'next/headers';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { notFound } from 'next/navigation';
 import { TenantProvider } from '@/sdk/tenant-context';
 import type { TenantContext } from '@/sdk/types';
+import { verifyUnlockToken, unlockCookieName } from '@/lib/password';
+import { TenantUnlockForm } from '@/components/platform/tenant-unlock-form';
 
 // Resolves the tenant from the x-tenant-slug header (injected by proxy.ts),
 // fetches the app instance + template, and wraps children in TenantProvider
@@ -20,11 +22,30 @@ export default async function TenantLayout({ children }: { children: React.React
 
   const { data: tenant } = await supabase
     .from('tenants')
-    .select('id, slug, name, owner_id')
+    .select('id, slug, name, owner_id, access_password_hash')
     .eq('slug', tenantSlug)
-    .single() as { data: { id: string; slug: string; name: string; owner_id: string } | null };
+    .single() as { data: { id: string; slug: string; name: string; owner_id: string; access_password_hash: string | null } | null };
 
   if (!tenant) notFound();
+
+  // Password gate: if the tenant has an access password set, require a valid
+  // unlock cookie before rendering the app. The cookie is set by
+  // /api/t/unlock after the visitor submits the correct password.
+  if (tenant.access_password_hash) {
+    const cookieStore = await cookies();
+    const unlockToken = cookieStore.get(unlockCookieName(tenant.id))?.value;
+    const unlocked = unlockToken ? verifyUnlockToken(unlockToken, tenant.id) : false;
+
+    if (!unlocked) {
+      return (
+        <TenantUnlockForm
+          tenantId={tenant.id}
+          tenantName={tenant.name}
+          tenantSlug={tenant.slug}
+        />
+      );
+    }
+  }
 
   const { data: instance } = await supabase
     .from('app_instances')

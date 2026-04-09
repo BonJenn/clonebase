@@ -11,7 +11,9 @@ export async function GET() {
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/react@18/umd/react.production.min.js" crossorigin="anonymous"></script>
   <script src="https://cdn.jsdelivr.net/npm/react-dom@18/umd/react-dom.production.min.js" crossorigin="anonymous"></script>
-  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js" crossorigin="anonymous"></script>
+  <!-- html2canvas-pro: fork of html2canvas with modern CSS support (oklch, color-mix, etc.)
+       Tailwind 4+ uses oklch() color values which the original html2canvas chokes on. -->
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas-pro@1.5.8/dist/html2canvas-pro.min.js" crossorigin="anonymous"></script>
   <style>
     body { margin: 0; }
     /* Edit mode visual affordances — only active when body.edit-mode is set */
@@ -506,8 +508,10 @@ function captureScreenshot(requestId) {
   }).catch(function(err) {
     if (wasEditMode) document.body.classList.add('edit-mode');
     var msg = err && err.message ? err.message : String(err);
-    console.error('[clonebase] html2canvas threw', err);
-    respond({ error: 'html2canvas failed: ' + msg });
+    var stack = err && err.stack ? String(err.stack) : '';
+    // Full error dump — shows up in the creator's console with all the detail
+    console.error('[clonebase] html2canvas threw', { message: msg, stack: stack, error: err });
+    respond({ error: 'html2canvas failed: ' + msg, stack: stack });
   });
 }
 

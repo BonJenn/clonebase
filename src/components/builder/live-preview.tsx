@@ -80,7 +80,13 @@ export const LivePreview = forwardRef<LivePreviewHandle, LivePreviewProps>(funct
       const resolver = captureResolvers.current.get(data.requestId);
       if (resolver) {
         captureResolvers.current.delete(data.requestId);
-        resolver(data.error ? null : data.dataUrl || null);
+        if (data.error) {
+          // Surface the sandbox-side error to the parent console for debugging
+          console.warn('[live-preview] capture failed:', data.error, data.stack || '');
+          resolver(null);
+        } else {
+          resolver(data.dataUrl || null);
+        }
       }
     } else if (data.type === 'element-edited') {
       onElementEdited?.({

@@ -1,15 +1,59 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { validateTemplateCode } from '@/lib/builder/code-validator';
+import { isValidSlug } from '@/lib/tenant';
+import { ROOT_DOMAIN } from '@/lib/constants';
+import { hashPassword } from '@/lib/password';
 
-// POST /api/builder/publish — Validate and publish a generated template
+// POST /api/builder/publish — Validate, publish, and/or deploy a generated template
+//
+// Three independent destinations (at least one required):
+//   - deploy_to_url: creates (or updates) a tenant + app_instance at {slug}.clonebase.app
+//   - list_on_marketplace: makes the template discoverable in the marketplace
+//
+// When deploying, app_visibility can be 'public' or 'private'. Private apps
+// require an access_password that gates the live URL via a server-rendered
+// password form in the tenant layout.
+//
+// Re-publishing reuses the existing tenant so the URL is stable across
+// iterations.
 export async function POST(request: NextRequest) {
   const supabase = await createServerSupabaseClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const { template_id, name, description, category, pricing_type, price_cents, preview_url } = await request.json();
+  const {
+    template_id,
+    name,
+    description,
+    category,
+    pricing_type,
+    price_cents,
+    preview_url,
+    slug: requestedSlug,
+    deploy_to_url = true,
+    list_on_marketplace = false,
+    app_visibility = 'public', // 'public' | 'private'
+    access_password,
+  } = await request.json();
+
   if (!template_id) return NextResponse.json({ error: 'template_id is required' }, { status: 400 });
+
+  // At least one destination must be selected
+  if (!deploy_to_url && !list_on_marketplace) {
+    return NextResponse.json({
+      error: 'Pick at least one: deploy to a URL or list on the marketplace.',
+    }, { status: 400 });
+  }
+
+  // Password requirement for private deploys
+  if (deploy_to_url && app_visibility === 'private') {
+    if (typeof access_password !== 'string' || access_password.trim().length < 4) {
+      return NextResponse.json({
+        error: 'Private apps require a password of at least 4 characters.',
+      }, { status: 400 });
+    }
+  }
 
   // Verify ownership
   const { data: template } = await supabase
@@ -49,17 +93,17 @@ export async function POST(request: NextRequest) {
     }, { status: 400 });
   }
 
-  // Update template metadata and publish
+  // Update template metadata. visibility on the TEMPLATE controls marketplace
+  // visibility (public = listed, private = not listed). The tenant's password
+  // protection is a separate concept, stored on the tenant row.
   const updates: Record<string, unknown> = {
     status: 'published',
-    visibility: 'public',
+    visibility: list_on_marketplace ? 'public' : 'private',
     source_type: 'generated',
   };
   if (name) updates.name = name.trim();
   if (description) updates.description = description.trim();
-  if (category) updates.category = category;
-  // preview_url is uploaded ahead of the publish call via /api/builder/upload-preview.
-  // Allow explicit null to clear an existing preview.
+  if (list_on_marketplace && category) updates.category = category;
   if (typeof preview_url === 'string' || preview_url === null) {
     updates.preview_url = preview_url;
   }
@@ -69,9 +113,8 @@ export async function POST(request: NextRequest) {
     .update(updates)
     .eq('id', template_id);
 
-  // Update pricing if provided — explicit update or insert since template_pricing
-  // doesn't have a unique constraint on template_id
-  if (pricing_type) {
+  // Pricing only matters when marketplace-listed
+  if (list_on_marketplace && pricing_type) {
     const validType = pricing_type === 'one_time' ? 'one_time' : 'free';
     const priceCents = validType === 'one_time' ? Math.max(100, Math.round(price_cents || 0)) : 0;
 
@@ -94,10 +137,142 @@ export async function POST(request: NextRequest) {
     }
   }
 
+  // --- Deploy: find or create a tenant + app_instance for the creator ---
+  let deployedSlug: string | null = null;
+  let instanceId: string | null = null;
+  let liveUrl: string | null = null;
+  const isPrivate = deploy_to_url && app_visibility === 'private';
+
+  if (deploy_to_url) {
+    const { data: existingInstanceRow } = await supabase
+      .from('app_instances')
+      .select('id, tenant_id, tenant:tenants!inner(id, slug, owner_id)')
+      .eq('template_id', template_id)
+      .single() as { data: { id: string; tenant_id: string; tenant: { id: string; slug: string; owner_id: string } } | null };
+
+    const reusableInstance =
+      existingInstanceRow && existingInstanceRow.tenant?.owner_id === user.id
+        ? existingInstanceRow
+        : null;
+
+    let tenantId: string;
+
+    if (reusableInstance) {
+      // Re-publishing: keep the existing tenant/slug. Ignore any slug the client
+      // sent — the URL is stable.
+      deployedSlug = reusableInstance.tenant.slug;
+      instanceId = reusableInstance.id;
+      tenantId = reusableInstance.tenant_id;
+
+      // Refresh the tenant name if the template was renamed
+      if (name) {
+        await (supabase.from('tenants') as any)
+          .update({ name: name.trim() })
+          .eq('id', tenantId);
+      }
+    } else {
+      // First-time deploy: we need a valid, unique slug
+      const rawSlug = (typeof requestedSlug === 'string' && requestedSlug.trim()) || '';
+      if (!rawSlug) {
+        return NextResponse.json({
+          error: 'slug is required to deploy the app for the first time',
+        }, { status: 400 });
+      }
+      const slugCheck = isValidSlug(rawSlug);
+      if (!slugCheck.valid) {
+        return NextResponse.json({ error: slugCheck.error }, { status: 400 });
+      }
+
+      const { data: slugCollision } = await supabase
+        .from('tenants')
+        .select('id')
+        .eq('slug', rawSlug.toLowerCase())
+        .maybeSingle() as { data: { id: string } | null };
+
+      if (slugCollision) {
+        return NextResponse.json({
+          error: 'That subdomain is already taken. Try another.',
+        }, { status: 409 });
+      }
+
+      const { data: tenant, error: tenantError } = await supabase
+        .from('tenants')
+        .insert({
+          owner_id: user.id,
+          name: name?.trim() || 'My App',
+          slug: rawSlug.toLowerCase(),
+        })
+        .select('id, slug')
+        .single() as { data: { id: string; slug: string } | null; error: { message: string } | null };
+
+      if (tenantError || !tenant) {
+        return NextResponse.json({
+          error: 'Failed to create deployment: ' + (tenantError?.message || 'unknown error'),
+        }, { status: 500 });
+      }
+      tenantId = tenant.id;
+
+      const { data: instance, error: instanceError } = await supabase
+        .from('app_instances')
+        .insert({
+          tenant_id: tenant.id,
+          template_id,
+          name: name?.trim() || 'My App',
+          status: 'active',
+          config_snapshot: {},
+        })
+        .select('id')
+        .single() as { data: { id: string } | null; error: { message: string } | null };
+
+      if (instanceError || !instance) {
+        await supabase.from('tenants').delete().eq('id', tenant.id);
+        return NextResponse.json({
+          error: 'Failed to create app instance: ' + (instanceError?.message || 'unknown error'),
+        }, { status: 500 });
+      }
+
+      deployedSlug = tenant.slug;
+      instanceId = instance.id;
+    }
+
+    // Update password-protection state on the tenant.
+    // - Private: hash the password and save
+    // - Public: clear any previous password
+    if (isPrivate) {
+      const { hash, salt } = hashPassword(access_password.trim());
+      await (supabase.from('tenants') as any)
+        .update({
+          access_password_hash: hash,
+          access_password_salt: salt,
+        })
+        .eq('id', tenantId);
+    } else {
+      await (supabase.from('tenants') as any)
+        .update({
+          access_password_hash: null,
+          access_password_salt: null,
+        })
+        .eq('id', tenantId);
+    }
+
+    // Build live URL
+    const origin = request.headers.get('origin') || '';
+    const isLocalDev = /localhost|127\.0\.0\.1/.test(origin);
+    liveUrl = isLocalDev
+      ? `${origin}/?tenant=${deployedSlug}`
+      : `https://${deployedSlug}.${ROOT_DOMAIN}`;
+  }
+
   return NextResponse.json({
     published: true,
     template_id,
-    slug: template.slug,
+    instance_id: instanceId,
+    slug: deployedSlug,
+    live_url: liveUrl,
+    deployed: !!deploy_to_url,
+    is_private: isPrivate,
+    marketplace_url: list_on_marketplace ? `/templates/${template_id}` : null,
+    listed_on_marketplace: !!list_on_marketplace,
     warnings: validation.warnings,
   });
 }
