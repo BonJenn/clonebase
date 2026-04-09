@@ -78,6 +78,9 @@ window.__SDK__ = {
         var newItem = Object.assign({}, item, { id: 'id-' + Date.now() + '-' + Math.random().toString(36).slice(2) });
         col.unshift(newItem);
         setData(col.slice());
+        // Push the new snapshot to the parent Data panel immediately so it
+        // doesn't have to wait for the 1s polling interval.
+        sendDataSnapshot();
         return Promise.resolve(newItem);
       },
       update: function(id, changes) {
@@ -85,6 +88,7 @@ window.__SDK__ = {
         if (idx === -1) return Promise.resolve(null);
         col[idx] = Object.assign({}, col[idx], changes);
         setData(col.slice());
+        sendDataSnapshot();
         return Promise.resolve(col[idx]);
       },
       remove: function(id) {
@@ -92,6 +96,7 @@ window.__SDK__ = {
         if (idx === -1) return Promise.resolve(false);
         col.splice(idx, 1);
         setData(col.slice());
+        sendDataSnapshot();
         return Promise.resolve(true);
       },
       refresh: function() { return Promise.resolve(); },

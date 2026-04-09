@@ -59,12 +59,16 @@ export function DataPanel({ templateId }: DataPanelProps) {
   }, [handleMessage]);
 
   useEffect(() => {
-    const interval = setInterval(() => {
+    function requestSnapshot() {
       const iframe = document.querySelector('iframe[title="App Preview"]') as HTMLIFrameElement;
       if (iframe?.contentWindow) {
         iframe.contentWindow.postMessage({ type: 'request-data' }, '*');
       }
-    }, 1000);
+    }
+    // Fire immediately so we don't wait 1s on mount, then every 1s after
+    // as a safety net in case any push broadcasts are missed.
+    requestSnapshot();
+    const interval = setInterval(requestSnapshot, 1000);
     return () => clearInterval(interval);
   }, []);
 
