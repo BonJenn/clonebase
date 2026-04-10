@@ -233,7 +233,7 @@ IMPORTANT CONSTRAINTS FROM PLAN:
   }
 
   // PASS 2: Generate the code
-  const model = isFirstGeneration ? 'gpt-4.1' : 'gpt-4.1-mini';
+  const model = 'gpt-5.4';
 
   // For follow-ups, only send the last few messages to stay within token limits.
   // The existing code is already in the system prompt via composePrompt.
