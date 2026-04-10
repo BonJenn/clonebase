@@ -16,11 +16,14 @@ Layout patterns for business sites:
 Design details that make it look agency-built:
 - Full-bleed images with text overlay (bg-cover bg-center with bg-black/40 overlay)
 - Section dividers with subtle background color changes (alternate white/gray-50)
-- Large typography for headings (text-4xl sm:text-5xl font-bold tracking-tight)
+- Large typography for headings (text-4xl sm:text-5xl font-semibold tracking-tight)
 - Smooth scroll behavior between sections
 - Image aspect ratios (aspect-video for heroes, aspect-square for menu items)
-- Glass-morphism effects (bg-white/80 backdrop-blur-sm)
-- Gradient text for emphasis (bg-clip-text text-transparent bg-gradient-to-r)
+- Sticky top navigation with subtle border (border-b border-gray-100 bg-white)
+- Proper whitespace rhythm (py-16 between sections, consistent gap-6 in grids)
+- Use \`<Icon>\` for contact details (phone, mail, map-pin, clock) and social links
+- Use \`<Card>\` for services/menu items and team members
+- Use \`<Badge>\` for categories, tags, and pricing labels
 
 Data organization for business sites — use SEPARATE collections:
 - 'menu_items' — name, description, price, category, image_url

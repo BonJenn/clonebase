@@ -9,9 +9,12 @@
 import { CORE } from './core';
 import { OUTPUT_FORMAT } from './output-format';
 import { TECHNICAL_CONTRACT } from './technical-contract';
+import { COMPONENTS } from './components';
 import { EDITABLE_IDS } from './editable-ids';
 import { QUALITY_PATTERNS } from './quality-patterns';
 import { DESIGN } from './design';
+import { LAYOUTS } from './layouts';
+import { PATTERNS } from './patterns';
 import { FILE_UPLOAD } from './file-upload';
 import { SEED_DATA } from './seed-data';
 import { RESPONSE_RULES } from './response-rules';
@@ -31,13 +34,18 @@ export interface ComposeOptions {
 
 // Stable prefix that does not depend on the current request.
 // This is what OpenAI's prompt cache will match against.
+// Order: core rules → output format → technical contract → UI kit docs →
+// design lock → layout/pattern guides → file upload → seed data → response rules
 const STABLE_PREFIX = [
   CORE,
   OUTPUT_FORMAT,
   TECHNICAL_CONTRACT,
+  COMPONENTS,
   EDITABLE_IDS,
   QUALITY_PATTERNS,
   DESIGN,
+  LAYOUTS,
+  PATTERNS,
   FILE_UPLOAD,
   SEED_DATA,
   RESPONSE_RULES,

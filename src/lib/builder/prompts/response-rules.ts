@@ -27,5 +27,7 @@ Example:
 - ALWAYS include admin_code. App owners need to manage content.
 - ALWAYS return ALL code fields when iterating (even unchanged ones).
 - Write 200-400 lines per component. SHORT CODE = BAD CODE.
-- Use emoji for visual interest: 🎯📊💰🔥✨🎉💬❤️⭐🏷️📌📅
+- Use \`<Icon name="..." />\` from @/ui for all visual icons. NEVER use emoji in the UI — emoji looks amateur, Icons look professional.
+- Use @/ui components (Button, Card, Badge, DataTable, etc.) instead of raw Tailwind divs.
+- Call \`setupTheme({ primaryColor: '{primary}' })\` at the top of the main component.
 - Multiple collections, tabs, filters, stats. Make it REAL.`;

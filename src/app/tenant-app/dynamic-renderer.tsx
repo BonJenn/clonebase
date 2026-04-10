@@ -8,6 +8,7 @@ import { useFileUpload } from '@/sdk/use-file-upload';
 import { useTenantAuth } from '@/sdk/use-tenant-auth';
 import { useStripeCheckout } from '@/sdk/use-stripe-checkout';
 import { Chart } from '@/sdk/chart';
+import { createProductionUIKit } from '@/lib/builder/ui-kit-production';
 
 interface DynamicRendererProps {
   transpiledCode: string;
@@ -32,13 +33,16 @@ export function DynamicRenderer({ transpiledCode, componentName, tenantId, insta
         useIntegration: () => ({ call: async () => ({ ok: true, data: {} }), loading: false, error: null }),
       };
 
+      // Provide UI kit for generated code
+      const __UI__ = createProductionUIKit();
+
       // eslint-disable-next-line no-new-func
       const module = { exports: {} as Record<string, unknown> };
-      const fn = new Function('React', '__SDK__', 'module', 'exports', transpiledCode);
+      const fn = new Function('React', '__SDK__', '__UI__', 'module', 'exports', transpiledCode);
 
       // Import React for the generated code
       const React = require('react');
-      fn(React, __SDK__, module, module.exports);
+      fn(React, __SDK__, __UI__, module, module.exports);
 
       // Find the component
       const comp = module.exports[componentName]

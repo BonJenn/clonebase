@@ -1,6 +1,8 @@
 // Raw HTML route for the sandbox preview iframe.
 // Returns a standalone HTML document (not wrapped by Next.js layout)
-// with React 18 UMD, Tailwind CDN, and SDK shims.
+// with React 18 UMD, Tailwind CDN, SDK shims, and UI component kit.
+
+import { UI_KIT_SCRIPT } from '@/lib/builder/ui-kit';
 
 export async function GET() {
   const html = `<!DOCTYPE html>
@@ -723,6 +725,9 @@ window.addEventListener('message', function(event) {
 });
 
 window.parent.postMessage({ type: 'sandbox-ready' }, '*');
+  </script>
+  <script>
+${UI_KIT_SCRIPT}
   </script>
 </body>
 </html>`;

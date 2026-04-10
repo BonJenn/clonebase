@@ -66,8 +66,39 @@ useEffect(() => {
 - Card games, board games, puzzle games → use HTML divs with click handlers and CSS transitions
 - Quiz games, trivia, text adventures → use regular React components
 
+#### Game HUD — Use @/ui components for polished game UI:
+\`\`\`tsx
+// Menu screen — clean and attractive, not ugly admin UI:
+<div className="flex min-h-screen items-center justify-center bg-gray-900">
+  <div className="text-center">
+    <Icon name="trophy" size={48} className="mx-auto text-amber-400 mb-4" />
+    <h1 className="text-4xl font-semibold text-white mb-2">Game Title</h1>
+    <p className="text-gray-400 mb-8">Tagline or instructions</p>
+    <Button size="lg" onClick={() => setScreen('play')}>Play Game</Button>
+  </div>
+</div>
+
+// In-game HUD overlay:
+<div className="absolute top-4 left-4 right-4 z-10 flex items-center justify-between pointer-events-none">
+  <Badge variant="default" size="lg" className="pointer-events-auto">
+    <Icon name="star" size={14} className="mr-1" /> {score}
+  </Badge>
+  <Button variant="ghost" size="sm" icon="pause" onClick={() => setScreen('pause')}
+    className="pointer-events-auto text-white hover:bg-white/20" />
+</div>
+
+// Game over screen:
+<Dialog open={screen === 'gameover'} onClose={() => setScreen('menu')} title="Game Over">
+  <p className="text-center text-2xl font-semibold mb-2">{score} points</p>
+  <DialogFooter>
+    <Button variant="secondary" onClick={() => setScreen('menu')}>Menu</Button>
+    <Button onClick={() => { setScore(0); setScreen('play'); }}>Play Again</Button>
+  </DialogFooter>
+</Dialog>
+\`\`\`
+
 #### Game-specific rules:
-- Use emoji for characters/sprites (🐧🏠🌳⭐🎣🍕) — they render on canvas with fillText
+- Use emoji for characters/sprites on canvas (🐧🏠🌳⭐🎣🍕) — these render via ctx.fillText. Emoji is OK only inside canvas, NEVER in UI buttons/headings
 - Use requestAnimationFrame for smooth animation, NOT setInterval
 - Keyboard: WASD + arrow keys for movement
 - ALWAYS call e.preventDefault() in keydown for arrow keys and spacebar — otherwise they scroll the page and ruin the game
@@ -79,32 +110,28 @@ useEffect(() => {
 
 #### Touch controls for games (REQUIRED for any game with movement):
 \`\`\`tsx
-// Add a virtual joystick / D-pad for mobile in addition to keyboard
+// Add a virtual D-pad for mobile in addition to keyboard
 <div className="fixed bottom-6 left-6 grid grid-cols-3 gap-1 sm:hidden touch-none select-none">
   <div />
-  <button
-    onTouchStart={() => keysRef.current.add('arrowup')}
-    onTouchEnd={() => keysRef.current.delete('arrowup')}
-    className="h-12 w-12 rounded-lg bg-black/40 text-white text-xl"
-  >↑</button>
+  <button onTouchStart={() => keysRef.current.add('arrowup')} onTouchEnd={() => keysRef.current.delete('arrowup')}
+    className="h-12 w-12 rounded-lg bg-black/40 text-white flex items-center justify-center">
+    <Icon name="chevron-up" size={24} />
+  </button>
   <div />
-  <button
-    onTouchStart={() => keysRef.current.add('arrowleft')}
-    onTouchEnd={() => keysRef.current.delete('arrowleft')}
-    className="h-12 w-12 rounded-lg bg-black/40 text-white text-xl"
-  >←</button>
+  <button onTouchStart={() => keysRef.current.add('arrowleft')} onTouchEnd={() => keysRef.current.delete('arrowleft')}
+    className="h-12 w-12 rounded-lg bg-black/40 text-white flex items-center justify-center">
+    <Icon name="chevron-left" size={24} />
+  </button>
   <div />
-  <button
-    onTouchStart={() => keysRef.current.add('arrowright')}
-    onTouchEnd={() => keysRef.current.delete('arrowright')}
-    className="h-12 w-12 rounded-lg bg-black/40 text-white text-xl"
-  >→</button>
+  <button onTouchStart={() => keysRef.current.add('arrowright')} onTouchEnd={() => keysRef.current.delete('arrowright')}
+    className="h-12 w-12 rounded-lg bg-black/40 text-white flex items-center justify-center">
+    <Icon name="chevron-right" size={24} />
+  </button>
   <div />
-  <button
-    onTouchStart={() => keysRef.current.add('arrowdown')}
-    onTouchEnd={() => keysRef.current.delete('arrowdown')}
-    className="h-12 w-12 rounded-lg bg-black/40 text-white text-xl"
-  >↓</button>
+  <button onTouchStart={() => keysRef.current.add('arrowdown')} onTouchEnd={() => keysRef.current.delete('arrowdown')}
+    className="h-12 w-12 rounded-lg bg-black/40 text-white flex items-center justify-center">
+    <Icon name="chevron-down" size={24} />
+  </button>
   <div />
 </div>
 // Action buttons (jump, shoot, etc.) on the right side, also sm:hidden

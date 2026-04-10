@@ -1,9 +1,10 @@
 import { transform } from 'sucrase';
 
-// Rewrites SDK imports to window.__SDK__ references for iframe preview,
+// Rewrites SDK and UI imports to window globals for iframe preview,
 // or to direct references for production runtime.
 function rewriteImports(source: string, mode: 'preview' | 'production'): string {
   const sdkPrefix = mode === 'preview' ? 'window.__SDK__' : '__SDK__';
+  const uiPrefix = mode === 'preview' ? 'window.__UI__' : '__UI__';
 
   return source
     // Remove 'use client' directive
@@ -15,6 +16,16 @@ function rewriteImports(source: string, mode: 'preview' | 'production'): string 
         return names.split(',').map(n => {
           const name = n.trim();
           return `var ${name} = ${sdkPrefix}.${name};`;
+        }).join('\n');
+      }
+    )
+    // Rewrite @/ui imports — map each imported name to the UI kit
+    .replace(
+      /import\s*\{([^}]+)\}\s*from\s*['"]@\/ui[^'"]*['"];?/g,
+      (_, names: string) => {
+        return names.split(',').map(n => {
+          const name = n.trim();
+          return `var ${name} = ${uiPrefix}.${name};`;
         }).join('\n');
       }
     )

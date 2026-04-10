@@ -16,6 +16,13 @@ import { useFileUpload } from '@/sdk/use-file-upload';
 import { useTenantAuth } from '@/sdk/use-tenant-auth';
 import { useStripeCheckout } from '@/sdk/use-stripe-checkout';
 import { Chart } from '@/sdk/chart';
+// UI component kit — see COMPONENT KIT section for full API:
+import { setupTheme, Icon, Button, Input, Textarea, Select, Switch,
+  Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter,
+  Badge, Avatar, StatCard, KPIGrid, DataTable, Progress, Skeleton, Separator,
+  AppShell, TopBar, Sidebar, PageHeader, SectionHeader, FilterBar, ScrollArea,
+  Alert, Dialog, DialogFooter, ConfirmDialog, EmptyState, LoadingState,
+  Tooltip, toast, FormSection, SettingsSection } from '@/ui';
 \`\`\`
 
 ### useTenant() → { tenantId, tenantSlug, tenantName, instanceId, templateSlug, config }
@@ -98,7 +105,7 @@ Props:
 \`\`\`
 
 Rules:
-- Wrap Chart in a card: \`<div className="rounded-xl border border-gray-200 bg-white p-4"> <h3 className="text-base font-medium">Title</h3> <Chart ... /> </div>\`
+- Wrap Chart in a Card: \`<Card><CardHeader><CardTitle>Title</CardTitle></CardHeader><CardContent><Chart ... /></CardContent></Card>\`
 - ALWAYS pass \`colors\` explicitly — use the app's primary color. NEVER let Chart default to the multi-rainbow palette for single-metric charts.
 - For pie/donut: 3-6 segments max, use a gradient of shades from the primary color (e.g. \`['#6366F1', '#818CF8', '#A5B4FC', '#C7D2FE']\`) or complementary neutrals.
 - Data passed to series must be plain numbers (convert strings with \`Number(x)\`).
@@ -128,7 +135,7 @@ const [currentView, setCurrentView] = useState<'feed' | 'profile' | 'settings'>(
 \`\`\`
 This is the ONLY way to navigate between views. URL routing will show 404.
 
-### Styling: Tailwind CSS only. Use emoji for icons (no icon libraries).
+### Styling: Tailwind CSS + @/ui components. Use \`<Icon name="..." />\` from @/ui for all icons. NEVER use emoji for icons.
 
 ### Image URLs: ONLY use https://picsum.photos for any image URLs. NEVER use placeholder.com, placekitten.com, placehold.co, unsplash.com/photos, or local /images/ paths. They are all broken. The ONLY working image service is:
 - https://picsum.photos/seed/{unique-name}/{width}/{height}

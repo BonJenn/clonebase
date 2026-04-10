@@ -115,78 +115,61 @@ Hard rules:
 
 ### 5. CARD SYSTEM — DEFAULT UI PATTERN
 
-ALL data must be displayed in cards, not raw lists.
+ALL data must be displayed in cards, not raw lists. Use \`<Card>\` from @/ui:
 
-Standard card:
 \`\`\`tsx
-<div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm hover:shadow-md transition-shadow">
-  <h3 className="text-base font-medium text-gray-900">Title</h3>
-  <p className="mt-1 text-sm text-gray-600">Metadata or description</p>
-  <div className="mt-4 flex items-center justify-between">
-    <span className="text-xs text-gray-500">Meta</span>
-    <button className="...">Action</button>
-  </div>
-</div>
+<Card className="hover:shadow-md transition-shadow">
+  <CardHeader>
+    <CardTitle>Project Alpha</CardTitle>
+    <CardDescription>Last updated 2 hours ago</CardDescription>
+  </CardHeader>
+  <CardContent>
+    <p className="text-sm text-gray-600">Description here...</p>
+  </CardContent>
+  <CardFooter>
+    <Button variant="ghost" size="sm">View Details</Button>
+  </CardFooter>
+</Card>
 \`\`\`
 
 Hard rules:
 - NEVER raw \`<ul>\` / \`<li>\` for main content
-- ALWAYS cards for user-visible items (products, posts, tasks, profiles, whatever)
+- ALWAYS \`<Card>\` for user-visible items (products, posts, tasks, profiles, whatever)
 - Cards must have a visible title, optional metadata, and optional action
-- Rounded corners: \`rounded-xl\` (large cards) or \`rounded-lg\` (small chips)
-- Border: \`border border-gray-200\`
-- Shadow: \`shadow-sm\` default, \`hover:shadow-md\` on hover (NEVER heavy shadow-xl / shadow-2xl on cards)
-- Card padding: \`p-4\` (compact) or \`p-6\` (spacious)
+- Use \`<DataTable>\` for tabular data instead of cards
+- NEVER heavy shadow-xl / shadow-2xl on cards
+- Use \`<EmptyState>\` when a collection has no items
 
 ---
 
-### 6. COMPONENT CONSISTENCY — SAME EVERYWHERE
+### 6. COMPONENT CONSISTENCY — USE @/ui COMPONENTS
 
-**Primary button** (use the plan's primary color):
+**Use the @/ui component kit for ALL standard UI elements. This guarantees consistency:**
+
 \`\`\`tsx
-<button className="rounded-lg bg-{primary}-600 px-4 py-2 text-sm font-medium text-white hover:bg-{primary}-700 disabled:opacity-50 transition-colors">
-  Action
-</button>
-\`\`\`
+// Buttons — always use <Button> from @/ui:
+<Button variant="primary" onClick={handleSave}>Save</Button>
+<Button variant="secondary" onClick={handleCancel}>Cancel</Button>
+<Button variant="ghost" icon="edit" size="sm">Edit</Button>
+<Button variant="danger" onClick={() => setShowConfirm(true)}>Delete</Button>
 
-**Secondary button**:
-\`\`\`tsx
-<button className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 transition-colors">
-  Action
-</button>
-\`\`\`
+// Inputs — always use <Input> from @/ui:
+<Input label="Email" type="email" value={email} onChange={e => setEmail(e.target.value)} error={emailError} />
 
-**Ghost/text button**:
-\`\`\`tsx
-<button className="text-sm font-medium text-{primary}-600 hover:text-{primary}-500">
-  Action
-</button>
-\`\`\`
+// Selects — always use <Select> from @/ui:
+<Select label="Category" value={category} onChange={e => setCategory(e.target.value)} options={categoryOptions} />
 
-**Text input**:
-\`\`\`tsx
-<input className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:border-{primary}-500 focus:outline-none focus:ring-1 focus:ring-{primary}-500" />
-\`\`\`
-
-**Select**:
-\`\`\`tsx
-<select className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-{primary}-500 focus:outline-none focus:ring-1 focus:ring-{primary}-500">
-\`\`\`
-
-**Textarea**: same as input but with \`py-2\` and rows.
-
-**Badge/pill**:
-\`\`\`tsx
-<span className="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-700">
-  Label
-</span>
+// Badges — always use <Badge> from @/ui:
+<Badge variant="success" dot>Active</Badge>
+<Badge variant="warning">Pending</Badge>
 \`\`\`
 
 Hard rules:
-- ALL buttons share the same radius, padding, and text sizing
-- ALL inputs share the same border, padding, and focus state
-- NO per-component custom styles — if you need a variant, use one of the three button types above
-- Icon buttons: \`h-9 w-9\` square, same background as the button type
+- ALL buttons use \`<Button>\` — never raw \`<button>\` with Tailwind
+- ALL inputs use \`<Input>\` — never raw \`<input>\` with Tailwind
+- ALL selects use \`<Select>\` — never raw \`<select>\` with Tailwind
+- ALL badges use \`<Badge>\` — never raw \`<span>\` with Tailwind
+- ALL icons use \`<Icon name="..." />\` — NEVER emoji
 
 ---
 
@@ -246,7 +229,35 @@ If the user explicitly says "mobile app", "iPhone", "Android", or "phone app":
 ---
 
 ### 10. DELETE CONFIRMATION
-Use \`window.confirm('Are you sure you want to delete this?')\` before calling remove().
+Use \`<ConfirmDialog>\` from @/ui for all destructive actions (delete, remove, clear). Never use \`window.confirm()\`.
+
+\`\`\`tsx
+const [showConfirm, setShowConfirm] = useState(false);
+// ...
+<ConfirmDialog open={showConfirm} onClose={() => setShowConfirm(false)}
+  onConfirm={handleDelete} title="Delete this item?"
+  description="This action cannot be undone." confirmLabel="Delete" variant="danger" />
+\`\`\`
+
+---
+
+### 11. COMPONENT PRIORITY — ALWAYS USE @/ui FIRST
+
+When building ANY UI element, follow this priority:
+1. **@/ui component** — Button, Card, Input, DataTable, Badge, Dialog, EmptyState, etc.
+2. **Raw Tailwind + semantic HTML** — only when no @/ui component fits
+3. **Never re-implement** what @/ui already provides
+
+This means:
+- Buttons → \`<Button>\` (never raw \`<button>\` with custom Tailwind)
+- Cards → \`<Card>\` (never raw \`<div>\` with border/shadow)
+- Tables → \`<DataTable>\` (never raw \`<table>\`)
+- Modals → \`<Dialog>\` (never custom fixed/absolute overlay divs)
+- Empty states → \`<EmptyState>\` (never just a text paragraph)
+- Loading → \`<LoadingState>\` (never a custom spinner div)
+- Icons → \`<Icon name="..."\` />\` (NEVER emoji)
+- Stats → \`<StatCard>\` or \`<KPIGrid>\` (never custom stat divs)
+- Feedback → \`toast()\` (never inline success/error messages)
 
 ---
 

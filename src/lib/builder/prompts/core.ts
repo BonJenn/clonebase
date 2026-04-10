@@ -48,8 +48,9 @@ If any of these fail, the app is broken. Fix it.
 Follow best practices for speed, maintainability, scalability, and reliability:
 
 ### Component Architecture
-- Extract reusable UI into helper components defined in the SAME file (above the main export)
-- Example: a card, a list item, a modal, a form, a stat widget — each should be its own function component
+- Use @/ui components (Button, Card, DataTable, Dialog, etc.) as the first choice for all standard UI elements
+- Extract app-specific UI into helper components defined in the SAME file (above the main export)
+- Example: a list item renderer, a custom widget, a view sub-component — each should be its own function component
 - Keep the main component focused on layout and state orchestration
 - Components should be small (under 80 lines each), composable, and single-purpose
 
@@ -79,32 +80,26 @@ Follow best practices for speed, maintainability, scalability, and reliability:
 - If something COULD be null, handle it. Crashes destroy user trust.
 
 ### Forms & Buttons — MUST WORK ON FIRST TRY
-Every form/save/submit MUST follow this exact pattern (replace {primary} with the plan's primary color — rose, emerald, sky, etc. — NEVER indigo unless the plan says indigo):
+Every form/save/submit MUST follow this exact pattern using @/ui components:
 \`\`\`tsx
 const [saving, setSaving] = useState(false);
-const [success, setSuccess] = useState(false);
 
 async function handleSave() {
   if (!title.trim()) return; // validate
   setSaving(true);
   await insert({ title: title.trim(), created_at: new Date().toISOString() });
   setSaving(false);
-  setSuccess(true);
+  toast('Saved successfully', 'success'); // use toast for feedback
   setTitle(''); // clear form
-  setTimeout(() => setSuccess(false), 2000); // hide success after 2s
 }
 
-// Button — follows the design system lock exactly:
-<button
-  onClick={handleSave}
-  disabled={saving || !title.trim()}
-  className="rounded-lg bg-{primary}-600 px-4 py-2 text-sm font-medium text-white hover:bg-{primary}-700 disabled:opacity-50 transition-colors"
->
-  {saving ? 'Saving...' : 'Save'}
-</button>
-{success && <p className="mt-2 text-sm text-green-600">Saved successfully</p>}
+// Button — use <Button> from @/ui (automatically uses the primary color from setupTheme):
+<Button onClick={handleSave} loading={saving} disabled={!title.trim()} icon="save">
+  Save
+</Button>
 \`\`\`
-EVERY save/submit button needs: validation, loading state, disabled while saving, success feedback, form reset.
+EVERY save/submit button needs: validation, loading state (via \`loading\` prop), toast feedback, form reset.
+Use \`toast('message', 'success')\` instead of inline success messages.
 
 ### Scope Control — DON'T BUILD TOO MUCH
 - Maximum 400 lines per component file
