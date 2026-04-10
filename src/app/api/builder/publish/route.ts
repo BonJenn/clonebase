@@ -35,6 +35,7 @@ export async function POST(request: NextRequest) {
     list_on_marketplace = false,
     app_visibility = 'public', // 'public' | 'private'
     access_password,
+    seed_data, // optional: Record<string, unknown[]> from sandbox
   } = await request.json();
 
   if (!template_id) return NextResponse.json({ error: 'template_id is required' }, { status: 400 });
@@ -264,6 +265,33 @@ export async function POST(request: NextRequest) {
           access_password_salt: null,
         })
         .eq('id', tenantId);
+    }
+
+    // Seed sandbox data into tenant_data if provided
+    if (seed_data && typeof seed_data === 'object' && instanceId) {
+      // Clean slate for re-publishes — remove old seeded rows
+      await supabase
+        .from('tenant_data')
+        .delete()
+        .eq('app_instance_id', instanceId);
+
+      // Build rows for bulk insert
+      const rows: { tenant_id: string; app_instance_id: string; collection: string; data: unknown }[] = [];
+      for (const [collection, items] of Object.entries(seed_data)) {
+        if (!Array.isArray(items)) continue;
+        for (const item of items) {
+          rows.push({
+            tenant_id: tenantId,
+            app_instance_id: instanceId,
+            collection,
+            data: item,
+          });
+        }
+      }
+
+      if (rows.length > 0) {
+        await (supabase.from('tenant_data') as any).insert(rows);
+      }
     }
 
     // Build live URL

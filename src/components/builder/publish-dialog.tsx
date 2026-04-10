@@ -10,6 +10,8 @@ interface PublishDialogProps {
   templateId: string;
   templateName: string;
   onClose: () => void;
+  /** Sandbox data collections to optionally seed into the deployed app. */
+  sandboxData?: Record<string, unknown[]>;
   /**
    * Captures a screenshot of the live preview iframe. Called before publishing
    * so the resulting PNG can be uploaded and saved as the template's preview_url.
@@ -53,7 +55,7 @@ function slugify(input: string): string {
     .slice(0, 63);
 }
 
-export function PublishDialog({ templateId, templateName, onClose, capturePreview, onPublished }: PublishDialogProps) {
+export function PublishDialog({ templateId, templateName, onClose, sandboxData, capturePreview, onPublished }: PublishDialogProps) {
   const router = useRouter();
   const [name, setName] = useState(templateName);
   const [description, setDescription] = useState('');
@@ -67,6 +69,8 @@ export function PublishDialog({ templateId, templateName, onClose, capturePrevie
   const [slugTouched, setSlugTouched] = useState(false);
   const [appVisibility, setAppVisibility] = useState<'public' | 'private'>('public');
   const [accessPassword, setAccessPassword] = useState('');
+  const hasSandboxData = sandboxData && Object.keys(sandboxData).length > 0;
+  const [includeData, setIncludeData] = useState(true);
 
   // Marketplace options
   const [category, setCategory] = useState('');
@@ -180,6 +184,7 @@ export function PublishDialog({ templateId, templateName, onClose, capturePrevie
         category: listOnMarketplace ? category : undefined,
         pricing_type: listOnMarketplace ? pricingType : undefined,
         price_cents: listOnMarketplace && pricingType === 'one_time' ? Math.round(parseFloat(priceAmount || '0') * 100) : 0,
+        seed_data: deployToUrl && includeData && hasSandboxData ? sandboxData : undefined,
       }),
     });
 
@@ -409,6 +414,40 @@ export function PublishDialog({ templateId, templateName, onClose, capturePrevie
                     </div>
                   )}
                 </div>
+
+                {hasSandboxData && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">App data</label>
+                    <div className="space-y-2">
+                      <label className="flex items-start gap-2 cursor-pointer">
+                        <input
+                          type="radio"
+                          name="seed-data"
+                          checked={includeData}
+                          onChange={() => setIncludeData(true)}
+                          className="mt-0.5"
+                        />
+                        <div>
+                          <p className="text-sm text-gray-900">Include your data</p>
+                          <p className="text-xs text-gray-500">Seed your live app with the data you added while building.</p>
+                        </div>
+                      </label>
+                      <label className="flex items-start gap-2 cursor-pointer">
+                        <input
+                          type="radio"
+                          name="seed-data"
+                          checked={!includeData}
+                          onChange={() => setIncludeData(false)}
+                          className="mt-0.5"
+                        />
+                        <div>
+                          <p className="text-sm text-gray-900">Start fresh</p>
+                          <p className="text-xs text-gray-500">Deploy with empty collections.</p>
+                        </div>
+                      </label>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>

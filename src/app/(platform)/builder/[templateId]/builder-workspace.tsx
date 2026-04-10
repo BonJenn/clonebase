@@ -336,6 +336,7 @@ export function BuilderWorkspace({
 
     // Re-publish with minimal fields — the server reuses the existing tenant
     // so slug, password, marketplace settings are untouched.
+    const sandboxData = (window as unknown as { __sandboxData?: Record<string, unknown[]> }).__sandboxData;
     const res = await fetch('/api/builder/publish', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -344,6 +345,7 @@ export function BuilderWorkspace({
         name: templateName,
         preview_url: previewUrl,
         deploy_to_url: true,
+        seed_data: sandboxData && Object.keys(sandboxData).length > 0 ? sandboxData : undefined,
         // Re-publish keeps existing marketplace + private state unchanged by
         // sending undefined for those fields; the server's reuse-instance
         // path doesn't touch visibility/password unless explicitly set.
@@ -572,6 +574,7 @@ export function BuilderWorkspace({
         <PublishDialog
           templateId={templateId}
           templateName={templateName}
+          sandboxData={(window as unknown as { __sandboxData?: Record<string, unknown[]> }).__sandboxData}
           onClose={handleDialogClose}
           capturePreview={() => livePreviewRef.current?.capturePreview() ?? Promise.resolve(null)}
           onPublished={(info) => {
