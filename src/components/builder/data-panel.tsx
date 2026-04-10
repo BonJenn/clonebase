@@ -42,20 +42,10 @@ export function DataPanel({ templateId }: DataPanelProps) {
   const [editJson, setEditJson] = useState('');
   const [addingTo, setAddingTo] = useState<string | null>(null);
   const [newJson, setNewJson] = useState('{\n  \n}');
-  // Diagnostic counters — visible at the top of the panel so we can tell if
-  // polling/push is actually delivering snapshots from the sandbox iframe.
-  const [reqCount, setReqCount] = useState(0);
-  const [snapCount, setSnapCount] = useState(0);
-  const [lastSnapshotAt, setLastSnapshotAt] = useState<number | null>(null);
-
   const handleMessage = useCallback((event: MessageEvent) => {
     if (event.data?.type === 'data-snapshot') {
       const snapshot = event.data.collections as Record<string, DataRow[]>;
-      const totalItems = Object.values(snapshot).reduce((sum, rows) => sum + rows.length, 0);
-      console.log('[data-panel] received snapshot — collections:', Object.keys(snapshot), 'total items:', totalItems);
       setCollections(snapshot);
-      setSnapCount((n) => n + 1);
-      setLastSnapshotAt(Date.now());
       if (!activeCollection && Object.keys(snapshot).length > 0) {
         setActiveCollection(Object.keys(snapshot)[0]);
       }
@@ -86,9 +76,6 @@ export function DataPanel({ templateId }: DataPanelProps) {
       }
 
       setCollections(snapshot);
-      setSnapCount((n) => n + 1);
-      setLastSnapshotAt(Date.now());
-      setReqCount((n) => n + 1);
       if (!activeCollection && Object.keys(snapshot).length > 0) {
         setActiveCollection(Object.keys(snapshot)[0]);
       }
@@ -165,35 +152,23 @@ export function DataPanel({ templateId }: DataPanelProps) {
     } catch { alert('Invalid JSON'); }
   }
 
-  const stateItemCount = Object.values(collections).reduce((s, r) => s + r.length, 0);
-  const debugBar = (
-    <div className="border-b border-amber-200 bg-amber-50 px-3 py-1 text-[10px] font-mono text-amber-800">
-      req: {reqCount} · snap: {snapCount} · collections: [{collectionNames.join(', ')}] · items in state: {stateItemCount} · active: &quot;{activeCollection}&quot; · rows: {activeRows.length}
-    </div>
-  );
-
   if (collectionNames.length === 0) {
     return (
-      <div className="flex h-full flex-col bg-gray-50">
-        {debugBar}
-        <div className="flex flex-1 items-center justify-center text-center p-8">
-          <div>
-            <p className="text-4xl">🗃️</p>
-            <h3 className="mt-4 text-lg font-semibold text-gray-900">No data yet</h3>
-            <p className="mt-1 text-sm text-gray-500">
-              Interact with the app in the Preview tab to generate data,
-              or the app will seed data on first render.
-            </p>
-          </div>
+      <div className="flex h-full items-center justify-center bg-gray-50 text-center p-8">
+        <div>
+          <p className="text-4xl">🗃️</p>
+          <h3 className="mt-4 text-lg font-semibold text-gray-900">No data yet</h3>
+          <p className="mt-1 text-sm text-gray-500">
+            Interact with the app in the Preview tab to generate data,
+            or the app will seed data on first render.
+          </p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="flex h-full flex-col bg-white">
-      {debugBar}
-      <div className="flex flex-1 overflow-hidden">
+    <div className="flex h-full bg-white">
       {/* Sidebar — collection folders */}
       <div className="w-48 shrink-0 border-r border-gray-200 bg-gray-50 overflow-y-auto">
         <div className="px-3 py-2 text-[10px] font-semibold text-gray-400 uppercase tracking-wider">
@@ -352,7 +327,6 @@ export function DataPanel({ templateId }: DataPanelProps) {
             </div>
           )}
         </div>
-      </div>
       </div>
     </div>
   );

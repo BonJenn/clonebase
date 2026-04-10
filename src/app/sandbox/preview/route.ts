@@ -83,7 +83,6 @@ window.__SDK__ = {
       insert: function(item) {
         var newItem = Object.assign({}, item, { id: 'id-' + Date.now() + '-' + Math.random().toString(36).slice(2) });
         col.unshift(newItem);
-        console.log('[sandbox mock] insert called — collection:', collectionName, 'col length after unshift:', col.length, 'col === dataStore[' + collectionName + ']:', col === dataStore[collectionName], 'dataStore[' + collectionName + '].length:', dataStore[collectionName] ? dataStore[collectionName].length : 'MISSING');
         setData(col.slice());
         // Push the new snapshot to the parent Data panel immediately so it
         // doesn't have to wait for the 1s polling interval.
@@ -417,14 +416,11 @@ function renderComponent(code, componentName) {
 // Send data snapshot to parent
 function sendDataSnapshot() {
   var snapshot = {};
-  var totalItems = 0;
   for (var key in dataStore) {
     snapshot[key] = dataStore[key].map(function(item) {
       return { id: item.id, collection: key, data: item, created_at: item.created_at || new Date().toISOString() };
     });
-    totalItems += snapshot[key].length;
   }
-  console.log('[sandbox] sendDataSnapshot — collections:', Object.keys(snapshot), 'total items:', totalItems, 'dataStore:', dataStore);
   window.parent.postMessage({ type: 'data-snapshot', collections: snapshot }, '*');
 }
 
