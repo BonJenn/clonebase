@@ -7,7 +7,7 @@ import { researchTopic, searchImages } from '@/lib/builder/researcher';
 import { detectBlueprint, formatBlueprintForPrompt } from '@/lib/builder/app-blueprints';
 import { lintDesign } from '@/lib/builder/design-linter';
 
-// Function timeout. GPT-4.1 with max_tokens: 16384 on a ~3K token system prompt
+// Function timeout. GPT-4.1 with max_completion_tokens: 16384 on a ~3K token system prompt
 // routinely takes 60-90s; complex generations can push 120s. We set this to 300
 // (Vercel's current default max on Pro) to give first-gen + an optional bug-fix
 // retry room to complete without hitting a platform 504.
@@ -267,7 +267,7 @@ IMPORTANT CONSTRAINTS FROM PLAN:
     response = await getOpenAI().chat.completions.create(
       {
         model,
-        max_tokens: 16384,
+        max_completion_tokens: 16384,
         temperature: isBugFix ? 0.1 : 0.7, // Near-deterministic for bug fixes — minimum drift
         messages: [
           { role: 'system', content: systemPrompt },
@@ -331,7 +331,7 @@ Return the JSON now.`;
           const retryResponse = await getOpenAI().chat.completions.create(
             {
               model,
-              max_tokens: 16384,
+              max_completion_tokens: 16384,
               temperature: 0,
               messages: [
                 { role: 'system', content: systemPrompt },
@@ -380,7 +380,7 @@ Return the JSON now.`;
         const lintRetry = await getOpenAI().chat.completions.create(
           {
             model,
-            max_tokens: 16384,
+            max_completion_tokens: 16384,
             temperature: 0.4,
             messages: [
               { role: 'system', content: systemPrompt },
