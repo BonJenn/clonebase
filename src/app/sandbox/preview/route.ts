@@ -43,7 +43,13 @@ export async function GET() {
   <input type="file" id="clonebase-image-input" accept="image/*" style="display:none" />
   <script>
 // --- SDK Shims (flat — each hook is a direct property on window.__SDK__) ---
-var dataStore = {};
+// CRITICAL: dataStore lives on the PARENT window, not inside the iframe.
+// The iframe may reload when its sandbox attribute updates or the browser
+// reclaims resources for an h-0 overflow-hidden frame. Storing data on the
+// parent ensures it survives across iframe reloads and is directly readable
+// by the builder's Data panel without any postMessage roundtrip.
+if (!window.parent.__sandboxData) window.parent.__sandboxData = {};
+var dataStore = window.parent.__sandboxData;
 
 function getCollection(name) {
   if (!dataStore[name]) dataStore[name] = [];

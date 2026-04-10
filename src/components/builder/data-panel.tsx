@@ -68,49 +68,35 @@ export function DataPanel({ templateId }: DataPanelProps) {
   }, [handleMessage]);
 
   useEffect(() => {
-    function requestSnapshot() {
-      const iframe = document.querySelector('iframe[title="App Preview"]') as HTMLIFrameElement;
-      if (!iframe?.contentWindow) {
-        console.warn('[data-panel] no iframe found with title="App Preview"');
-        return;
+    function readSandboxData() {
+      // Read directly from window.__sandboxData — the sandbox iframe writes
+      // here instead of to its own scope, so data survives iframe reloads.
+      const sandboxData = (window as unknown as { __sandboxData?: Record<string, Array<Record<string, unknown>>> }).__sandboxData;
+      if (!sandboxData) return;
+
+      const snapshot: Record<string, DataRow[]> = {};
+      for (const [key, arr] of Object.entries(sandboxData)) {
+        if (!Array.isArray(arr)) continue;
+        snapshot[key] = arr.map((item) => ({
+          id: (item.id as string) || `id-${Date.now()}`,
+          collection: key,
+          data: item,
+          created_at: (item.created_at as string) || new Date().toISOString(),
+        }));
       }
 
-      // Try direct read first (only works with allow-same-origin on the iframe).
-      // This bypasses the postMessage chain which has a mystery data-loss issue.
-      try {
-        const iframeWindow = iframe.contentWindow as unknown as { dataStore?: Record<string, Array<Record<string, unknown>>> };
-        if (iframeWindow.dataStore) {
-          const snapshot: Record<string, DataRow[]> = {};
-          let totalItems = 0;
-          for (const [key, arr] of Object.entries(iframeWindow.dataStore)) {
-            snapshot[key] = arr.map((item) => ({
-              id: (item.id as string) || `id-${Date.now()}`,
-              collection: key,
-              data: item,
-              created_at: (item.created_at as string) || new Date().toISOString(),
-            }));
-            totalItems += snapshot[key].length;
-          }
-          setCollections(snapshot);
-          setSnapCount((n) => n + 1);
-          setLastSnapshotAt(Date.now());
-          if (!activeCollection && Object.keys(snapshot).length > 0) {
-            setActiveCollection(Object.keys(snapshot)[0]);
-          }
-          setReqCount((n) => n + 1);
-          return; // Direct read succeeded — skip postMessage
-        }
-      } catch {
-        // Cross-origin blocked — fall back to postMessage
-      }
-
-      // Fallback: postMessage-based polling
-      iframe.contentWindow.postMessage({ type: 'request-data' }, '*');
+      setCollections(snapshot);
+      setSnapCount((n) => n + 1);
+      setLastSnapshotAt(Date.now());
       setReqCount((n) => n + 1);
+      if (!activeCollection && Object.keys(snapshot).length > 0) {
+        setActiveCollection(Object.keys(snapshot)[0]);
+      }
     }
-    // Fire immediately so we don't wait 1s on mount, then every 1s after.
-    requestSnapshot();
-    const interval = setInterval(requestSnapshot, 1000);
+
+    // Fire immediately then poll every 500ms for responsiveness
+    readSandboxData();
+    const interval = setInterval(readSandboxData, 500);
     return () => clearInterval(interval);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
