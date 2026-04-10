@@ -5,6 +5,7 @@ import { composePrompt } from '@/lib/builder/prompts';
 import { planApp } from '@/lib/builder/planner';
 import { researchTopic, searchImages } from '@/lib/builder/researcher';
 import { detectBlueprint, formatBlueprintForPrompt } from '@/lib/builder/app-blueprints';
+import { lintDesign } from '@/lib/builder/design-linter';
 
 // Function timeout. GPT-4.1 with max_tokens: 16384 on a ~3K token system prompt
 // routinely takes 60-90s; complex generations can push 120s. We set this to 300
@@ -363,6 +364,51 @@ Return the JSON now.`;
           // Retry failure is non-fatal — keep the original response and continue
           console.log(`[builder] t+${elapsed()}ms retry failed, keeping original: ${(retryErr as Error).message}`);
         }
+      }
+    }
+  }
+
+  // DESIGN LINT PASS: scan for common design violations on first generation.
+  // If the score is below threshold and we have time budget, retry with feedback.
+  if (isFirstGeneration && generated.page_code && !isBugFix) {
+    const lint = lintDesign(generated.page_code);
+    console.log(`[builder] t+${elapsed()}ms design lint: score=${lint.score}/100, violations=${lint.violations.length}, pass=${lint.passesThreshold}`);
+
+    if (!lint.passesThreshold && remaining() >= RETRY_MIN_BUDGET_MS) {
+      console.log(`[builder] t+${elapsed()}ms triggering design lint retry (${lint.violations.length} violations)`);
+      try {
+        const lintRetry = await getOpenAI().chat.completions.create(
+          {
+            model,
+            max_tokens: 16384,
+            temperature: 0.4,
+            messages: [
+              { role: 'system', content: systemPrompt },
+              ...conversationMessages.map((m: { role: string; content: string }) => ({
+                role: m.role as 'user' | 'assistant',
+                content: m.content,
+              })),
+              { role: 'assistant', content: textContent },
+              { role: 'user', content: lint.feedback },
+            ],
+          },
+          { timeout: Math.min(RETRY_CALL_TIMEOUT_MS, Math.max(20_000, remaining() - 20_000)) }
+        );
+        const lintRetryContent = lintRetry.choices[0]?.message?.content;
+        if (lintRetryContent) {
+          const lintRetryParsed = parseGenerated(lintRetryContent);
+          if (lintRetryParsed?.page_code) {
+            const reLint = lintDesign(lintRetryParsed.page_code);
+            if (reLint.score > lint.score) {
+              console.log(`[builder] t+${elapsed()}ms lint retry accepted (score ${lint.score} → ${reLint.score})`);
+              generated = lintRetryParsed;
+            } else {
+              console.log(`[builder] t+${elapsed()}ms lint retry rejected (score did not improve: ${reLint.score})`);
+            }
+          }
+        }
+      } catch (lintErr) {
+        console.log(`[builder] t+${elapsed()}ms lint retry failed, keeping original: ${(lintErr as Error).message}`);
       }
     }
   }

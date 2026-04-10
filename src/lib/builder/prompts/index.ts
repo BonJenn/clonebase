@@ -23,6 +23,7 @@ import { AUTH } from './auth';
 import { BUSINESS_DESIGN } from './business-design';
 import { BUG_FIX } from './bug-fix';
 import type { AppPlan } from '../planner';
+import { selectPreset, formatPresetForPrompt, PRESETS } from '../design-presets';
 
 export interface ComposeOptions {
   plan?: AppPlan | null;
@@ -30,6 +31,7 @@ export interface ComposeOptions {
   currentCode?: { page_code?: string; admin_code?: string; api_handler_code?: string } | null;
   elementContext?: { editId?: string; tag?: string; text?: string } | null;
   planContext?: string;
+  presetId?: string;
 }
 
 // Stable prefix that does not depend on the current request.
@@ -52,19 +54,31 @@ const STABLE_PREFIX = [
 ].join('\n\n');
 
 export function composePrompt(opts: ComposeOptions = {}): string {
-  const { plan, isBugFix, currentCode, elementContext, planContext } = opts;
+  const { plan, isBugFix, currentCode, elementContext, planContext, presetId } = opts;
   const planAny = plan as unknown as Record<string, unknown> | undefined;
   const appType = (planAny?.app_type as string | undefined) ?? 'standard';
+  const designTheme = (planAny?.design_theme as string | undefined) ?? 'light';
 
   const sections: string[] = [STABLE_PREFIX];
 
   // Conditional sections — only included when the planner indicates they're needed.
-  // Order is fixed (games → auth → business → bug-fix) so that requests with the
-  // same flag combination produce identical prompts and benefit from prompt caching.
+  // Order is fixed (games → auth → business → bug-fix → preset) so that requests
+  // with the same flag combination produce identical prompts and benefit from
+  // prompt caching.
   if (appType === 'game') sections.push(GAMES);
   if (plan?.needs_auth) sections.push(AUTH);
   if (plan?.needs_research) sections.push(BUSINESS_DESIGN);
   if (isBugFix) sections.push(BUG_FIX);
+
+  // Design preset — selected from app_type + design_theme (or explicit presetId).
+  // Injected after conditional sections but before dynamic context so the model
+  // sees the token constraints before the plan details.
+  if (plan) {
+    const preset = presetId
+      ? (PRESETS[presetId] ?? selectPreset(appType, designTheme))
+      : selectPreset(appType, designTheme);
+    sections.push(formatPresetForPrompt(preset));
+  }
 
   // Dynamic per-request context goes LAST so the prefix above can be cached.
   if (planContext) sections.push(planContext);
