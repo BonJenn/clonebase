@@ -64,6 +64,42 @@ export function BuilderWorkspace({
   const [updating, setUpdating] = useState(false);
   const [updateToast, setUpdateToast] = useState<string | null>(null);
 
+  // Persist sandbox data to localStorage so it survives page refresh.
+  // The sandbox iframe stores data on window.__sandboxData — we hydrate
+  // from localStorage on mount and save whenever a data-snapshot arrives.
+  const sandboxDataKey = `clonebase-sandbox-data-${templateId}`;
+
+  useEffect(() => {
+    // Hydrate: restore data from localStorage before iframe initializes
+    try {
+      const saved = localStorage.getItem(sandboxDataKey);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed && typeof parsed === 'object') {
+          (window as unknown as Record<string, unknown>).__sandboxData = parsed;
+        }
+      }
+    } catch {
+      // Corrupted data — start fresh
+    }
+
+    // Save: listen for data-snapshot messages from the sandbox and persist
+    function handleDataSnapshot(event: MessageEvent) {
+      if (event.data?.type !== 'data-snapshot') return;
+      const sandboxData = (window as unknown as { __sandboxData?: Record<string, unknown[]> }).__sandboxData;
+      if (sandboxData) {
+        try {
+          localStorage.setItem(sandboxDataKey, JSON.stringify(sandboxData));
+        } catch {
+          // localStorage full or unavailable — non-fatal
+        }
+      }
+    }
+
+    window.addEventListener('message', handleDataSnapshot);
+    return () => window.removeEventListener('message', handleDataSnapshot);
+  }, [sandboxDataKey]);
+
   // Transpile code for preview whenever it changes
   const transpile = useCallback(async (pageCode: string) => {
     try {
