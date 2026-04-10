@@ -148,11 +148,10 @@ export function DataPanel({ templateId }: DataPanelProps) {
     } catch { alert('Invalid JSON'); }
   }
 
+  const stateItemCount = Object.values(collections).reduce((s, r) => s + r.length, 0);
   const debugBar = (
     <div className="border-b border-amber-200 bg-amber-50 px-3 py-1 text-[10px] font-mono text-amber-800">
-      requests sent: {reqCount} · snapshots received: {snapCount}
-      {lastSnapshotAt && ` · last: ${((Date.now() - lastSnapshotAt) / 1000).toFixed(1)}s ago`}
-      {reqCount > 0 && snapCount === 0 && ' · ⚠ iframe not responding — check console'}
+      req: {reqCount} · snap: {snapCount} · collections: [{collectionNames.join(', ')}] · items in state: {stateItemCount} · active: &quot;{activeCollection}&quot; · rows: {activeRows.length}
     </div>
   );
 
