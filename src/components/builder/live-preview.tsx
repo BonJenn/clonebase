@@ -169,7 +169,7 @@ export const LivePreview = forwardRef<LivePreviewHandle, LivePreviewProps>(funct
       <iframe
         ref={iframeRef}
         src="/sandbox/preview"
-        sandbox="allow-scripts"
+        sandbox="allow-scripts allow-same-origin"
         className={`h-full w-full border-0 ${!transpiledCode ? 'hidden' : ''} ${editMode ? 'ring-4 ring-inset ring-indigo-500' : ''}`}
         title="App Preview"
       />
