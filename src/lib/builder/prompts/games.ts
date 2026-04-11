@@ -54,8 +54,7 @@ useEffect(() => {
   // Draw background, objects, player
   ctx.fillStyle = '#4ade80';
   ctx.fillRect(0, 0, 800, 600);
-  ctx.font = '32px serif';
-  ctx.fillText('🐧', playerPos.x, playerPos.y);
+  if (sprites.current.player) ctx.drawImage(sprites.current.player, playerPos.x, playerPos.y, 48, 48);
 }, [playerPos]);
 
 <canvas ref={canvasRef} width={800} height={600} className="rounded-xl border" />
@@ -97,8 +96,54 @@ useEffect(() => {
 </Dialog>
 \`\`\`
 
+#### Sprite Loading Pattern — Use real game art instead of emoji:
+All game sprites come from Kenney (CC0 public domain) via jsDelivr CDN.
+Preload sprites in a useEffect so they're ready before the game loop draws them:
+\`\`\`tsx
+const sprites = useRef<Record<string, HTMLImageElement>>({});
+const spritesLoaded = useRef(false);
+useEffect(() => {
+  const urls: Record<string, string> = {
+    player: 'https://cdn.jsdelivr.net/gh/kefik/kenney@latest/SimplifiedPlatformer/Characters/platformChar_idle.png',
+    coin: 'https://cdn.jsdelivr.net/gh/kefik/kenney@latest/SimplifiedPlatformer/Items/platformPack_item001.png',
+  };
+  let loaded = 0;
+  Object.entries(urls).forEach(([key, src]) => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => { loaded++; if (loaded === Object.keys(urls).length) spritesLoaded.current = true; };
+    img.src = src;
+    sprites.current[key] = img;
+  });
+}, []);
+
+// In your render loop — draw sprites instead of emoji:
+if (sprites.current.player) ctx.drawImage(sprites.current.player, x, y, 48, 48);
+if (sprites.current.coin) ctx.drawImage(sprites.current.coin, coin.x, coin.y, 32, 32);
+\`\`\`
+
+#### Kenney Sprite Catalog — pick assets by game genre:
+
+**Platformer** (base: \`https://cdn.jsdelivr.net/gh/kefik/kenney@latest/SimplifiedPlatformer\`):
+- Characters: \`Characters/platformChar_idle.png\`, \`platformChar_walk1.png\`, \`platformChar_walk2.png\`, \`platformChar_jump.png\`, \`platformChar_duck.png\`, \`platformChar_happy.png\`
+- Items: \`Items/platformPack_item001.png\` (gold coin), \`item002.png\` (silver coin), \`item003.png\` (bronze coin), \`item004.png\` (gem blue), \`item005.png\` (gem green), \`item007.png\` (star), \`item009.png\` (heart), \`item017.png\` (key)
+- Tiles: \`Tiles/platformPack_tile001.png\` through \`tile065.png\` (ground, bricks, platforms)
+
+**Space Shooter** (base: \`https://cdn.jsdelivr.net/gh/kefik/kenney@latest/Shooter\`):
+- Player ships: \`playerShip1_blue.png\`, \`playerShip2_green.png\`, \`playerShip3_orange.png\` (3 styles × 4 colors: blue/green/orange/red)
+- Enemies: \`enemies/enemyBlack1.png\` through \`enemyBlack5.png\` (5 shapes × 4 colors: Black/Blue/Green/Red)
+- UFOs: \`ufoBlue.png\`, \`ufoGreen.png\`, \`ufoRed.png\`, \`ufoYellow.png\`
+- Lasers: \`lasers/laserBlue01.png\`, \`laserRed01.png\`, \`laserGreen01.png\` (16 variants per color)
+- Meteors: \`meteors/meteorBrown_big1.png\` through \`big4.png\`, \`med1.png\`, \`small1.png\`, \`tiny1.png\` (brown + grey)
+- Powerups: \`powerups/powerupBlue.png\`, \`powerupGreen.png\`, \`powerups/star_gold.png\`, \`shield_gold.png\`, \`bolt_gold.png\`
+- Fire effects: \`effects/fire00.png\` through \`fire19.png\` (20-frame animation)
+- HUD: \`ui/playerLife1_blue.png\` (life icons matching ship color), \`ui/numeral0.png\` through \`numeral9.png\`
+
+Sprite dimensions: platformer chars ~64×64, platformer items/tiles ~64×64, ships ~75-100px wide, enemies ~80-100px, lasers ~10×50, meteors vary (big ~100px, tiny ~20px).
+
 #### Game-specific rules:
-- Use emoji for characters/sprites on canvas (🐧🏠🌳⭐🎣🍕) — these render via ctx.fillText. Emoji is OK only inside canvas, NEVER in UI buttons/headings
+- Prefer Kenney sprite images for polished visuals. Emoji fallback is OK for quick prototypes or when no suitable sprite exists.
+- NEVER use emoji in UI buttons/headings — only inside canvas as a last resort
 - Use requestAnimationFrame for smooth animation, NOT setInterval
 - Keyboard: WASD + arrow keys for movement
 - ALWAYS call e.preventDefault() in keydown for arrow keys and spacebar — otherwise they scroll the page and ruin the game

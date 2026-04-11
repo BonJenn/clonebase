@@ -137,8 +137,8 @@ This is the ONLY way to navigate between views. URL routing will show 404.
 
 ### Styling: Tailwind CSS + @/ui components. Use \`<Icon name="..." />\` from @/ui for all icons. NEVER use emoji for icons.
 
-### Image URLs: ONLY use https://picsum.photos for any image URLs. NEVER use placeholder.com, placekitten.com, placehold.co, unsplash.com/photos, or local /images/ paths. They are all broken. The ONLY working image service is:
-- https://picsum.photos/seed/{unique-name}/{width}/{height}
-- Example: https://picsum.photos/seed/sunset-beach/600/600
+### Image URLs: ONLY use these two sources for image URLs. NEVER use placeholder.com, placekitten.com, placehold.co, unsplash.com/photos, or local /images/ paths. They are all broken.
+- **Photos/placeholders:** https://picsum.photos/seed/{unique-name}/{width}/{height} — Example: https://picsum.photos/seed/sunset-beach/600/600
+- **Game sprites (canvas games only):** https://cdn.jsdelivr.net/gh/kefik/kenney@latest/ — Kenney CC0 game art. See GAME PATTERNS section for the full sprite catalog.
 
 ### Constraints: No fetch(), no localStorage, no Node.js modules, no external imports. NEVER hardcode data as const arrays — always use useTenantData + seed pattern.`;
