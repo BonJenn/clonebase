@@ -39,54 +39,66 @@ export async function POST(request: NextRequest) {
 
   let customerId = profile?.stripe_customer_id;
   if (!customerId) {
-    const customer = await stripe.customers.create({
-      email: profile?.email || user.email || '',
-      metadata: { clonebase_user_id: user.id },
-    });
-    customerId = customer.id;
+    try {
+      const customer = await stripe.customers.create({
+        email: profile?.email || user.email || '',
+        metadata: { clonebase_user_id: user.id },
+      });
+      customerId = customer.id;
 
-    // Save customer ID to profile (admin client to bypass RLS)
-    const { createAdminClient } = await import('@/lib/supabase/admin');
-    const admin = createAdminClient();
-    await (admin.from('profiles') as any)
-      .update({ stripe_customer_id: customerId })
-      .eq('id', user.id);
+      // Save customer ID to profile (admin client to bypass RLS)
+      const { createAdminClient } = await import('@/lib/supabase/admin');
+      const admin = createAdminClient();
+      await (admin.from('profiles') as any)
+        .update({ stripe_customer_id: customerId })
+        .eq('id', user.id);
+    } catch (err) {
+      console.error('[billing] customer creation failed:', (err as Error).message);
+      return NextResponse.json({ error: 'Failed to create billing account' }, { status: 500 });
+    }
   }
 
   // Create a Checkout session for a recurring subscription
   const origin = request.headers.get('origin') || 'https://clonebase.app';
-  const session = await stripe.checkout.sessions.create({
-    customer: customerId,
-    mode: 'subscription',
-    line_items: [
-      {
-        price_data: {
-          currency: 'usd',
-          product_data: {
-            name: `Clonebase ${tier.name}`,
-            description: `${credits} credits/month — ${tier.description}`,
+
+  try {
+    const session = await stripe.checkout.sessions.create({
+      customer: customerId,
+      mode: 'subscription',
+      line_items: [
+        {
+          price_data: {
+            currency: 'usd',
+            product_data: {
+              name: `Clonebase ${tier.name}`,
+              description: `${credits} credits/month — ${tier.description}`,
+            },
+            unit_amount: priceCents,
+            recurring: { interval: 'month' },
           },
-          unit_amount: priceCents,
-          recurring: { interval: 'month' },
+          quantity: 1,
         },
-        quantity: 1,
-      },
-    ],
-    success_url: `${origin}/dashboard?subscription=success`,
-    cancel_url: `${origin}/pricing?subscription=canceled`,
-    metadata: {
-      clonebase_user_id: user.id,
-      tier_id,
-      credits: String(credits),
-    },
-    subscription_data: {
+      ],
+      success_url: `${origin}/dashboard?subscription=success`,
+      cancel_url: `${origin}/pricing?subscription=canceled`,
       metadata: {
         clonebase_user_id: user.id,
         tier_id,
         credits: String(credits),
       },
-    },
-  });
+      subscription_data: {
+        metadata: {
+          clonebase_user_id: user.id,
+          tier_id,
+          credits: String(credits),
+        },
+      },
+    } as Parameters<typeof stripe.checkout.sessions.create>[0]);
 
-  return NextResponse.json({ url: session.url });
+    return NextResponse.json({ url: session.url });
+  } catch (err) {
+    const message = (err as Error).message || 'Stripe error';
+    console.error('[billing] checkout session creation failed:', message);
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
 }
