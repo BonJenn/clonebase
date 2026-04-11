@@ -1,20 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
-import OpenAI from 'openai';
+import { getAnthropic } from '@/lib/anthropic';
 import { composePrompt } from '@/lib/builder/prompts';
 import { planApp } from '@/lib/builder/planner';
 import { researchTopic, searchImages } from '@/lib/builder/researcher';
 import { detectBlueprint, formatBlueprintForPrompt } from '@/lib/builder/app-blueprints';
 import { lintDesign } from '@/lib/builder/design-linter';
 
-// Function timeout. GPT-4.1 with max_completion_tokens: 16384 on a ~3K token system prompt
-// routinely takes 60-90s; complex generations can push 120s. We set this to 300
-// (Vercel's current default max on Pro) to give first-gen + an optional bug-fix
-// retry room to complete without hitting a platform 504.
 export const maxDuration = 300;
 
-// Per-request OpenAI timeouts. These are strictly less than maxDuration so that
-// a hanging OpenAI call errors cleanly instead of starving the function budget.
+// Per-request timeouts. These are strictly less than maxDuration so that
+// a hanging API call errors cleanly instead of starving the function budget.
 const PRIMARY_CALL_TIMEOUT_MS = 200_000;
 const RETRY_CALL_TIMEOUT_MS = 90_000;
 
@@ -22,10 +18,30 @@ const RETRY_CALL_TIMEOUT_MS = 90_000;
 // left to realistically complete a second call + db writes.
 const RETRY_MIN_BUDGET_MS = 100_000;
 
-let _openai: OpenAI | null = null;
-function getOpenAI() {
-  if (!_openai) _openai = new OpenAI();
-  return _openai;
+// Claude model for code generation — Sonnet 4.6 is the sweet spot of
+// quality, speed, and cost for structured code generation tasks.
+const CODE_MODEL = 'claude-sonnet-4-6';
+
+/** Call Claude and return the text content from the response. */
+async function callClaude(opts: {
+  system: string;
+  messages: Array<{ role: 'user' | 'assistant'; content: string }>;
+  maxTokens?: number;
+  temperature?: number;
+  timeoutMs?: number;
+}): Promise<string | null> {
+  const response = await getAnthropic().messages.create(
+    {
+      model: CODE_MODEL,
+      max_tokens: opts.maxTokens ?? 16384,
+      temperature: opts.temperature ?? 0.7,
+      system: opts.system,
+      messages: opts.messages,
+    },
+    { signal: AbortSignal.timeout(opts.timeoutMs ?? PRIMARY_CALL_TIMEOUT_MS) }
+  );
+  const block = response.content[0];
+  return block?.type === 'text' ? block.text : null;
 }
 
 interface GeneratedCode {
@@ -233,7 +249,6 @@ IMPORTANT CONSTRAINTS FROM PLAN:
   }
 
   // PASS 2: Generate the code
-  const model = 'gpt-5.4';
 
   // For follow-ups, only send the last few messages to stay within token limits.
   // The existing code is already in the system prompt via composePrompt.
@@ -246,10 +261,7 @@ IMPORTANT CONSTRAINTS FROM PLAN:
   const bugFixKeywords = /\b(bug|broken|doesn'?t work|isn'?t working|not working|fix|error|crash|crashes|wrong|fails?|can'?t|won'?t|nothing happens|stopped working)\b/i;
   const isBugFix = bugFixKeywords.test(latestUserMessage);
 
-  // Compose the system prompt from topical sections. Conditional sections (games,
-  // auth, business, bug-fix) are only included when their flags fire. Dynamic
-  // per-request context (current code, plan, element selection) is appended last
-  // so the stable prefix can be reused by OpenAI's prompt cache.
+  // Compose the system prompt from topical sections.
   const systemPrompt = composePrompt({
     plan,
     isBugFix,
@@ -258,29 +270,22 @@ IMPORTANT CONSTRAINTS FROM PLAN:
     planContext,
   });
 
-  // Rough token estimate (~4 chars per token) — useful for spotting prompt bloat.
   const approxTokens = Math.round(systemPrompt.length / 4);
-  console.log(`[builder] t+${elapsed()}ms system prompt: ${systemPrompt.length} chars / ~${approxTokens} tokens (model=${model}, game=${(plan as unknown as { app_type?: string } | null)?.app_type === 'game'}, auth=${plan?.needs_auth === true}, research=${plan?.needs_research === true}, bugfix=${isBugFix}, blueprint=${blueprint?.id || 'none'})`);
+  console.log(`[builder] t+${elapsed()}ms system prompt: ${systemPrompt.length} chars / ~${approxTokens} tokens (model=${CODE_MODEL}, game=${(plan as unknown as { app_type?: string } | null)?.app_type === 'game'}, auth=${plan?.needs_auth === true}, research=${plan?.needs_research === true}, bugfix=${isBugFix}, blueprint=${blueprint?.id || 'none'})`);
 
-  let response;
+  let textContent: string | null;
   try {
-    response = await getOpenAI().chat.completions.create(
-      {
-        model,
-        max_completion_tokens: 16384,
-        temperature: isBugFix ? 0.1 : 0.7, // Near-deterministic for bug fixes — minimum drift
-        messages: [
-          { role: 'system', content: systemPrompt },
-          ...conversationMessages.map((m: { role: string; content: string }) => ({
-            role: m.role as 'user' | 'assistant',
-            content: m.content,
-          })),
-        ],
-      },
-      { timeout: PRIMARY_CALL_TIMEOUT_MS }
-    );
+    textContent = await callClaude({
+      system: systemPrompt,
+      messages: conversationMessages.map((m: { role: string; content: string }) => ({
+        role: m.role as 'user' | 'assistant',
+        content: m.content,
+      })),
+      temperature: isBugFix ? 0.1 : 0.7,
+      timeoutMs: PRIMARY_CALL_TIMEOUT_MS,
+    });
   } catch (err) {
-    const message = (err as Error).message || 'OpenAI call failed';
+    const message = (err as Error).message || 'Claude call failed';
     console.log(`[builder] t+${elapsed()}ms primary call FAILED: ${message}`);
     return NextResponse.json(
       { error: message.includes('timeout') || message.includes('aborted')
@@ -291,7 +296,6 @@ IMPORTANT CONSTRAINTS FROM PLAN:
   }
   console.log(`[builder] t+${elapsed()}ms primary call complete`);
 
-  const textContent = response.choices[0]?.message?.content;
   if (!textContent) {
     return NextResponse.json({ error: 'No response from model' }, { status: 500 });
   }
@@ -328,25 +332,20 @@ Do not refactor. Do not rename. Do not restyle. Do not "improve" anything. Do no
 Return the JSON now.`;
 
         try {
-          const retryResponse = await getOpenAI().chat.completions.create(
-            {
-              model,
-              max_completion_tokens: 16384,
-              temperature: 0,
-              messages: [
-                { role: 'system', content: systemPrompt },
-                ...conversationMessages.map((m: { role: string; content: string }) => ({
-                  role: m.role as 'user' | 'assistant',
-                  content: m.content,
-                })),
-                { role: 'assistant', content: textContent },
-                { role: 'user', content: feedbackMessage },
-              ],
-            },
-            { timeout: Math.min(RETRY_CALL_TIMEOUT_MS, Math.max(20_000, remaining() - 20_000)) }
-          );
+          const retryContent = await callClaude({
+            system: systemPrompt,
+            messages: [
+              ...conversationMessages.map((m: { role: string; content: string }) => ({
+                role: m.role as 'user' | 'assistant',
+                content: m.content,
+              })),
+              { role: 'assistant', content: textContent },
+              { role: 'user', content: feedbackMessage },
+            ],
+            temperature: 0,
+            timeoutMs: Math.min(RETRY_CALL_TIMEOUT_MS, Math.max(20_000, remaining() - 20_000)),
+          });
 
-          const retryContent = retryResponse.choices[0]?.message?.content;
           if (retryContent) {
             const retryParsed = parseGenerated(retryContent);
             if (retryParsed?.page_code) {
@@ -377,24 +376,19 @@ Return the JSON now.`;
     if (!lint.passesThreshold && remaining() >= RETRY_MIN_BUDGET_MS) {
       console.log(`[builder] t+${elapsed()}ms triggering design lint retry (${lint.violations.length} violations)`);
       try {
-        const lintRetry = await getOpenAI().chat.completions.create(
-          {
-            model,
-            max_completion_tokens: 16384,
-            temperature: 0.4,
-            messages: [
-              { role: 'system', content: systemPrompt },
-              ...conversationMessages.map((m: { role: string; content: string }) => ({
-                role: m.role as 'user' | 'assistant',
-                content: m.content,
-              })),
-              { role: 'assistant', content: textContent },
-              { role: 'user', content: lint.feedback },
-            ],
-          },
-          { timeout: Math.min(RETRY_CALL_TIMEOUT_MS, Math.max(20_000, remaining() - 20_000)) }
-        );
-        const lintRetryContent = lintRetry.choices[0]?.message?.content;
+        const lintRetryContent = await callClaude({
+          system: systemPrompt,
+          messages: [
+            ...conversationMessages.map((m: { role: string; content: string }) => ({
+              role: m.role as 'user' | 'assistant',
+              content: m.content,
+            })),
+            { role: 'assistant', content: textContent },
+            { role: 'user', content: lint.feedback },
+          ],
+          temperature: 0.4,
+          timeoutMs: Math.min(RETRY_CALL_TIMEOUT_MS, Math.max(20_000, remaining() - 20_000)),
+        });
         if (lintRetryContent) {
           const lintRetryParsed = parseGenerated(lintRetryContent);
           if (lintRetryParsed?.page_code) {
@@ -437,7 +431,7 @@ Return the JSON now.`;
     component_files: generated.component_files || {},
     conversation_history: messages,
     generation_prompt: messages[0]?.content || '',
-    model_used: model,
+    model_used: CODE_MODEL,
     version: nextVersion,
     is_current: true,
   });

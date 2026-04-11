@@ -1,10 +1,4 @@
-import OpenAI from 'openai';
-
-let _openai: OpenAI | null = null;
-function getOpenAI() {
-  if (!_openai) _openai = new OpenAI();
-  return _openai;
-}
+import { getAnthropic } from '@/lib/anthropic';
 
 export interface AppPlan {
   app_name: string;
@@ -24,14 +18,7 @@ export interface AppPlan {
 // Pass 1: Analyze the user's prompt and create a structured plan.
 // This runs fast (gpt-4.1-mini) and constrains what the code generator builds.
 export async function planApp(prompt: string): Promise<AppPlan> {
-  const response = await getOpenAI().chat.completions.create({
-    model: 'gpt-4.1-mini',
-    max_tokens: 1000,
-    temperature: 0.3,
-    messages: [
-      {
-        role: 'system',
-        content: `You are an app architect. Analyze the user's app description and return a JSON plan. Be realistic about what can be built as a single-page React app with in-memory data.
+  const systemContent = `You are an app architect. Analyze the user's app description and return a JSON plan. Be realistic about what can be built as a single-page React app with in-memory data.
 
 Return ONLY valid JSON:
 {
@@ -72,13 +59,18 @@ Rules:
 - complexity: simple (1-2 views, 1 collection), medium (3-4 views, 2-3 collections), complex (5+ views, 4+ collections)
 - warnings: flag things like "real-time multiplayer requires WebSocket which isn't supported", "3D graphics not possible in this environment"
 - Keep views to maximum 5. If the user asks for too much, simplify.
-- Maximum 4 data collections. Combine related data if needed.`
-      },
-      { role: 'user', content: prompt },
-    ],
+- Maximum 4 data collections. Combine related data if needed.`;
+
+  const response = await getAnthropic().messages.create({
+    model: 'claude-haiku-4-5-20251001',
+    max_tokens: 1000,
+    temperature: 0.3,
+    system: systemContent,
+    messages: [{ role: 'user', content: prompt }],
   });
 
-  const text = response.choices[0]?.message?.content?.trim() || '';
+  const block = response.content[0];
+  const text = (block?.type === 'text' ? block.text : '')?.trim() || '';
   try {
     let jsonStr = text;
     const fenceMatch = jsonStr.match(/```(?:json)?\s*([\s\S]*?)```/);
