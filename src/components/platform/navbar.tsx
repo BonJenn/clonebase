@@ -38,6 +38,9 @@ export function Navbar() {
               <Link href="/marketplace" className={`text-sm ${isHome ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-900'} transition-colors`}>
                 Marketplace
               </Link>
+              <Link href="/pricing" className={`text-sm ${isHome ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-900'} transition-colors`}>
+                Pricing
+              </Link>
               {user && (
                 <Link href="/dashboard" className={`text-sm ${isHome ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-900'} transition-colors`}>
                   Dashboard
@@ -100,6 +103,13 @@ export function Navbar() {
               className={`block rounded-lg px-3 py-3 text-base font-medium ${isHome ? 'text-gray-300 hover:bg-gray-800' : 'text-gray-700 hover:bg-gray-100'}`}
             >
               Marketplace
+            </Link>
+            <Link
+              href="/pricing"
+              onClick={closeMenu}
+              className={`block rounded-lg px-3 py-3 text-base font-medium ${isHome ? 'text-gray-300 hover:bg-gray-800' : 'text-gray-700 hover:bg-gray-100'}`}
+            >
+              Pricing
             </Link>
             {user && (
               <Link

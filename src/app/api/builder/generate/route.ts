@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { getAnthropic } from '@/lib/anthropic';
+import { checkCredits, useCredit } from '@/lib/credits';
 import { composePrompt } from '@/lib/builder/prompts';
 import { planApp } from '@/lib/builder/planner';
 import { researchTopic, searchImages } from '@/lib/builder/researcher';
@@ -122,6 +123,17 @@ export async function POST(request: NextRequest) {
   const supabase = await createServerSupabaseClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+  // Credit gate: check before doing any expensive work
+  const creditStatus = await checkCredits(user.id);
+  if (!creditStatus.allowed) {
+    return NextResponse.json({
+      error: creditStatus.error,
+      credits_remaining: 0,
+      credits_limit: creditStatus.creditsLimit,
+      tier: creditStatus.tier,
+    }, { status: 402 });
+  }
 
   const { template_id, messages, element_context } = await request.json();
   if (!template_id || !messages?.length) {
@@ -492,6 +504,9 @@ Return the JSON now.`;
     }
   }
 
+  // Deduct 1 credit for successful generation (fire-and-forget)
+  useCredit(user.id).catch(() => {});
+
   return NextResponse.json({
     page_code: generated.page_code,
     admin_code: generated.admin_code || null,
@@ -500,5 +515,6 @@ Return the JSON now.`;
     suggested_integrations: integrations,
     plan: plan || undefined,
     version: nextVersion,
+    credits_remaining: creditStatus.creditsRemaining - 1,
   });
 }
