@@ -36,11 +36,17 @@ Before returning code, verify the UI:
 [ ] Every spacing value comes from the strict scale (1, 2, 3, 4, 6, 8, 12)
 [ ] Only 5 text styles are used across the whole app
 [ ] Only 1 primary color + neutral grays (no rainbow of Tailwind colors)
-[ ] Page uses the standard \`mx-auto max-w-6xl px-6 py-12\` skeleton
+[ ] Page uses the standard \`mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-12\` skeleton
 [ ] All data is in cards (not raw lists)
 [ ] All buttons share the same styling; all inputs share the same styling
 [ ] No heavy shadows, excessive gradients, or emoji-bedazzled headings
 [ ] Layout feels like Linear / Stripe dashboard / modern SaaS, not like a template
+[ ] RESPONSIVE: Every grid has \`grid-cols-1\` as the mobile base (e.g. \`grid-cols-1 sm:grid-cols-2 lg:grid-cols-3\`)
+[ ] RESPONSIVE: Every flex row uses \`flex-col sm:flex-row\`
+[ ] RESPONSIVE: Page header stacks on mobile (\`flex-col sm:flex-row sm:items-center sm:justify-between\`)
+[ ] RESPONSIVE: No fixed widths that would break on 375px screens
+[ ] RESPONSIVE: Tables wrapped in \`overflow-x-auto\`
+[ ] RESPONSIVE: Bottom nav exists for apps with 3+ views
 
 If any of these fail, the app is broken. Fix it.
 

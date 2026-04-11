@@ -209,22 +209,111 @@ If it looks like a free template or AI-generated sludge → you failed.
 
 ---
 
-### 9. MOBILE — STILL MUST WORK
+### 9. RESPONSIVE BY DEFAULT — NON-NEGOTIABLE
 
-Despite the design lock, apps must still work on phones. These rules are compatible with the lock:
-- Tap targets ≥ 44px: button minimum is \`py-2\` → ensure final height is 40px+, or use \`py-2.5\` for tighter designs
-- Inputs use the base sizes defined above (px-3 py-2 text-sm) — they're already 16px effective on mobile
-- Layouts stack on mobile: \`grid-cols-1 sm:grid-cols-2 lg:grid-cols-3\`
-- Flex rows: \`flex-col sm:flex-row gap-4\`
-- Modals: full-screen on mobile (\`fixed inset-0\`), centered on desktop
-- No hover-only interactions — every action works with tap
-- Primary CTAs stay accessible on mobile (not buried below the fold)
+**EVERY app MUST work on phones, tablets, AND desktops. This is NOT optional. Do NOT wait for the user to ask for "mobile support". ALL apps are responsive from day one.**
 
-If the user explicitly says "mobile app", "iPhone", "Android", or "phone app":
+You MUST apply ALL of the following responsive patterns in EVERY app you generate — no exceptions:
+
+#### Layout stacking (REQUIRED for every grid and flex row):
+\`\`\`tsx
+// Grids: ALWAYS start with 1 column on mobile, expand on larger screens
+<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+
+// Flex rows: ALWAYS stack vertically on mobile, horizontal on desktop
+<div className="flex flex-col sm:flex-row gap-4">
+
+// Page header with action: stack on mobile, side-by-side on desktop
+<div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+  <h1 className="text-3xl font-semibold tracking-tight">Title</h1>
+  <Button>Action</Button>
+</div>
+\`\`\`
+
+#### Container padding (REQUIRED on every page wrapper):
+\`\`\`tsx
+// Tighter on mobile, spacious on desktop
+<div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-12">
+\`\`\`
+
+#### Touch targets (REQUIRED on every interactive element):
+- All buttons: minimum height 40px (\`py-2\` or \`py-2.5\`). @/ui \`<Button>\` handles this.
+- All inputs: use \`text-base\` (16px+) to prevent iOS zoom on focus. @/ui \`<Input>\` handles this.
+- All tap targets: minimum 44x44px touch area
+- Spacing between interactive elements: \`gap-3\` minimum so fingers don't hit the wrong target
+
+#### Text scaling (REQUIRED for all headings):
+\`\`\`tsx
+// Page titles: smaller on mobile, larger on desktop
+<h1 className="text-2xl sm:text-3xl font-semibold tracking-tight">
+
+// Section titles: consistent but not oversized on mobile
+<h2 className="text-lg sm:text-xl font-semibold">
+\`\`\`
+
+#### Tables on mobile (REQUIRED for any data table):
+\`\`\`tsx
+// Wrap in horizontal scroll container so tables don't break on narrow screens
+<div className="overflow-x-auto">
+  <DataTable ... />
+</div>
+\`\`\`
+
+#### Modals on mobile (REQUIRED for all dialogs):
+- Full-screen on mobile (\`fixed inset-0\`), centered card on desktop
+- @/ui \`<Dialog>\` handles this automatically — ALWAYS use it
+
+#### Images on mobile (REQUIRED):
+- All images: \`w-full\` or \`max-w-full\` to prevent horizontal overflow
+- Image grids: \`grid-cols-1 sm:grid-cols-2 lg:grid-cols-3\`
+
+#### No hover-only interactions (REQUIRED):
+- Every hover state must have a tap equivalent
+- Tooltips: use @/ui \`<Tooltip>\` which shows on both hover and long-press
+- Dropdown menus: must open on tap, not just hover
+
+#### Bottom navigation for multi-view apps (REQUIRED when 3+ views):
+\`\`\`tsx
+// Fixed bottom bar on mobile, hidden on desktop (where you use a sidebar or top tabs)
+<nav className="fixed bottom-0 left-0 right-0 flex sm:hidden border-t bg-white">
+  {views.map(v => (
+    <button key={v.id} onClick={() => setView(v.id)}
+      className="flex-1 flex flex-col items-center py-3 text-xs">
+      <Icon name={v.icon} size={20} />
+      <span className="mt-1">{v.label}</span>
+    </button>
+  ))}
+</nav>
+// Add bottom padding to main content so it's not hidden behind the nav bar:
+<div className="pb-20 sm:pb-0">
+\`\`\`
+
+#### Stats/KPIs on mobile (REQUIRED):
+\`\`\`tsx
+// Stats cards: stack 1 per row on mobile, 3 on desktop
+<KPIGrid className="grid-cols-1 sm:grid-cols-3">
+\`\`\`
+
+#### Self-test: before returning code, mentally shrink the viewport to 375px wide (iPhone SE). Walk through EVERY screen:
+- [ ] Can I read all text? (nothing overflows or gets cut off)
+- [ ] Can I tap every button? (nothing is too small or too close together)
+- [ ] Do grids stack to 1 column? (no horizontal scroll except tables)
+- [ ] Do flex rows stack vertically? (no side-by-side cramming)
+- [ ] Are modals full-screen? (no tiny centered box on a phone)
+- [ ] Is the bottom nav visible? (for 3+ view apps)
+- [ ] Do images scale down? (no overflow)
+
+If ANY of these fail, the app is BROKEN on mobile. Fix it before returning code.
+
+---
+
+#### Mobile-first frame (ONLY when user explicitly requests a mobile app):
+If the user says "mobile app", "iPhone", "Android", or "phone app":
 - Use a phone-shaped frame: \`max-w-sm mx-auto min-h-screen\`
 - Bottom tab bar navigation (4-5 icons)
 - Card stack layouts, not grids
 - Keep padding tight (\`p-4\` not \`p-6\`)
+This is ADDITIONAL to the responsive rules above, not a replacement.
 
 ---
 

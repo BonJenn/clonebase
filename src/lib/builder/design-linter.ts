@@ -253,6 +253,100 @@ const checkCodeLength: LintRule = (_, lines) => {
   return violations;
 };
 
+// ── Responsive lint rules ─────────────────────────────────────────────────
+
+const checkResponsiveGrids: LintRule = (code) => {
+  const violations: LintViolation[] = [];
+  // Find grid declarations that go straight to multi-column without a
+  // single-column mobile base. E.g. "grid-cols-2" or "grid-cols-3" without
+  // a preceding "grid-cols-1" in the same className.
+  // Match className strings containing grid-cols-{2,3,4,5,6} but NOT grid-cols-1
+  const gridMatches = code.matchAll(/className="([^"]*grid-cols-[2-6][^"]*)"/g);
+  for (const m of gridMatches) {
+    const cls = m[1];
+    // OK if it has grid-cols-1 as the mobile base
+    if (/grid-cols-1\b/.test(cls)) continue;
+    // OK if it uses sm: or md: or lg: prefix on the multi-col (means it's responsive)
+    if (/(?:sm|md|lg):grid-cols-/.test(cls)) continue;
+    violations.push({
+      rule: 'non-responsive-grid',
+      severity: 'error',
+      message: `Grid "${cls.match(/grid-cols-\d/)?.[0]}" without mobile base — use "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3" pattern`,
+    });
+  }
+  return violations;
+};
+
+const checkResponsiveFlex: LintRule = (code) => {
+  const violations: LintViolation[] = [];
+  // Find "flex-row" without a "flex-col" mobile base (not inside sm:/md:/lg: prefix)
+  // This catches `className="flex flex-row ..."` without `flex-col sm:flex-row`
+  const flexMatches = code.matchAll(/className="([^"]*\bflex-row\b[^"]*)"/g);
+  for (const m of flexMatches) {
+    const cls = m[1];
+    // OK if it has sm:flex-row or md:flex-row (means flex-col is the mobile base)
+    if (/(?:sm|md|lg):flex-row/.test(cls)) continue;
+    // OK if flex-col is also present (explicit stacking control)
+    if (/\bflex-col\b/.test(cls)) continue;
+    violations.push({
+      rule: 'non-responsive-flex',
+      severity: 'warning',
+      message: `"flex-row" without mobile stacking — use "flex-col sm:flex-row" so content stacks on phones`,
+    });
+  }
+  return violations;
+};
+
+const checkFixedWidths: LintRule = (code) => {
+  const violations: LintViolation[] = [];
+  // Catch fixed pixel widths on containers that would break on mobile
+  // Allow common exceptions: w-10, w-12 (icons), w-48 (sidebar), w-[280px] (kanban)
+  const matches = code.matchAll(/\bw-\[(\d+)px\]/g);
+  for (const m of matches) {
+    const px = parseInt(m[1]);
+    // Skip small widths (icons, thumbnails) and intentional fixed widths
+    if (px <= 100 || [280, 300, 320, 400].includes(px)) continue;
+    violations.push({
+      rule: 'fixed-width',
+      severity: 'warning',
+      message: `Fixed width "w-[${px}px]" may overflow on mobile — use max-w-* or responsive widths`,
+    });
+  }
+  return violations;
+};
+
+const checkMissingOverflowOnTable: LintRule = (code) => {
+  const violations: LintViolation[] = [];
+  // Check for <table> or DataTable without an overflow-x-auto wrapper
+  // Look for table-related content not preceded by overflow-x-auto within ~200 chars
+  const hasTable = /(<table|<DataTable|<thead)/.test(code);
+  const hasOverflow = /overflow-x-auto/.test(code);
+  if (hasTable && !hasOverflow) {
+    violations.push({
+      rule: 'table-no-overflow',
+      severity: 'warning',
+      message: 'Table without overflow-x-auto wrapper — tables break on mobile without horizontal scroll',
+    });
+  }
+  return violations;
+};
+
+const checkResponsivePadding: LintRule = (code) => {
+  const violations: LintViolation[] = [];
+  // Check the main page container for responsive padding
+  // Look for max-w-6xl or max-w-4xl with px-6 but WITHOUT sm:px-6 pattern
+  // (meaning px-6 is used at mobile width, which is too wide for 375px screens)
+  const containerMatch = code.match(/className="[^"]*max-w-(?:4xl|5xl|6xl|7xl)[^"]*px-6(?!\s)/);
+  if (containerMatch && !/px-4.*sm:px-6/.test(containerMatch[0])) {
+    violations.push({
+      rule: 'non-responsive-padding',
+      severity: 'warning',
+      message: 'Page container uses px-6 without responsive step — use "px-4 sm:px-6" so mobile has tighter padding',
+    });
+  }
+  return violations;
+};
+
 // ── All rules ───────────────────────────────────────────────────────────────
 
 const ALL_RULES: LintRule[] = [
@@ -271,6 +365,12 @@ const ALL_RULES: LintRule[] = [
   checkMissingEmptyState,
   checkGradientAbuse,
   checkCodeLength,
+  // Responsive rules
+  checkResponsiveGrids,
+  checkResponsiveFlex,
+  checkFixedWidths,
+  checkMissingOverflowOnTable,
+  checkResponsivePadding,
 ];
 
 // ── Main linter function ────────────────────────────────────────────────────
