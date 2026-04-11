@@ -20,7 +20,7 @@ console.log(`Baseline (old monolithic prompt): ${OLD_PROMPT_SIZE} chars (~${Math
 
 for (const { name, opts } of scenarios) {
   const composed = composePrompt(opts);
-  const chars = composed.length;
+  const chars = composed.full.length;
   const tokens = Math.round(chars / 4);
   const delta = chars - OLD_PROMPT_SIZE;
   const pct = ((delta / OLD_PROMPT_SIZE) * 100).toFixed(1);

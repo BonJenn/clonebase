@@ -53,39 +53,53 @@ const STABLE_PREFIX = [
   RESPONSE_RULES,
 ].join('\n\n');
 
-export function composePrompt(opts: ComposeOptions = {}): string {
+export interface ComposedPrompt {
+  /** Stable + conditional sections — cacheable across requests. */
+  stable: string;
+  /** Dynamic per-request context (plan, current code, element). Changes every call. */
+  dynamic: string;
+  /** Combined string for backward compat. */
+  full: string;
+}
+
+export function composePrompt(opts: ComposeOptions = {}): ComposedPrompt {
   const { plan, isBugFix, currentCode, elementContext, planContext, presetId } = opts;
   const planAny = plan as unknown as Record<string, unknown> | undefined;
   const appType = (planAny?.app_type as string | undefined) ?? 'standard';
   const designTheme = (planAny?.design_theme as string | undefined) ?? 'light';
 
-  const sections: string[] = [STABLE_PREFIX];
+  // Stable sections — same across requests with the same flags. Cacheable.
+  const stableSections: string[] = [STABLE_PREFIX];
 
   // Conditional sections — only included when the planner indicates they're needed.
   // Order is fixed (games → auth → business → bug-fix → preset) so that requests
   // with the same flag combination produce identical prompts and benefit from
   // prompt caching.
-  if (appType === 'game') sections.push(GAMES);
-  if (plan?.needs_auth) sections.push(AUTH);
-  if (plan?.needs_research) sections.push(BUSINESS_DESIGN);
-  if (isBugFix) sections.push(BUG_FIX);
+  if (appType === 'game') stableSections.push(GAMES);
+  if (plan?.needs_auth) stableSections.push(AUTH);
+  if (plan?.needs_research) stableSections.push(BUSINESS_DESIGN);
+  if (isBugFix) stableSections.push(BUG_FIX);
 
   // Design preset — selected from app_type + design_theme (or explicit presetId).
-  // Injected after conditional sections but before dynamic context so the model
-  // sees the token constraints before the plan details.
   if (plan) {
     const preset = presetId
       ? (PRESETS[presetId] ?? selectPreset(appType, designTheme))
       : selectPreset(appType, designTheme);
-    sections.push(formatPresetForPrompt(preset));
+    stableSections.push(formatPresetForPrompt(preset));
   }
 
-  // Dynamic per-request context goes LAST so the prefix above can be cached.
-  if (planContext) sections.push(planContext);
-  if (currentCode?.page_code) sections.push(formatCurrentCode(currentCode));
-  if (elementContext?.editId) sections.push(formatElementContext(elementContext));
+  const stable = stableSections.join('\n\n');
 
-  return sections.join('\n\n');
+  // Dynamic per-request context — changes every call. NOT cached.
+  const dynamicSections: string[] = [];
+  if (planContext) dynamicSections.push(planContext);
+  if (currentCode?.page_code) dynamicSections.push(formatCurrentCode(currentCode));
+  if (elementContext?.editId) dynamicSections.push(formatElementContext(elementContext));
+
+  const dynamic = dynamicSections.join('\n\n');
+  const full = dynamic ? `${stable}\n\n${dynamic}` : stable;
+
+  return { stable, dynamic, full };
 }
 
 function formatCurrentCode(code: { page_code?: string; admin_code?: string; api_handler_code?: string }): string {

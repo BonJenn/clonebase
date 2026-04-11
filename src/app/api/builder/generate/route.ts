@@ -18,24 +18,47 @@ const RETRY_CALL_TIMEOUT_MS = 90_000;
 // left to realistically complete a second call + db writes.
 const RETRY_MIN_BUDGET_MS = 100_000;
 
-// Claude model for code generation — Sonnet 4.6 is the sweet spot of
-// quality, speed, and cost for structured code generation tasks.
-const CODE_MODEL = 'claude-sonnet-4-6';
+// Claude models:
+// - Sonnet 4.6 for first-generation (quality matters for the initial build)
+// - Haiku 4.5 for follow-ups (simple edits like "make the button blue" don't
+//   need Sonnet's reasoning — Haiku is ~10x cheaper and fast)
+const MODEL_SONNET = 'claude-sonnet-4-6';
+const MODEL_HAIKU = 'claude-haiku-4-5-20251001';
 
-/** Call Claude and return the text content from the response. */
+/**
+ * Call Claude with prompt caching. The stable portion of the system prompt
+ * is marked with cache_control so Anthropic caches it for 5 minutes — subsequent
+ * requests sharing the same prefix pay only 10% of the input token cost.
+ *
+ * @param stableSystem - Cacheable system prompt (design lock, technical contract, etc.)
+ * @param dynamicSystem - Per-request context (plan, current code, element selection)
+ */
 async function callClaude(opts: {
-  system: string;
+  stableSystem: string;
+  dynamicSystem?: string;
   messages: Array<{ role: 'user' | 'assistant'; content: string }>;
+  model?: string;
   maxTokens?: number;
   temperature?: number;
   timeoutMs?: number;
 }): Promise<string | null> {
+  const systemBlocks: Array<{ type: 'text'; text: string; cache_control?: { type: 'ephemeral' } }> = [
+    {
+      type: 'text' as const,
+      text: opts.stableSystem,
+      cache_control: { type: 'ephemeral' as const },
+    },
+  ];
+  if (opts.dynamicSystem) {
+    systemBlocks.push({ type: 'text' as const, text: opts.dynamicSystem });
+  }
+
   const response = await getAnthropic().messages.create(
     {
-      model: CODE_MODEL,
+      model: opts.model ?? MODEL_SONNET,
       max_tokens: opts.maxTokens ?? 16384,
       temperature: opts.temperature ?? 0.7,
-      system: opts.system,
+      system: systemBlocks,
       messages: opts.messages,
     },
     { signal: AbortSignal.timeout(opts.timeoutMs ?? PRIMARY_CALL_TIMEOUT_MS) }
@@ -261,8 +284,8 @@ IMPORTANT CONSTRAINTS FROM PLAN:
   const bugFixKeywords = /\b(bug|broken|doesn'?t work|isn'?t working|not working|fix|error|crash|crashes|wrong|fails?|can'?t|won'?t|nothing happens|stopped working)\b/i;
   const isBugFix = bugFixKeywords.test(latestUserMessage);
 
-  // Compose the system prompt from topical sections.
-  const systemPrompt = composePrompt({
+  // Compose the system prompt — split into stable (cacheable) + dynamic parts.
+  const prompt = composePrompt({
     plan,
     isBugFix,
     currentCode: existing,
@@ -270,13 +293,18 @@ IMPORTANT CONSTRAINTS FROM PLAN:
     planContext,
   });
 
-  const approxTokens = Math.round(systemPrompt.length / 4);
-  console.log(`[builder] t+${elapsed()}ms system prompt: ${systemPrompt.length} chars / ~${approxTokens} tokens (model=${CODE_MODEL}, game=${(plan as unknown as { app_type?: string } | null)?.app_type === 'game'}, auth=${plan?.needs_auth === true}, research=${plan?.needs_research === true}, bugfix=${isBugFix}, blueprint=${blueprint?.id || 'none'})`);
+  // Sonnet for first generation (quality), Haiku for follow-ups (cost)
+  const model = isFirstGeneration ? MODEL_SONNET : MODEL_HAIKU;
+
+  const approxTokens = Math.round(prompt.full.length / 4);
+  console.log(`[builder] t+${elapsed()}ms system prompt: ${prompt.full.length} chars / ~${approxTokens} tokens (model=${model}, cached=${prompt.stable.length} chars, dynamic=${prompt.dynamic.length} chars, game=${(plan as unknown as { app_type?: string } | null)?.app_type === 'game'}, auth=${plan?.needs_auth === true}, bugfix=${isBugFix}, blueprint=${blueprint?.id || 'none'})`);
 
   let textContent: string | null;
   try {
     textContent = await callClaude({
-      system: systemPrompt,
+      stableSystem: prompt.stable,
+      dynamicSystem: prompt.dynamic || undefined,
+      model,
       messages: conversationMessages.map((m: { role: string; content: string }) => ({
         role: m.role as 'user' | 'assistant',
         content: m.content,
@@ -333,7 +361,9 @@ Return the JSON now.`;
 
         try {
           const retryContent = await callClaude({
-            system: systemPrompt,
+            stableSystem: prompt.stable,
+            dynamicSystem: prompt.dynamic || undefined,
+            model,
             messages: [
               ...conversationMessages.map((m: { role: string; content: string }) => ({
                 role: m.role as 'user' | 'assistant',
@@ -377,7 +407,9 @@ Return the JSON now.`;
       console.log(`[builder] t+${elapsed()}ms triggering design lint retry (${lint.violations.length} violations)`);
       try {
         const lintRetryContent = await callClaude({
-          system: systemPrompt,
+          stableSystem: prompt.stable,
+          dynamicSystem: prompt.dynamic || undefined,
+          model,
           messages: [
             ...conversationMessages.map((m: { role: string; content: string }) => ({
               role: m.role as 'user' | 'assistant',
@@ -431,7 +463,7 @@ Return the JSON now.`;
     component_files: generated.component_files || {},
     conversation_history: messages,
     generation_prompt: messages[0]?.content || '',
-    model_used: CODE_MODEL,
+    model_used: model,
     version: nextVersion,
     is_current: true,
   });
