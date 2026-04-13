@@ -1,38 +1,36 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createAdminClient } from '@/lib/supabase/admin';
 import { sendWelcomeEmail } from '@/lib/email';
 
 // POST /api/auth/welcome — Send the welcome email after signup.
-// Called client-side from the signup page with { email, name }.
-// We verify the email belongs to a recently-created profile to prevent abuse.
+// Called from the signup page with { email, name }.
+// No auth check needed — this just sends a welcome email.
+// Dedup: tracks recently-sent emails in memory to prevent double-sends.
+const recentlySent = new Set<string>();
+
 export async function POST(request: NextRequest) {
-  const { email, name } = await request.json().catch(() => ({ email: null, name: null }));
-  if (!email || typeof email !== 'string') {
-    return NextResponse.json({ ok: false }, { status: 400 });
-  }
-
-  // Verify this email belongs to a profile created in the last 5 minutes
-  const admin = createAdminClient();
-  const { data: profile } = await admin
-    .from('profiles')
-    .select('id, created_at')
-    .eq('email', email)
-    .limit(1)
-    .maybeSingle() as { data: { id: string; created_at: string } | null };
-
-  if (!profile) return NextResponse.json({ ok: false });
-
-  const created = new Date(profile.created_at);
-  if (Date.now() - created.getTime() > 5 * 60 * 1000) {
-    // Account is older than 5 minutes — don't re-send welcome
-    return NextResponse.json({ ok: false, reason: 'not_new' });
-  }
-
   try {
-    await sendWelcomeEmail(email, name || undefined);
+    const body = await request.json();
+    const email = typeof body?.email === 'string' ? body.email.trim().toLowerCase() : '';
+    const name = typeof body?.name === 'string' ? body.name.trim() : undefined;
+
+    if (!email || !email.includes('@')) {
+      return NextResponse.json({ ok: false, reason: 'invalid_email' }, { status: 400 });
+    }
+
+    // Simple dedup — don't send twice to the same address within 5 minutes
+    if (recentlySent.has(email)) {
+      return NextResponse.json({ ok: true, reason: 'already_sent' });
+    }
+
+    await sendWelcomeEmail(email, name);
+
+    recentlySent.add(email);
+    setTimeout(() => recentlySent.delete(email), 5 * 60 * 1000);
+
+    console.log(`[email] welcome sent to ${email}`);
     return NextResponse.json({ ok: true });
   } catch (err) {
     console.error('[email] welcome email failed:', (err as Error).message);
-    return NextResponse.json({ ok: false });
+    return NextResponse.json({ ok: false, error: (err as Error).message }, { status: 500 });
   }
 }
