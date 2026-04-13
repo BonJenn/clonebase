@@ -7,6 +7,7 @@ import { useUser } from '@/hooks/use-user';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
+import { CreditsBadge } from '@/components/platform/credits-badge';
 
 export function Navbar() {
   const { user, loading } = useUser();
@@ -55,6 +56,7 @@ export function Navbar() {
               <div className="h-8 w-20 animate-pulse rounded-lg bg-gray-200/20" />
             ) : user ? (
               <>
+                <CreditsBadge />
                 <Link href="/builder">
                   <Button size="sm" className="bg-indigo-600 hover:bg-indigo-500">Build an App</Button>
                 </Link>

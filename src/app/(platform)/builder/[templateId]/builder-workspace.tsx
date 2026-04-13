@@ -285,6 +285,9 @@ export function BuilderWorkspace({
       // Transpile for preview
       await transpile(data.page_code);
       setShowAnimation(false);
+
+      // Notify the credits badge to refresh
+      window.dispatchEvent(new Event('credits-updated'));
     } catch {
       setMessages([...updatedMessages, {
         role: 'assistant',
