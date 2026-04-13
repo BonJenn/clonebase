@@ -54,6 +54,7 @@ export function BuilderWorkspace({
   const [showAnimation, setShowAnimation] = useState(false);
   const [lastFailedMessage, setLastFailedMessage] = useState<string | null>(null);
   const [selectedElement, setSelectedElement] = useState<ElementSelectedEvent | null>(null);
+  const [upgradePrompt, setUpgradePrompt] = useState<string | null>(null);
   const livePreviewRef = useRef<LivePreviewHandle>(null);
 
   // Instance tracks the creator's own deployment. Once they've published
@@ -249,15 +250,28 @@ export function BuilderWorkspace({
       const data = await res.json();
 
       if (!res.ok) {
-        setMessages([...updatedMessages, {
-          role: 'assistant',
-          content: `Something went wrong: ${data.error || 'Generation failed'}. Tap "Retry" or rephrase your request.`,
-        }]);
-        setLastFailedMessage(content);
+        // Credit/limit errors (402 = out of credits, 403 = app limit or feature gate)
+        // → show a prominent upgrade prompt in the preview pane
+        if (res.status === 402 || res.status === 403) {
+          setUpgradePrompt(data.error || 'Upgrade your plan to continue building.');
+          setMessages([...updatedMessages, {
+            role: 'assistant',
+            content: data.error || 'You need to upgrade your plan to continue.',
+          }]);
+        } else {
+          setMessages([...updatedMessages, {
+            role: 'assistant',
+            content: `Something went wrong: ${data.error || 'Generation failed'}. Tap "Retry" or rephrase your request.`,
+          }]);
+          setLastFailedMessage(content);
+        }
         setGenerating(false);
         setShowAnimation(false);
         return;
       }
+
+      // Clear any previous upgrade prompt on success
+      setUpgradePrompt(null);
 
       setLastFailedMessage(null);
 
@@ -548,6 +562,35 @@ export function BuilderWorkspace({
                 <GeneratingAnimation />
               </div>
             )}
+
+            {/* Upgrade prompt — overlays the preview when user hits limits */}
+            {upgradePrompt && activeView === 'preview' && (
+              <div className="absolute inset-0 z-20 flex items-center justify-center bg-white/95 backdrop-blur-sm">
+                <div className="max-w-md text-center px-6">
+                  <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-indigo-50">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="h-8 w-8 text-indigo-600">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" />
+                    </svg>
+                  </div>
+                  <h2 className="mt-4 text-xl font-semibold text-gray-900">Upgrade to keep building</h2>
+                  <p className="mt-2 text-sm text-gray-600">{upgradePrompt}</p>
+                  <div className="mt-6 flex flex-col sm:flex-row items-center justify-center gap-3">
+                    <a href="/pricing">
+                      <Button className="bg-indigo-600 hover:bg-indigo-500 px-6">
+                        View Plans
+                      </Button>
+                    </a>
+                    <button
+                      onClick={() => setUpgradePrompt(null)}
+                      className="text-sm text-gray-500 hover:text-gray-700"
+                    >
+                      Dismiss
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
             <LivePreview
               ref={livePreviewRef}
               transpiledCode={transpiledCode}
