@@ -4,6 +4,7 @@ import { validateTemplateCode } from '@/lib/builder/code-validator';
 import { isValidSlug } from '@/lib/tenant';
 import { ROOT_DOMAIN } from '@/lib/constants';
 import { hashPassword } from '@/lib/password';
+import { checkFeature } from '@/lib/tier-gate';
 
 // POST /api/builder/publish — Validate, publish, and/or deploy a generated template
 //
@@ -47,8 +48,11 @@ export async function POST(request: NextRequest) {
     }, { status: 400 });
   }
 
-  // Password requirement for private deploys
+  // Feature gates: check tier before allowing premium features
   if (deploy_to_url && app_visibility === 'private') {
+    const gate = await checkFeature(user.id, 'passwordProtected', 'Password-protected apps');
+    if (gate) return NextResponse.json({ error: gate }, { status: 403 });
+
     if (typeof access_password !== 'string' || access_password.trim().length < 4) {
       return NextResponse.json({
         error: 'Private apps require a password of at least 4 characters.',

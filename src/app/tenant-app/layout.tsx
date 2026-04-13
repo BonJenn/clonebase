@@ -5,6 +5,7 @@ import { TenantProvider } from '@/sdk/tenant-context';
 import type { TenantContext } from '@/sdk/types';
 import { verifyUnlockToken, unlockCookieName } from '@/lib/password';
 import { TenantUnlockForm } from '@/components/platform/tenant-unlock-form';
+import { getUserTier } from '@/lib/tier-gate';
 
 // Resolves the tenant from the x-tenant-slug header (injected by proxy.ts),
 // fetches the app instance + template, and wraps children in TenantProvider
@@ -77,10 +78,24 @@ export default async function TenantLayout({ children }: { children: React.React
     },
   };
 
+  // Check if the tenant owner's plan includes branding removal
+  const ownerTier = await getUserTier(tenant.owner_id);
+  const showBranding = !ownerTier.tier.features.removeBranding;
+
   return (
     <TenantProvider value={ctx}>
       <div className="min-h-full" data-tenant={tenantSlug}>
         {children}
+        {showBranding && (
+          <a
+            href="https://clonebase.app"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="fixed bottom-3 right-3 z-50 rounded-full bg-gray-900/80 px-3 py-1.5 text-[11px] font-medium text-white shadow-lg backdrop-blur-sm hover:bg-gray-900 transition-colors"
+          >
+            Built with Clonebase
+          </a>
+        )}
       </div>
     </TenantProvider>
   );

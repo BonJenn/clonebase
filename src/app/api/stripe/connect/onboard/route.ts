@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { createConnectAccount, createOnboardingLink } from '@/lib/stripe-connect';
+import { checkFeature } from '@/lib/tier-gate';
 
 // POST /api/stripe/connect/onboard
 //
@@ -13,6 +14,9 @@ export async function POST(request: NextRequest) {
   const supabase = await createServerSupabaseClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+  const gate = await checkFeature(user.id, 'stripeConnect', 'Accepting payments');
+  if (gate) return NextResponse.json({ error: gate }, { status: 403 });
 
   const { country } = await request.json().catch(() => ({}));
 

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { getAnthropic } from '@/lib/anthropic';
 import { checkCredits, useCredit } from '@/lib/credits';
+import { getUserTier, checkAppLimit } from '@/lib/tier-gate';
 import { composePrompt } from '@/lib/builder/prompts';
 import { planApp } from '@/lib/builder/planner';
 import { researchTopic, searchImages } from '@/lib/builder/researcher';
@@ -135,6 +136,9 @@ export async function POST(request: NextRequest) {
     }, { status: 402 });
   }
 
+  // Get the user's tier for model selection + app limit checks
+  const userTier = await getUserTier(user.id);
+
   const { template_id, messages, element_context } = await request.json();
   if (!template_id || !messages?.length) {
     return NextResponse.json({ error: 'template_id and messages are required' }, { status: 400 });
@@ -162,6 +166,14 @@ export async function POST(request: NextRequest) {
 
   const existing = existingRows?.[0] || null;
   const isFirstGeneration = !existing && messages.length <= 1;
+
+  // App limit check on first generation (creating a new app)
+  if (isFirstGeneration) {
+    const limitError = await checkAppLimit(user.id);
+    if (limitError) {
+      return NextResponse.json({ error: limitError }, { status: 403 });
+    }
+  }
 
   // PASS 1: Plan the app (first generation only)
   let planContext = '';
@@ -305,8 +317,9 @@ IMPORTANT CONSTRAINTS FROM PLAN:
     planContext,
   });
 
-  // Sonnet for first generation (quality), Haiku for follow-ups (cost)
-  const model = isFirstGeneration ? MODEL_SONNET : MODEL_HAIKU;
+  // Priority generation: paid users get Sonnet for first gen (higher quality).
+  // Free users get Haiku for everything. Follow-ups always use Haiku.
+  const model = (isFirstGeneration && userTier.isPaid) ? MODEL_SONNET : MODEL_HAIKU;
 
   const approxTokens = Math.round(prompt.full.length / 4);
   console.log(`[builder] t+${elapsed()}ms system prompt: ${prompt.full.length} chars / ~${approxTokens} tokens (model=${model}, cached=${prompt.stable.length} chars, dynamic=${prompt.dynamic.length} chars, game=${(plan as unknown as { app_type?: string } | null)?.app_type === 'game'}, auth=${plan?.needs_auth === true}, bugfix=${isBugFix}, blueprint=${blueprint?.id || 'none'})`);
