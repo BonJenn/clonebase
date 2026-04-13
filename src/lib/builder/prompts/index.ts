@@ -34,23 +34,28 @@ export interface ComposeOptions {
   presetId?: string;
 }
 
-// Stable prefix that does not depend on the current request.
-// This is what OpenAI's prompt cache will match against.
-// Order: core rules → output format → technical contract → UI kit docs →
-// design lock → layout/pattern guides → file upload → seed data → response rules
-const STABLE_PREFIX = [
+// ALWAYS included — core rules the model needs for every call (first gen + follow-ups).
+// ~11K tokens. Cached by Anthropic prompt caching.
+const ALWAYS_PREFIX = [
   CORE,
   OUTPUT_FORMAT,
   TECHNICAL_CONTRACT,
   COMPONENTS,
   EDITABLE_IDS,
-  QUALITY_PATTERNS,
   DESIGN,
+  RESPONSE_RULES,
+].join('\n\n');
+
+// Only included on FIRST GENERATION — reference material for building new apps
+// from scratch. Follow-ups already have the current code in context, so they
+// don't need layout guides, seed data docs, or pattern examples. Excluding
+// these saves ~4,400 tokens per follow-up call.
+const FIRST_GEN_ONLY = [
+  QUALITY_PATTERNS,
   LAYOUTS,
   PATTERNS,
   FILE_UPLOAD,
   SEED_DATA,
-  RESPONSE_RULES,
 ].join('\n\n');
 
 export interface ComposedPrompt {
@@ -68,8 +73,12 @@ export function composePrompt(opts: ComposeOptions = {}): ComposedPrompt {
   const appType = (planAny?.app_type as string | undefined) ?? 'standard';
   const designTheme = (planAny?.design_theme as string | undefined) ?? 'light';
 
+  // Determine if this is a first generation or a follow-up edit.
+  // Follow-ups skip reference modules (layouts, patterns, seed data) to save tokens.
+  const isFollowUp = !!currentCode?.page_code;
+
   // Stable sections — same across requests with the same flags. Cacheable.
-  const stableSections: string[] = [STABLE_PREFIX];
+  const stableSections: string[] = isFollowUp ? [ALWAYS_PREFIX] : [ALWAYS_PREFIX, FIRST_GEN_ONLY];
 
   // Conditional sections — only included when the planner indicates they're needed.
   // Order is fixed (games → auth → business → bug-fix → preset) so that requests
