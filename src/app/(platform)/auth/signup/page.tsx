@@ -41,6 +41,9 @@ export default function SignupPage() {
       return;
     }
 
+    // Send welcome email (fire-and-forget — don't block signup)
+    fetch('/api/auth/welcome', { method: 'POST' }).catch(() => {});
+
     router.push('/dashboard');
     router.refresh();
   }

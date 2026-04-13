@@ -520,6 +520,15 @@ Return the JSON now.`;
   // Deduct 1 credit for successful generation (fire-and-forget)
   useCredit(user.id).catch(() => {});
 
+  // Send a "credits running low" email at 20% remaining (fire-and-forget)
+  const creditsLeft = creditStatus.creditsRemaining - 1;
+  const lowThreshold = Math.ceil(creditStatus.creditsLimit * 0.2);
+  if (creditsLeft > 0 && creditsLeft === lowThreshold) {
+    import('@/lib/email').then(({ sendCreditsLowEmail }) => {
+      sendCreditsLowEmail(user.email || '', creditsLeft, creditStatus.creditsLimit).catch(() => {});
+    }).catch(() => {});
+  }
+
   return NextResponse.json({
     page_code: generated.page_code,
     admin_code: generated.admin_code || null,
