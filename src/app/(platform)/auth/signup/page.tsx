@@ -41,8 +41,9 @@ export default function SignupPage() {
       return;
     }
 
-    // Send welcome email (fire-and-forget — don't block signup)
-    fetch('/api/auth/welcome', {
+    // Send welcome email — await it before navigating so the fetch
+    // doesn't get cancelled by the page transition.
+    await fetch('/api/auth/welcome', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, name: displayName }),
