@@ -89,11 +89,13 @@ export default function PricingPage() {
                 </div>
               )}
 
-              <div>
+              {/* Tier name + description — fixed height so prices align */}
+              <div className="min-h-[72px]">
                 <h3 className="text-lg font-semibold text-gray-900">{tier.name}</h3>
                 <p className="mt-1 text-sm text-gray-500">{tier.description}</p>
               </div>
 
+              {/* Price — always same vertical position */}
               <div className="mt-6">
                 <div className="flex items-baseline gap-1">
                   <span className="text-4xl font-bold text-gray-900">
@@ -103,26 +105,30 @@ export default function PricingPage() {
                 </div>
               </div>
 
-              {/* Credit selector dropdown */}
-              {!isFree && (
-                <div className="mt-4">
-                  <label className="text-xs text-gray-500 mb-1 block">Credits per month</label>
-                  <select
-                    value={credits}
-                    onChange={(e) => setSelectedCredits((s) => ({ ...s, [tierId]: Number(e.target.value) }))}
-                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                  >
-                    {tier.creditOptions.map((opt) => (
-                      <option key={opt} value={opt}>
-                        {opt} credits / month — {formatPrice(getPrice(tierId, opt))}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
+              {/* Credit selector — fixed height container so button aligns even on Free tier */}
+              <div className="mt-4 h-[62px]">
+                {!isFree ? (
+                  <div>
+                    <label className="text-xs text-gray-500 mb-1 block">Credits per month</label>
+                    <select
+                      value={credits}
+                      onChange={(e) => setSelectedCredits((s) => ({ ...s, [tierId]: Number(e.target.value) }))}
+                      className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                    >
+                      {tier.creditOptions.map((opt) => (
+                        <option key={opt} value={opt}>
+                          {opt} credits / month — {formatPrice(getPrice(tierId, opt))}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                ) : (
+                  <p className="text-sm text-gray-500 pt-2">30 credits included</p>
+                )}
+              </div>
 
-              {/* CTA */}
-              <div className="mt-6">
+              {/* CTA — always same vertical position */}
+              <div className="mt-4">
                 {isFree ? (
                   <Link href="/auth/signup">
                     <Button variant="secondary" className="w-full">Get started free</Button>
@@ -138,7 +144,7 @@ export default function PricingPage() {
                 )}
               </div>
 
-              {/* Features list */}
+              {/* Features list — flex-1 fills remaining space */}
               <ul className="mt-6 space-y-2.5 text-sm text-gray-600 flex-1">
                 <li className="flex items-start gap-2">
                   <span className="text-green-500 mt-0.5">&#10003;</span>
