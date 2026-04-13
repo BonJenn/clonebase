@@ -21,25 +21,34 @@ export default function PricingPage() {
     business: 100,
   });
   const [loading, setLoading] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   async function handleSubscribe(tierId: string) {
     setLoading(tierId);
-    const res = await fetch('/api/billing/subscribe', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        tier_id: tierId,
-        credits: selectedCredits[tierId],
-      }),
-    });
-    const data = await res.json();
-    if (data.url) {
-      window.location.href = data.url;
-    } else {
-      setLoading(null);
-      if (data.error === 'Unauthorized') {
-        window.location.href = '/auth/signup?redirect=/pricing';
+    setError(null);
+    try {
+      const res = await fetch('/api/billing/subscribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tier_id: tierId,
+          credits: selectedCredits[tierId],
+        }),
+      });
+      const data = await res.json().catch(() => ({ error: `Server error (${res.status})` }));
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        setLoading(null);
+        if (data.error === 'Unauthorized') {
+          window.location.href = '/auth/signup?redirect=/pricing';
+        } else {
+          setError(data.error || 'Something went wrong');
+        }
       }
+    } catch (err) {
+      setLoading(null);
+      setError((err as Error).message || 'Network error');
     }
   }
 
@@ -54,6 +63,12 @@ export default function PricingPage() {
           Every plan includes hosting, database, and a live URL.
         </p>
       </div>
+
+      {error && (
+        <div className="mt-6 rounded-lg bg-red-50 p-4 text-sm text-red-700 max-w-xl mx-auto">
+          {error}
+        </div>
+      )}
 
       <div className="mt-12 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         {TIER_ORDER.map((tierId) => {

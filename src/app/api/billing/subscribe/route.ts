@@ -12,6 +12,7 @@ import { TIERS, getPrice } from '@/lib/plans';
 //
 // Body: { tier_id: string, credits: number }
 export async function POST(request: NextRequest) {
+  try {
   const supabase = await createServerSupabaseClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -100,5 +101,11 @@ export async function POST(request: NextRequest) {
     const message = (err as Error).message || 'Stripe error';
     console.error('[billing] checkout session creation failed:', message);
     return NextResponse.json({ error: message }, { status: 500 });
+  }
+  } catch (outerErr) {
+    const msg = (outerErr as Error).message || 'Unknown error';
+    const stack = (outerErr as Error).stack || '';
+    console.error('[billing] unhandled error:', msg, stack);
+    return NextResponse.json({ error: msg, stack: stack.split('\n').slice(0, 5) }, { status: 500 });
   }
 }
