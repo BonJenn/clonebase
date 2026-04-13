@@ -26,11 +26,12 @@ export default function BillingPage() {
   const [portalLoading, setPortalLoading] = useState(false);
 
   useEffect(() => {
-    const supabase = createClient();
-    supabase.auth.getUser().then(async ({ data: { user } }: { data: { user: { id: string } | null } }) => {
+    async function load() {
+      // Fetch subscription
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser() as { data: { user: { id: string } | null } };
       if (!user) { setLoading(false); return; }
 
-      // Fetch subscription
       const { data: subData } = await supabase
         .from('user_subscriptions')
         .select('tier_id, credits_per_month, status, current_period_start, current_period_end')
@@ -39,24 +40,20 @@ export default function BillingPage() {
         .maybeSingle();
       setSub(subData as Subscription | null);
 
-      // Fetch current period usage
-      const now = new Date();
-      let periodStart: string;
-      if (subData?.current_period_start) {
-        periodStart = subData.current_period_start;
-      } else {
-        periodStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+      // Fetch credit usage from the server-side API (avoids timezone
+      // mismatch between browser and server when calculating period dates)
+      const creditsRes = await fetch('/api/billing/credits');
+      if (creditsRes.ok) {
+        const creditsData = await creditsRes.json();
+        setUsage({
+          credits_used: creditsData.creditsUsed || 0,
+          credits_limit: creditsData.creditsLimit || 30,
+        });
       }
-      const { data: usageData } = await supabase
-        .from('credit_usage')
-        .select('credits_used, credits_limit')
-        .eq('user_id', user.id)
-        .eq('period_start', periodStart)
-        .maybeSingle();
-      setUsage(usageData as Usage | null);
 
       setLoading(false);
-    });
+    }
+    load();
   }, []);
 
   async function handleOpenPortal() {
