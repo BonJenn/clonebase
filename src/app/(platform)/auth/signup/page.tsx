@@ -42,7 +42,11 @@ export default function SignupPage() {
     }
 
     // Send welcome email (fire-and-forget — don't block signup)
-    fetch('/api/auth/welcome', { method: 'POST' }).catch(() => {});
+    fetch('/api/auth/welcome', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, name: displayName }),
+    }).catch(() => {});
 
     router.push('/dashboard');
     router.refresh();
