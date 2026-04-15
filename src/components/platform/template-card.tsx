@@ -15,7 +15,7 @@ export function TemplateCard({ template }: TemplateCardProps) {
       className="group block rounded-xl border border-gray-200 bg-white overflow-hidden transition-shadow hover:shadow-lg"
     >
       {/* Preview image */}
-      <div className="aspect-video bg-gradient-to-br from-indigo-50 to-purple-50 flex items-center justify-center">
+      <div className="aspect-video bg-gray-100 flex items-center justify-center">
         {template.preview_url ? (
           <img
             src={template.preview_url}
@@ -23,13 +23,9 @@ export function TemplateCard({ template }: TemplateCardProps) {
             className="w-full h-full object-cover"
           />
         ) : (
-          <div className="text-4xl text-indigo-200">
-            {template.icon_url ? (
-              <img src={template.icon_url} alt="" className="h-12 w-12" />
-            ) : (
-              <span className="text-5xl">{template.name.charAt(0).toUpperCase()}</span>
-            )}
-          </div>
+          <span className="text-4xl font-semibold text-gray-300">
+            {template.name.charAt(0).toUpperCase()}
+          </span>
         )}
       </div>
 

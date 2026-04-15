@@ -87,8 +87,8 @@ export default async function DashboardPage() {
         <h2 className="text-lg font-semibold text-gray-900">My Apps</h2>
         {!myApps?.length && !instances?.length ? (
           <div className="mt-4 rounded-xl border border-dashed border-gray-300 p-8 text-center">
-            <p className="text-4xl">🚀</p>
-            <p className="mt-3 text-gray-500">No apps yet. Build one or clone from the marketplace.</p>
+            <p className="text-sm font-medium text-gray-900">No apps yet</p>
+            <p className="mt-1 text-sm text-gray-500">Build one from scratch or clone from the marketplace.</p>
             <div className="mt-4 flex items-center justify-center gap-3">
               <Link href="/builder">
                 <Button>Build an App</Button>
@@ -108,12 +108,12 @@ export default async function DashboardPage() {
                 </div>
                 <Link href={`/dashboard/apps/${app.id}`} className="block">
                   {/* Preview thumbnail */}
-                  <div className="aspect-video bg-gradient-to-br from-purple-50 to-indigo-50 flex items-center justify-center">
+                  <div className="aspect-video bg-gray-100 flex items-center justify-center">
                     {app.preview_url ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img src={app.preview_url} alt={app.name} className="w-full h-full object-cover" />
                     ) : (
-                      <span className="text-5xl text-purple-200">{app.name.charAt(0).toUpperCase()}</span>
+                      <span className="text-4xl text-gray-300">{app.name.charAt(0).toUpperCase()}</span>
                     )}
                   </div>
                   <div className="p-5">
@@ -152,12 +152,12 @@ export default async function DashboardPage() {
               return (
                 <Link key={inst.id} href={`/dashboard/projects/${inst.id}`} className="rounded-xl border border-gray-200 bg-white overflow-hidden hover:shadow-md transition-shadow block">
                   {/* Preview thumbnail from the parent template */}
-                  <div className="aspect-video bg-gradient-to-br from-indigo-50 to-sky-50 flex items-center justify-center">
+                  <div className="aspect-video bg-gray-100 flex items-center justify-center">
                     {inst.template?.preview_url ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img src={inst.template.preview_url} alt={inst.name} className="w-full h-full object-cover" />
                     ) : (
-                      <span className="text-5xl text-indigo-200">{inst.name.charAt(0).toUpperCase()}</span>
+                      <span className="text-4xl text-gray-300">{inst.name.charAt(0).toUpperCase()}</span>
                     )}
                   </div>
                   <div className="p-5">
@@ -203,12 +203,12 @@ export default async function DashboardPage() {
                 className="rounded-xl border border-gray-200 bg-white overflow-hidden hover:shadow-md transition-shadow block"
               >
                 {/* Preview thumbnail */}
-                <div className="aspect-video bg-gradient-to-br from-gray-50 to-slate-100 flex items-center justify-center">
+                <div className="aspect-video bg-gray-100 flex items-center justify-center">
                   {tpl.preview_url ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={tpl.preview_url} alt={tpl.name} className="w-full h-full object-cover" />
                   ) : (
-                    <span className="text-5xl text-slate-300">{tpl.name.charAt(0).toUpperCase()}</span>
+                    <span className="text-4xl text-gray-300">{tpl.name.charAt(0).toUpperCase()}</span>
                   )}
                 </div>
                 <div className="p-5">

@@ -187,21 +187,6 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="border-t border-gray-800 bg-gray-950 py-10">
-        <div className="mx-auto max-w-6xl px-4 sm:px-6">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
-            <span className="text-sm font-semibold text-white">Clonebase</span>
-            <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm text-gray-400">
-              <Link href="/builder" className="hover:text-white transition-colors">Builder</Link>
-              <Link href="/marketplace" className="hover:text-white transition-colors">Marketplace</Link>
-              <Link href="/pricing" className="hover:text-white transition-colors">Pricing</Link>
-              <Link href="/dashboard" className="hover:text-white transition-colors">Dashboard</Link>
-            </div>
-            <p className="text-xs text-gray-600">&copy; {new Date().getFullYear()} Clonebase</p>
-          </div>
-        </div>
-      </footer>
     </div>
   );
 }

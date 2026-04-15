@@ -55,7 +55,7 @@ export function StorageBrowser({ files, tenantId }: StorageBrowserProps) {
   if (files.length === 0) {
     return (
       <div className="mt-12 text-center">
-        <p className="text-4xl">📂</p>
+        <p className="text-sm font-medium text-gray-400">No files yet</p>
         <h3 className="mt-4 text-lg font-semibold text-gray-900">No files uploaded yet</h3>
         <p className="mt-1 text-sm text-gray-500">Files will appear here as users upload them through your app.</p>
       </div>

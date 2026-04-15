@@ -220,7 +220,7 @@ function PaymentsContent() {
           <div className="mt-4 h-32 animate-pulse rounded-xl bg-gray-100" />
         ) : payments.length === 0 ? (
           <div className="mt-4 rounded-xl border border-dashed border-gray-300 p-8 text-center">
-            <p className="text-4xl">💸</p>
+            <p className="text-sm font-medium text-gray-400">No payments yet</p>
             <p className="mt-3 text-sm text-gray-500">
               No payments yet. Once you publish an app and a customer pays, it will show up here.
             </p>

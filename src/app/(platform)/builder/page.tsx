@@ -124,23 +124,20 @@ export default function BuilderLandingPage() {
         <p className="text-center text-sm font-medium text-gray-400 mb-4">TRY THESE</p>
         <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
           {[
-            { emoji: '🍕', title: 'Restaurant Website', prompt: 'Look up a popular pizza restaurant near me and build a beautiful website with the full menu, all locations, hours, and reviews' },
-            { emoji: '📝', title: 'Blogging Platform', prompt: 'Build me a blogging platform where users can sign up, write posts with rich text, and comment on each other\'s posts' },
-            { emoji: '💪', title: 'Fitness Tracker', prompt: 'Build me a fitness tracker where I can log workouts, track my progress over time, and see stats about my training' },
-            { emoji: '🎮', title: 'Virtual World', prompt: 'Build me a Club Penguin-style virtual world where I can walk around rooms, chat, and customize my character' },
-            { emoji: '📊', title: 'Startup Dashboard', prompt: 'Build me a dashboard tracking AI startup funding rounds with company details, valuations, and investor info' },
-            { emoji: '🍳', title: 'Recipe App', prompt: 'Build me a recipe sharing app with categories, ingredients, step-by-step instructions, and beautiful food photos' },
+            { title: 'Restaurant Website', prompt: 'Look up a popular pizza restaurant near me and build a beautiful website with the full menu, all locations, hours, and reviews' },
+            { title: 'Blogging Platform', prompt: 'Build me a blogging platform where users can sign up, write posts with rich text, and comment on each other\'s posts' },
+            { title: 'Fitness Tracker', prompt: 'Build me a fitness tracker where I can log workouts, track my progress over time, and see stats about my training' },
+            { title: 'Virtual World', prompt: 'Build me a Club Penguin-style virtual world where I can walk around rooms, chat, and customize my character' },
+            { title: 'Startup Dashboard', prompt: 'Build me a dashboard tracking AI startup funding rounds with company details, valuations, and investor info' },
+            { title: 'Recipe App', prompt: 'Build me a recipe sharing app with categories, ingredients, step-by-step instructions, and beautiful food photos' },
           ].map((example) => (
             <button
               key={example.title}
               onClick={() => setPrompt(example.prompt)}
-              className="flex items-start gap-3 rounded-xl border border-gray-200 bg-white p-4 text-left transition-all hover:shadow-md hover:border-indigo-200"
+              className="rounded-xl border border-gray-200 bg-white p-4 text-left transition-all hover:shadow-sm hover:border-gray-300"
             >
-              <span className="text-2xl shrink-0">{example.emoji}</span>
-              <div>
-                <p className="font-medium text-gray-900">{example.title}</p>
-                <p className="mt-0.5 text-xs text-gray-500 line-clamp-2">{example.prompt}</p>
-              </div>
+              <p className="text-sm font-medium text-gray-900">{example.title}</p>
+              <p className="mt-1 text-xs text-gray-500 line-clamp-2">{example.prompt}</p>
             </button>
           ))}
         </div>

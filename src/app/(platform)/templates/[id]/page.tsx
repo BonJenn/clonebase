@@ -77,11 +77,11 @@ export default async function TemplateDetailPage({ params }: TemplateDetailProps
       </div>
 
       {/* Preview */}
-      <div className="mt-6 sm:mt-8 aspect-video rounded-xl bg-gradient-to-br from-indigo-50 to-purple-50 flex items-center justify-center overflow-hidden">
+      <div className="mt-6 sm:mt-8 aspect-video rounded-xl bg-gray-100 flex items-center justify-center overflow-hidden">
         {tpl.preview_url ? (
           <img src={tpl.preview_url} alt={tpl.name} className="w-full h-full object-cover" />
         ) : (
-          <span className="text-5xl sm:text-6xl text-indigo-200">{tpl.name.charAt(0).toUpperCase()}</span>
+          <span className="text-4xl sm:text-5xl text-gray-300 font-semibold">{tpl.name.charAt(0).toUpperCase()}</span>
         )}
       </div>
 
