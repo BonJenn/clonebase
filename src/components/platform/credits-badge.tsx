@@ -29,8 +29,21 @@ export function CreditsBadge() {
   useEffect(() => {
     fetchCredits();
 
-    // Listen for updates after generations
-    function handleUpdate() { fetchCredits(); }
+    // Listen for credit updates from the builder workspace.
+    // Supports three modes via CustomEvent detail:
+    //   { delta: -1 }       → optimistic adjustment (instant feedback)
+    //   { remaining: 25 }   → confirmed value from API response
+    //   (no detail)         → re-fetch from server (legacy fallback)
+    function handleUpdate(e: Event) {
+      const detail = (e as CustomEvent).detail;
+      if (detail?.delta !== undefined && typeof detail.delta === 'number') {
+        setCredits((prev) => prev ? { ...prev, remaining: Math.max(0, prev.remaining + detail.delta) } : prev);
+      } else if (detail?.remaining !== undefined && typeof detail.remaining === 'number') {
+        setCredits((prev) => prev ? { ...prev, remaining: detail.remaining } : prev);
+      } else {
+        fetchCredits();
+      }
+    }
     window.addEventListener('credits-updated', handleUpdate);
     return () => window.removeEventListener('credits-updated', handleUpdate);
   }, []);

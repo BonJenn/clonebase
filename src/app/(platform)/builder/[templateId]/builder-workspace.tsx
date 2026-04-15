@@ -242,6 +242,9 @@ export function BuilderWorkspace({
     setShowAnimation(true);
     setActiveView('preview');
 
+    // Optimistically decrement the credits badge immediately
+    window.dispatchEvent(new CustomEvent('credits-updated', { detail: { delta: -1 } }));
+
     // Snapshot the selected element so it survives clearing
     const elementContext = selectedElement;
     setSelectedElement(null);
@@ -307,6 +310,8 @@ export function BuilderWorkspace({
           }]);
           setLastFailedMessage(content);
         }
+        // Revert optimistic credit decrement on failure
+        window.dispatchEvent(new CustomEvent('credits-updated', { detail: { delta: 1 } }));
         setGenerating(false);
         setShowAnimation(false);
         return;
@@ -338,8 +343,10 @@ export function BuilderWorkspace({
       // Auto-capture a preview thumbnail so the dashboard shows it
       scheduleAutoCapture();
 
-      // Notify the credits badge to refresh
-      window.dispatchEvent(new Event('credits-updated'));
+      // Confirm the credits badge with the real remaining count from the API
+      if (typeof data.credits_remaining === 'number') {
+        window.dispatchEvent(new CustomEvent('credits-updated', { detail: { remaining: data.credits_remaining } }));
+      }
     } catch {
       setMessages([...updatedMessages, {
         role: 'assistant',
@@ -347,6 +354,8 @@ export function BuilderWorkspace({
       }]);
       setLastFailedMessage(content);
       setShowAnimation(false);
+      // Revert optimistic credit decrement on network error
+      window.dispatchEvent(new CustomEvent('credits-updated', { detail: { delta: 1 } }));
     }
 
     setGenerating(false);

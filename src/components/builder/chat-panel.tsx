@@ -41,11 +41,26 @@ export function ChatPanel({ messages, onSend, generating, onRetry, canRetry, sel
     scrollContainerRef.current?.scrollTo(0, 0);
   }, []);
 
+  // When generation starts (first message added), reset scroll so the user
+  // sees the "Building your app..." indicator instead of a stale scroll offset
+  // left over from the pre-flight view. For follow-ups (messages > 1), scroll
+  // to the bottom to show the latest exchange.
   useEffect(() => {
-    if (messages.length > 0) {
+    if (generating) {
+      if (messages.length <= 1) {
+        scrollContainerRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
+      } else {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+      }
+    }
+  }, [generating, messages.length]);
+
+  // Scroll to bottom when a new assistant message arrives
+  useEffect(() => {
+    if (messages.length > 1) {
       messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }
-  }, [messages]);
+  }, [messages.length]);
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
