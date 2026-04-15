@@ -243,7 +243,7 @@ export function DesignPicker({ selected, onSelect }: DesignPickerProps) {
   return (
     <div>
       <p className="text-sm font-medium text-gray-700 mb-3">Design direction</p>
-      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2">
+      <div className="grid grid-cols-2 gap-2">
         {/* Auto option */}
         <button
           type="button"
@@ -270,8 +270,8 @@ export function DesignPicker({ selected, onSelect }: DesignPickerProps) {
               <path d="M10 2L12.09 7.26L18 8.27L14 12.14L14.81 18.02L10 15.27L5.19 18.02L6 12.14L2 8.27L7.91 7.26L10 2Z" fill="#a5b4fc" stroke="#818cf8" strokeWidth="1" />
             </svg>
           </div>
-          <p className="mt-1.5 text-xs font-medium text-gray-900 truncate">Auto</p>
-          <p className="text-[10px] text-gray-500 truncate">AI chooses</p>
+          <p className="mt-1.5 text-xs font-medium text-gray-900">Auto</p>
+          <p className="text-[10px] text-gray-500">AI chooses</p>
         </button>
 
         {/* Preset cards */}
@@ -287,8 +287,8 @@ export function DesignPicker({ selected, onSelect }: DesignPickerProps) {
             }`}
           >
             <MiniMockup preset={preset} />
-            <p className="mt-1.5 text-xs font-medium text-gray-900 truncate">{preset.name}</p>
-            <p className="text-[10px] text-gray-500 truncate">{preset.subtitle}</p>
+            <p className="mt-1.5 text-xs font-medium text-gray-900">{preset.name}</p>
+            <p className="text-[10px] text-gray-500">{preset.subtitle}</p>
           </button>
         ))}
       </div>

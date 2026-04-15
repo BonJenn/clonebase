@@ -36,7 +36,9 @@ export function ChatPanel({ messages, onSend, generating, onRetry, canRetry, sel
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (messages.length > 0) {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
   }, [messages]);
 
   function handleSubmit(e: React.FormEvent) {
