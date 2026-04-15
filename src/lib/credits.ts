@@ -54,8 +54,8 @@ export async function checkCredits(userId: string): Promise<CreditStatus> {
     periodEnd = new Date(sub.current_period_end);
   } else {
     // Free: use calendar month
-    periodStart = new Date(now.getFullYear(), now.getMonth(), 1);
-    periodEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+    periodStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+    periodEnd = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1));
   }
 
   // Find or create the usage row for this period
@@ -119,32 +119,41 @@ export async function useCredit(userId: string): Promise<void> {
     periodStart = new Date(sub.current_period_start);
     periodEnd = new Date(sub.current_period_end);
   } else {
-    periodStart = new Date(now.getFullYear(), now.getMonth(), 1);
-    periodEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+    periodStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+    periodEnd = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1));
   }
 
-  // Upsert: create if not exists, increment if exists
-  const { data: existing } = await admin
-    .from('credit_usage')
-    .select('id, credits_used')
-    .eq('user_id', userId)
-    .eq('period_start', periodStart.toISOString())
-    .maybeSingle() as { data: { id: string; credits_used: number } | null };
+  // Insert-first strategy: try to create the row for this period.
+  // If it already exists (unique constraint on user_id + period_start),
+  // fall back to fetching and incrementing. Not perfectly atomic under
+  // extreme concurrency, but much safer than the select-then-insert pattern.
+  const periodStartStr = periodStart.toISOString();
+  const periodEndStr = periodEnd.toISOString();
 
-  if (existing) {
-    await (admin.from('credit_usage') as any)
-      .update({
-        credits_used: existing.credits_used + 1,
-        updated_at: now.toISOString(),
-      })
-      .eq('id', existing.id);
-  } else {
-    await (admin.from('credit_usage') as any).insert({
-      user_id: userId,
-      period_start: periodStart.toISOString(),
-      period_end: periodEnd.toISOString(),
-      credits_used: 1,
-      credits_limit: creditsLimit,
-    });
+  const { error: insertError } = await (admin.from('credit_usage') as any).insert({
+    user_id: userId,
+    period_start: periodStartStr,
+    period_end: periodEndStr,
+    credits_used: 1,
+    credits_limit: creditsLimit,
+  });
+
+  if (insertError) {
+    // Row already exists for this period — increment credits_used
+    const { data: row } = await admin
+      .from('credit_usage')
+      .select('id, credits_used')
+      .eq('user_id', userId)
+      .eq('period_start', periodStartStr)
+      .single() as { data: { id: string; credits_used: number } | null };
+
+    if (row) {
+      await (admin.from('credit_usage') as any)
+        .update({
+          credits_used: row.credits_used + 1,
+          updated_at: now.toISOString(),
+        })
+        .eq('id', row.id);
+    }
   }
 }

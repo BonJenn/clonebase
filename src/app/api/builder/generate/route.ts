@@ -494,9 +494,13 @@ Return the JSON now.`;
   });
 
   // Auto-create integration definitions if suggested
-  const integrations = generated.suggested_integrations || [];
-  if (integrations.length > 0) {
-    for (const integ of integrations) {
+  const integrations = (generated.suggested_integrations || []).filter(
+    (integ): integ is Record<string, unknown> & { name: string; service_key: string } =>
+      !!integ && typeof (integ as Record<string, unknown>).name === 'string' && typeof (integ as Record<string, unknown>).service_key === 'string' &&
+      !!(integ as Record<string, unknown>).name && !!(integ as Record<string, unknown>).service_key
+  );
+  for (const integ of integrations) {
+    try {
       const { data: existingInteg } = await supabase
         .from('integration_definitions')
         .select('id')
@@ -507,18 +511,22 @@ Return the JSON now.`;
       if (!existingInteg?.length) {
         await (supabase.from('integration_definitions') as any).insert({
           template_id: template_id,
-          name: integ.name,
-          service_key: integ.service_key,
-          description: integ.description || '',
+          name: integ.name.trim(),
+          service_key: integ.service_key.trim(),
+          description: (integ.description as string) || '',
           integration_type: 'user_provided',
           required_fields: integ.required_fields || ['api_key'],
         });
       }
+    } catch {
+      // Non-fatal: integration suggestion was malformed
     }
   }
 
-  // Deduct 1 credit for successful generation (fire-and-forget)
-  useCredit(user.id).catch(() => {});
+  // Deduct 1 credit for successful generation
+  useCredit(user.id).catch((err) => {
+    console.error('[builder] credit deduction failed:', (err as Error).message);
+  });
 
   // Send a "credits running low" email at 20% remaining (fire-and-forget)
   const creditsLeft = creditStatus.creditsRemaining - 1;

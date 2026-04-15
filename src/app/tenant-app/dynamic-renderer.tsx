@@ -52,6 +52,8 @@ export function DynamicRenderer({ transpiledCode, componentName, tenantId, insta
       return comp as React.ComponentType<{ tenantId: string; instanceId: string }> | null;
     } catch (err) {
       console.error('Failed to evaluate generated template:', err);
+      // Report to Sentry so we can debug customer-facing app crashes
+      import('@sentry/nextjs').then((Sentry) => Sentry.captureException(err)).catch(() => {});
       return null;
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps

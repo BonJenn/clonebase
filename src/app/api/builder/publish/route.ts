@@ -273,28 +273,34 @@ export async function POST(request: NextRequest) {
 
     // Seed sandbox data into tenant_data if provided
     if (seed_data && typeof seed_data === 'object' && instanceId) {
-      // Clean slate for re-publishes — remove old seeded rows
-      await supabase
-        .from('tenant_data')
-        .delete()
-        .eq('app_instance_id', instanceId);
+      try {
+        // Clean slate for re-publishes — remove old seeded rows
+        await supabase
+          .from('tenant_data')
+          .delete()
+          .eq('app_instance_id', instanceId);
 
-      // Build rows for bulk insert
-      const rows: { tenant_id: string; app_instance_id: string; collection: string; data: unknown }[] = [];
-      for (const [collection, items] of Object.entries(seed_data)) {
-        if (!Array.isArray(items)) continue;
-        for (const item of items) {
-          rows.push({
-            tenant_id: tenantId,
-            app_instance_id: instanceId,
-            collection,
-            data: item,
-          });
+        // Build rows for bulk insert
+        const rows: { tenant_id: string; app_instance_id: string; collection: string; data: unknown }[] = [];
+        for (const [collection, items] of Object.entries(seed_data)) {
+          if (!Array.isArray(items)) continue;
+          for (const item of items) {
+            rows.push({
+              tenant_id: tenantId,
+              app_instance_id: instanceId,
+              collection,
+              data: item,
+            });
+          }
         }
-      }
 
-      if (rows.length > 0) {
-        await (supabase.from('tenant_data') as any).insert(rows);
+        if (rows.length > 0) {
+          const { error: seedError } = await (supabase.from('tenant_data') as any).insert(rows);
+          if (seedError) console.error('[publish] seed data insert failed:', seedError.message);
+        }
+      } catch (err) {
+        console.error('[publish] seed data failed:', (err as Error).message);
+        // Non-fatal: app is still published, just without seed data
       }
     }
 

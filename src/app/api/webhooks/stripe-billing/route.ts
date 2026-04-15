@@ -42,15 +42,16 @@ export async function POST(request: NextRequest) {
   switch (event.type) {
     // ── New subscription from Checkout ─────────────────────────────────
     case 'checkout.session.completed': {
+      try {
       const session = event.data.object as Stripe.Checkout.Session;
       if (session.mode !== 'subscription') break;
 
       const userId = session.metadata?.clonebase_user_id;
       const tierId = session.metadata?.tier_id;
-      const credits = parseInt(session.metadata?.credits || '100', 10);
+      const credits = parseInt(session.metadata?.credits || '0', 10);
       const subscriptionId = session.subscription as string;
 
-      if (!userId || !tierId || !subscriptionId) break;
+      if (!userId || !tierId || !subscriptionId || !credits) break;
 
       // Fetch the subscription to get period dates
       const sub = await getStripe().subscriptions.retrieve(subscriptionId) as unknown as Record<string, unknown>;
@@ -74,53 +75,62 @@ export async function POST(request: NextRequest) {
         current_period_start: new Date(periodStart * 1000).toISOString(),
         current_period_end: new Date(periodEnd * 1000).toISOString(),
       });
+      } catch (err) {
+        console.error('[billing webhook] checkout.session.completed failed:', (err as Error).message);
+        return NextResponse.json({ error: 'Subscription provisioning failed' }, { status: 500 });
+      }
 
       break;
     }
 
     // ── Subscription updated (plan change, renewal) ───────────────────
     case 'customer.subscription.updated': {
-      const sub = event.data.object as unknown as Record<string, unknown> & { id: string; metadata?: Record<string, string>; status: string };
-      const tierId = sub.metadata?.tier_id;
-      const credits = parseInt(sub.metadata?.credits || '100', 10);
-      const pStart = typeof sub.current_period_start === 'number' ? sub.current_period_start : Date.now() / 1000;
-      const pEnd = typeof sub.current_period_end === 'number' ? sub.current_period_end : (Date.now() / 1000) + 30 * 86400;
+      try {
+        const sub = event.data.object as unknown as Record<string, unknown> & { id: string; metadata?: Record<string, string>; status: string };
+        const tierId = sub.metadata?.tier_id;
+        const credits = parseInt(sub.metadata?.credits || '0', 10) || 100;
+        const pStart = typeof sub.current_period_start === 'number' ? sub.current_period_start : Date.now() / 1000;
+        const pEnd = typeof sub.current_period_end === 'number' ? sub.current_period_end : (Date.now() / 1000) + 30 * 86400;
 
-      await (admin.from('user_subscriptions') as any)
-        .update({
-          tier_id: tierId || undefined,
-          credits_per_month: credits,
-          status: sub.status === 'active' ? 'active' : sub.status === 'past_due' ? 'past_due' : sub.status,
-          current_period_start: new Date(pStart * 1000).toISOString(),
-          current_period_end: new Date(pEnd * 1000).toISOString(),
-          updated_at: new Date().toISOString(),
-        })
-        .eq('stripe_subscription_id', sub.id);
+        await (admin.from('user_subscriptions') as any)
+          .update({
+            tier_id: tierId || undefined,
+            credits_per_month: credits,
+            status: sub.status === 'active' ? 'active' : sub.status === 'past_due' ? 'past_due' : sub.status,
+            current_period_start: new Date(pStart * 1000).toISOString(),
+            current_period_end: new Date(pEnd * 1000).toISOString(),
+            updated_at: new Date().toISOString(),
+          })
+          .eq('stripe_subscription_id', sub.id);
+      } catch (err) {
+        console.error('[billing webhook] subscription.updated failed:', (err as Error).message);
+        return NextResponse.json({ error: 'Subscription update failed' }, { status: 500 });
+      }
 
       break;
     }
 
     // ── Subscription canceled ─────────────────────────────────────────
     case 'customer.subscription.deleted': {
-      const sub = event.data.object as Stripe.Subscription;
+      try {
+        const sub = event.data.object as Stripe.Subscription;
 
-      await (admin.from('user_subscriptions') as any)
-        .update({
-          status: 'canceled',
-          updated_at: new Date().toISOString(),
-        })
-        .eq('stripe_subscription_id', sub.id);
+        await (admin.from('user_subscriptions') as any)
+          .update({
+            status: 'canceled',
+            updated_at: new Date().toISOString(),
+          })
+          .eq('stripe_subscription_id', sub.id);
+      } catch (err) {
+        console.error('[billing webhook] subscription.deleted failed:', (err as Error).message);
+        return NextResponse.json({ error: 'Subscription cancellation failed' }, { status: 500 });
+      }
 
       break;
     }
 
-    // ── Invoice paid (period renewal — reset credit usage) ────────────
+    // ── Invoice paid ──────────────────────────────────────────────────
     case 'invoice.paid': {
-      const invoice = event.data.object as unknown as { subscription?: string };
-      if (!invoice.subscription) break;
-
-      // The subscription.updated event handles period dates and status.
-      // This event is a good place to log or trigger notifications.
       // Credit usage resets automatically because checkCredits() looks
       // at the current period — old periods' usage rows are ignored.
       break;

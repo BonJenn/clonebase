@@ -144,12 +144,18 @@ export async function POST(request: NextRequest) {
       status: 'not_connected' as const,
     }));
 
-    await supabase.from('tenant_integrations').insert(integrationRows);
+    const { error: integError } = await supabase.from('tenant_integrations').insert(integrationRows);
+    if (integError) {
+      // Rollback: delete the instance and tenant
+      await supabase.from('app_instances').delete().eq('id', instance.id);
+      await supabase.from('tenants').delete().eq('id', tenant.id);
+      return NextResponse.json({ error: 'Failed to create integrations' }, { status: 500 });
+    }
   }
 
   // 4. Increment clone count (admin client bypasses RLS for this function)
   const adminClient = createAdminClient();
-  await (adminClient.rpc as Function)('increment_clone_count', { template_uuid: template.id });
+  await (adminClient.rpc as Function)('increment_clone_count', { template_uuid: template.id }).catch(() => {});
 
   return NextResponse.json({
     tenant,
