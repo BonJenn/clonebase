@@ -68,5 +68,11 @@ export async function POST(request: NextRequest) {
   // Cache-bust by appending a query param since we upserted in place
   const publicUrl = `${urlData.publicUrl}?v=${Date.now()}`;
 
+  // Persist the preview URL directly on the template so previews show on the
+  // dashboard/marketplace immediately — don't wait for the publish flow.
+  await (admin.from('app_templates') as any)
+    .update({ preview_url: publicUrl })
+    .eq('id', templateId);
+
   return NextResponse.json({ url: publicUrl, path });
 }

@@ -56,6 +56,7 @@ export function BuilderWorkspace({
   const [selectedElement, setSelectedElement] = useState<ElementSelectedEvent | null>(null);
   const [upgradePrompt, setUpgradePrompt] = useState<string | null>(null);
   const livePreviewRef = useRef<LivePreviewHandle>(null);
+  const autoCaptureTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Instance tracks the creator's own deployment. Once they've published
   // once, the primary button flips from "Publish" to "Update" for one-click
@@ -120,6 +121,30 @@ export function BuilderWorkspace({
       // Transpilation error — preview will show error state
     }
   }, []);
+
+  // Auto-capture a preview screenshot after code generation so that even
+  // draft (unpublished) apps have thumbnails on the dashboard.
+  const scheduleAutoCapture = useCallback(() => {
+    if (autoCaptureTimer.current) clearTimeout(autoCaptureTimer.current);
+    autoCaptureTimer.current = setTimeout(async () => {
+      try {
+        const dataUrl = await livePreviewRef.current?.capturePreview();
+        if (!dataUrl) return;
+        const match = dataUrl.match(/^data:([^;]+);base64,(.+)$/);
+        if (!match) return;
+        const binary = atob(match[2]);
+        const bytes = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+        const file = new File([bytes], `${templateId}.png`, { type: match[1] });
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('template_id', templateId);
+        await fetch('/api/builder/upload-preview', { method: 'POST', body: formData });
+      } catch {
+        // Silent — auto-capture is best-effort
+      }
+    }, 3000); // Wait 3s for iframe to render the new code
+  }, [templateId]);
 
   // Transpile existing code on mount
   useEffect(() => {
@@ -300,6 +325,9 @@ export function BuilderWorkspace({
       await transpile(data.page_code);
       setShowAnimation(false);
 
+      // Auto-capture a preview thumbnail so the dashboard shows it
+      scheduleAutoCapture();
+
       // Notify the credits badge to refresh
       window.dispatchEvent(new Event('credits-updated'));
     } catch {
@@ -360,7 +388,7 @@ export function BuilderWorkspace({
       body: JSON.stringify({
         template_id: templateId,
         name: templateName,
-        preview_url: previewUrl,
+        ...(previewUrl ? { preview_url: previewUrl } : {}),
         deploy_to_url: true,
         seed_data: sandboxData && Object.keys(sandboxData).length > 0 ? sandboxData : undefined,
         // Re-publish keeps existing marketplace + private state unchanged by

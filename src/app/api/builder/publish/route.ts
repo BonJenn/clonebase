@@ -111,7 +111,7 @@ export async function POST(request: NextRequest) {
   if (name) updates.name = name.trim();
   if (description) updates.description = description.trim();
   if (list_on_marketplace && category) updates.category = category;
-  if (typeof preview_url === 'string' || preview_url === null) {
+  if (typeof preview_url === 'string' && preview_url) {
     updates.preview_url = preview_url;
   }
 
