@@ -69,7 +69,7 @@ export async function checkAppLimit(userId: string): Promise<string | null> {
     .from('app_templates')
     .select('id')
     .eq('creator_id', userId)
-    .eq('source_type', 'generated');
+    .eq('source_type', 'generated') as { data: { id: string }[] | null };
 
   if (!templateIds || templateIds.length === 0) return null;
 
