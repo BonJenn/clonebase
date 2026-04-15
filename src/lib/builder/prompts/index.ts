@@ -1,8 +1,8 @@
 // Composes the system prompt for the code generator from topical sections.
 //
-// Ordering principle: stable sections first (cacheable by OpenAI prompt caching),
+// Ordering principle: stable sections first (cacheable by Anthropic prompt caching),
 // then conditional add-ons in fixed order, then dynamic per-request context last.
-// OpenAI caches the longest matching prefix of system prompts ≥ 1024 tokens, so
+// Anthropic caches the longest matching prefix of system prompts ≥ 1024 tokens, so
 // putting variable content (current code, plan, element selection) at the END
 // maximizes cache hits across iterations on the same template.
 
@@ -18,6 +18,7 @@ import { PATTERNS } from './patterns';
 import { FILE_UPLOAD } from './file-upload';
 import { SEED_DATA } from './seed-data';
 import { RESPONSE_RULES } from './response-rules';
+import { FOLLOW_UP } from './follow-up';
 import { GAMES } from './games';
 import { AUTH } from './auth';
 import { BUSINESS_DESIGN } from './business-design';
@@ -35,27 +36,34 @@ export interface ComposeOptions {
 }
 
 // ALWAYS included — core rules the model needs for every call (first gen + follow-ups).
-// ~11K tokens. Cached by Anthropic prompt caching.
+// QUALITY_PATTERNS is in here because follow-ups need the quality bar just as much.
 const ALWAYS_PREFIX = [
   CORE,
   OUTPUT_FORMAT,
   TECHNICAL_CONTRACT,
   COMPONENTS,
   EDITABLE_IDS,
+  QUALITY_PATTERNS,
   DESIGN,
   RESPONSE_RULES,
 ].join('\n\n');
 
-// Only included on FIRST GENERATION — reference material for building new apps
-// from scratch. Follow-ups already have the current code in context, so they
-// don't need layout guides, seed data docs, or pattern examples. Excluding
-// these saves ~4,400 tokens per follow-up call.
+// Only included on FIRST GENERATION — full reference material for building new apps.
 const FIRST_GEN_ONLY = [
-  QUALITY_PATTERNS,
   LAYOUTS,
   PATTERNS,
   FILE_UPLOAD,
   SEED_DATA,
+].join('\n\n');
+
+// Only included on FOLLOW-UPS — layout reference + seed data pattern + extension rules.
+// Follow-ups need LAYOUTS so the model maintains the existing navigation and design
+// when adding new views. SEED_DATA is needed when adding features with new data.
+// FOLLOW_UP teaches the model how to extend without breaking.
+const FOLLOW_UP_SECTIONS = [
+  LAYOUTS,
+  SEED_DATA,
+  FOLLOW_UP,
 ].join('\n\n');
 
 export interface ComposedPrompt {
@@ -74,11 +82,12 @@ export function composePrompt(opts: ComposeOptions = {}): ComposedPrompt {
   const designTheme = (planAny?.design_theme as string | undefined) ?? 'light';
 
   // Determine if this is a first generation or a follow-up edit.
-  // Follow-ups skip reference modules (layouts, patterns, seed data) to save tokens.
   const isFollowUp = !!currentCode?.page_code;
 
   // Stable sections — same across requests with the same flags. Cacheable.
-  const stableSections: string[] = isFollowUp ? [ALWAYS_PREFIX] : [ALWAYS_PREFIX, FIRST_GEN_ONLY];
+  const stableSections: string[] = isFollowUp
+    ? [ALWAYS_PREFIX, FOLLOW_UP_SECTIONS]
+    : [ALWAYS_PREFIX, FIRST_GEN_ONLY];
 
   // Conditional sections — only included when the planner indicates they're needed.
   // Order is fixed (games → auth → business → bug-fix → preset) so that requests
@@ -102,6 +111,13 @@ export function composePrompt(opts: ComposeOptions = {}): ComposedPrompt {
   // Dynamic per-request context — changes every call. NOT cached.
   const dynamicSections: string[] = [];
   if (planContext) dynamicSections.push(planContext);
+
+  // For follow-ups, prepend a structured summary of the current app so the model
+  // understands the architecture before seeing the raw code.
+  if (isFollowUp && currentCode?.page_code) {
+    dynamicSections.push(analyzeCurrentCode(currentCode.page_code));
+  }
+
   if (currentCode?.page_code) dynamicSections.push(formatCurrentCode(currentCode));
   if (elementContext?.editId) dynamicSections.push(formatElementContext(elementContext));
 
@@ -109,6 +125,65 @@ export function composePrompt(opts: ComposeOptions = {}): ComposedPrompt {
   const full = dynamic ? `${stable}\n\n${dynamic}` : stable;
 
   return { stable, dynamic, full };
+}
+
+/**
+ * Auto-detect the architecture of the current app from the source code.
+ * This gives the model structured context so it understands the app's
+ * views, data collections, navigation, and theme before making changes.
+ */
+function analyzeCurrentCode(pageCode: string): string {
+  const lines: string[] = ['## APP CONTEXT (auto-detected from current code)'];
+
+  // Extract views from conditional rendering patterns
+  const viewPatterns = [
+    ...pageCode.matchAll(/\{(?:view|tab|screen|section|activeView|activeTab|page|currentView)\s*===\s*['"]([^'"]+)['"]/g),
+  ];
+  if (viewPatterns.length > 0) {
+    const views = [...new Set(viewPatterns.map(m => m[1]))];
+    lines.push(`- Views/tabs: ${views.join(', ')} (${views.length} total)`);
+  }
+
+  // Extract data collections from useTenantData calls
+  const collections = [...pageCode.matchAll(/useTenantData<(\w+)>\(['"]([^'"]+)['"]\)/g)];
+  if (collections.length > 0) {
+    const items = [...new Set(collections.map(m => `${m[2]} (${m[1]})`))];
+    lines.push(`- Data collections: ${items.join(', ')}`);
+  }
+
+  // Detect primary color from setupTheme
+  const themeMatch = pageCode.match(/setupTheme\(\{\s*primaryColor:\s*['"](\w+)['"]/);
+  if (themeMatch) {
+    lines.push(`- Primary color: ${themeMatch[1]}`);
+  }
+
+  // Detect auth usage
+  if (pageCode.includes('useTenantAuth')) {
+    lines.push('- Authentication: YES (useTenantAuth)');
+  }
+
+  // Detect navigation pattern
+  if (pageCode.includes('AppShell') && pageCode.includes('Sidebar')) {
+    lines.push('- Navigation: Sidebar (AppShell + Sidebar component)');
+  } else if (/fixed\s+bottom|bottom-0/.test(pageCode) && /nav|tab/i.test(pageCode)) {
+    lines.push('- Navigation: Bottom tab bar (mobile-first)');
+  } else if (/<header|<nav/.test(pageCode)) {
+    lines.push('- Navigation: Top nav bar');
+  }
+
+  // Detect seed data
+  if (/SEED_DATA|seed_data|seedData/.test(pageCode)) {
+    lines.push('- Seed data: YES (app has sample content)');
+  }
+
+  // Line count
+  const lineCount = pageCode.split('\n').length;
+  lines.push(`- Code size: ~${lineCount} lines`);
+
+  lines.push('');
+  lines.push('When extending this app, maintain the navigation pattern, reuse existing collections where possible, and match the design style.');
+
+  return lines.join('\n');
 }
 
 function formatCurrentCode(code: { page_code?: string; admin_code?: string; api_handler_code?: string }): string {

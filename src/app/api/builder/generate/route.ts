@@ -333,16 +333,22 @@ IMPORTANT CONSTRAINTS FROM PLAN:
 
   // PASS 2: Generate the code
 
-  // For follow-ups, only send the last few messages to stay within token limits.
-  // The existing code is already in the system prompt via composePrompt.
+  // For follow-ups, send enough conversation history so the model understands
+  // the original intent and recent changes. 10 messages = 5 exchanges.
   const conversationMessages = isFirstGeneration
     ? messages
-    : messages.slice(-6); // Last 3 exchanges max
+    : messages.slice(-10);
 
-  // Detect bug fix mode from the latest user message
+  // Detect bug fix mode from the latest user message. Only trigger when the
+  // message is PRIMARILY about fixing something — not when it's a feature
+  // request that happens to contain a bug-fix word (e.g. "add error handling").
   const latestUserMessage = [...messages].reverse().find((m: { role: string }) => m.role === 'user')?.content || '';
+  const featureKeywords = /\b(add|create|build|make|implement|include|new|setup|set up|introduce|design)\b/i;
   const bugFixKeywords = /\b(bug|broken|doesn'?t work|isn'?t working|not working|fix|error|crash|crashes|wrong|fails?|can'?t|won'?t|nothing happens|stopped working)\b/i;
-  const isBugFix = bugFixKeywords.test(latestUserMessage);
+  const isFeatureRequest = featureKeywords.test(latestUserMessage);
+  const hasBugKeywords = bugFixKeywords.test(latestUserMessage);
+  // Feature requests take priority — "add error handling" is a feature, not a bug fix
+  const isBugFix = hasBugKeywords && !isFeatureRequest;
 
   // Compose the system prompt — split into stable (cacheable) + dynamic parts.
   const prompt = composePrompt({
@@ -459,9 +465,9 @@ Return the JSON now.`;
     }
   }
 
-  // DESIGN LINT PASS: scan for common design violations on first generation.
+  // DESIGN LINT PASS: scan for design violations on all generations (not just first).
   // If the score is below threshold and we have time budget, retry with feedback.
-  if (isFirstGeneration && generated.page_code && !isBugFix) {
+  if (generated.page_code && !isBugFix) {
     const lint = lintDesign(generated.page_code);
     console.log(`[builder] t+${elapsed()}ms design lint: score=${lint.score}/100, violations=${lint.violations.length}, pass=${lint.passesThreshold}`);
 
