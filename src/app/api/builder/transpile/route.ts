@@ -1,12 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { transpileForPreview } from '@/lib/builder/transpiler';
 
-// POST /api/builder/transpile — Transpile TSX to JS for preview iframe
+// POST /api/builder/transpile — Transpile TSX to JS for preview iframe.
+// Always returns 200 — transpilation errors are returned in the body so
+// the browser console stays clean (the preview iframe handles the error).
 export async function POST(request: NextRequest) {
-  const { code, filename } = await request.json();
+  let code: string;
+  let filename: string | undefined;
+  try {
+    const body = await request.json();
+    code = body?.code;
+    filename = body?.filename;
+  } catch {
+    return NextResponse.json({ transpiled: null, error: 'Invalid request body' });
+  }
 
   if (!code) {
-    return NextResponse.json({ error: 'code is required' }, { status: 400 });
+    return NextResponse.json({ transpiled: null, error: 'code is required' });
   }
 
   try {
@@ -14,8 +24,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ transpiled });
   } catch (err) {
     return NextResponse.json({
+      transpiled: null,
       error: 'Transpilation failed',
       details: (err as Error).message,
-    }, { status: 400 });
+    });
   }
 }

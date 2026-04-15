@@ -139,7 +139,19 @@ export async function POST(request: NextRequest) {
   // Get the user's tier for model selection + app limit checks
   const userTier = await getUserTier(user.id);
 
-  const { template_id, messages, element_context, design_preset, auth_preference } = await request.json();
+  let template_id: string, messages: Array<{ role: string; content: string }>;
+  let element_context: { editId?: string; tag?: string; text?: string } | undefined;
+  let design_preset: string | undefined, auth_preference: string | undefined;
+  try {
+    const body = await request.json();
+    template_id = body.template_id;
+    messages = body.messages;
+    element_context = body.element_context;
+    design_preset = body.design_preset;
+    auth_preference = body.auth_preference;
+  } catch {
+    return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
+  }
   if (!template_id || !messages?.length) {
     return NextResponse.json({ error: 'template_id and messages are required' }, { status: 400 });
   }

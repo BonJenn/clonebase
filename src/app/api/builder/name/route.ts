@@ -1,10 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAnthropic } from '@/lib/anthropic';
 
-// POST /api/builder/name — Generate a short app name from a prompt
+// POST /api/builder/name — Generate a short app name from a prompt.
+// Best-effort: always returns 200 with a name (falls back to truncated prompt).
 export async function POST(request: NextRequest) {
-  const { prompt } = await request.json();
-  if (!prompt) return NextResponse.json({ error: 'prompt required' }, { status: 400 });
+  let prompt: string;
+  try {
+    const body = await request.json();
+    prompt = body?.prompt;
+  } catch {
+    return NextResponse.json({ name: 'New App' });
+  }
+
+  if (!prompt || typeof prompt !== 'string') {
+    return NextResponse.json({ name: 'New App' });
+  }
 
   try {
     const response = await getAnthropic().messages.create({

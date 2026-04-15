@@ -23,6 +23,13 @@ export async function POST(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let reqBody: any;
+  try {
+    reqBody = await request.json();
+  } catch {
+    return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
+  }
   const {
     template_id,
     name,
@@ -37,7 +44,7 @@ export async function POST(request: NextRequest) {
     app_visibility = 'public', // 'public' | 'private'
     access_password,
     seed_data, // optional: Record<string, unknown[]> from sandbox
-  } = await request.json();
+  } = reqBody;
 
   if (!template_id) return NextResponse.json({ error: 'template_id is required' }, { status: 400 });
 

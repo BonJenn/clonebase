@@ -3,7 +3,14 @@ import { parseFigmaDesign, parseFigmaUrl } from '@/lib/figma/parser';
 
 // POST /api/builder/figma — Fetch and parse a Figma design into a text description
 export async function POST(request: NextRequest) {
-  const { figma_url, figma_token } = await request.json();
+  let figma_url: string | undefined, figma_token: string | undefined;
+  try {
+    const body = await request.json();
+    figma_url = body?.figma_url;
+    figma_token = body?.figma_token;
+  } catch {
+    return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
+  }
 
   if (!figma_url) {
     return NextResponse.json({ error: 'figma_url is required' }, { status: 400 });
