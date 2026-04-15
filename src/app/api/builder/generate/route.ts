@@ -139,7 +139,7 @@ export async function POST(request: NextRequest) {
   // Get the user's tier for model selection + app limit checks
   const userTier = await getUserTier(user.id);
 
-  const { template_id, messages, element_context } = await request.json();
+  const { template_id, messages, element_context, design_preset, auth_preference } = await request.json();
   if (!template_id || !messages?.length) {
     return NextResponse.json({ error: 'template_id and messages are required' }, { status: 400 });
   }
@@ -295,6 +295,20 @@ IMPORTANT CONSTRAINTS FROM PLAN:
 `;
   }
 
+  // Apply user overrides from the landing page controls
+  if (plan && auth_preference === 'yes') {
+    plan.needs_auth = true;
+  } else if (plan && auth_preference === 'no') {
+    plan.needs_auth = false;
+  }
+  // Update planContext to reflect the auth override so the model sees the correct instruction
+  if (plan && auth_preference && auth_preference !== 'auto' && planContext) {
+    planContext = planContext.replace(
+      /Authentication: (YES — use useTenantAuth\(\)|NO — do not add auth)/,
+      `Authentication: ${plan.needs_auth ? 'YES — use useTenantAuth()' : 'NO — do not add auth'}`
+    );
+  }
+
   // PASS 2: Generate the code
 
   // For follow-ups, only send the last few messages to stay within token limits.
@@ -315,6 +329,7 @@ IMPORTANT CONSTRAINTS FROM PLAN:
     currentCode: existing,
     elementContext: element_context,
     planContext,
+    presetId: design_preset || undefined,
   });
 
   // Priority generation: paid users get Sonnet for first gen (higher quality).

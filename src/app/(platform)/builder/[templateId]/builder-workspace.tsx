@@ -31,6 +31,8 @@ interface BuilderWorkspaceProps {
   templateId: string;
   templateName: string;
   initialPrompt: string | null;
+  initialDesignPreset: string | null;
+  initialAuthPref: 'yes' | 'no' | null;
   existingCode: GeneratedCode | null;
   existingMessages: Message[];
   existingInstance: ExistingInstance | null;
@@ -40,6 +42,8 @@ export function BuilderWorkspace({
   templateId,
   templateName,
   initialPrompt,
+  initialDesignPreset,
+  initialAuthPref,
   existingCode,
   existingMessages,
   existingInstance,
@@ -153,6 +157,10 @@ export function BuilderWorkspace({
     }
   }, [existingCode, transpile]);
 
+  // Track whether the initial preferences have been consumed so they're
+  // only sent on the very first generate call, not on follow-up messages.
+  const initialPrefsRef = useRef({ design: initialDesignPreset, auth: initialAuthPref });
+
   // Auto-generate on first load if we have an initial prompt and no existing work
   useEffect(() => {
     if (initialPrompt && messages.length === 0 && !code) {
@@ -260,6 +268,14 @@ export function BuilderWorkspace({
         ? [...updatedMessages.slice(0, -1), { role: 'user' as const, content: content + figmaContext }]
         : updatedMessages;
 
+      // Include design/auth preferences on the first generation only
+      const prefs = initialPrefsRef.current;
+      const extraParams: Record<string, string> = {};
+      if (prefs.design) { extraParams.design_preset = prefs.design; }
+      if (prefs.auth) { extraParams.auth_preference = prefs.auth; }
+      // Consume once — don't resend on follow-up messages
+      initialPrefsRef.current = { design: null, auth: null };
+
       const res = await fetch('/api/builder/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -269,6 +285,7 @@ export function BuilderWorkspace({
           element_context: elementContext
             ? { editId: elementContext.editId, tag: elementContext.tag, text: elementContext.text }
             : undefined,
+          ...extraParams,
         }),
       });
 
