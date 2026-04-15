@@ -66,4 +66,12 @@ IMPORTANT:
 - To change password: \`await updatePassword(newPassword)\` — returns true/false
 - To update profile: \`await updateProfile({ name: 'New Name', bio: '...' })\` — updates user.user_metadata
 - Access profile data: \`user.user_metadata.name\`, \`user.user_metadata.bio\`, etc.
-- NEVER use console.log as a placeholder. If a feature needs a function from the hook, USE IT.`;
+- NEVER use console.log as a placeholder. If a feature needs a function from the hook, USE IT.
+
+CRITICAL AUTH FLOW — DO NOT ADD A LANDING PAGE BEFORE AUTH:
+- The useTenantAuth pattern already handles the flow: !user → auth form, user → app.
+- Do NOT create a separate "Welcome" / "Get Started" / "Landing" view before the auth form.
+- Do NOT require the user to click a button to reach the sign-in form.
+- The FIRST thing a non-logged-in user sees is the auth form. Period.
+- After sign-in succeeds, the component re-renders with user set, and the app content appears immediately.
+- There must be ZERO dead-end screens between opening the app and seeing real content.`;

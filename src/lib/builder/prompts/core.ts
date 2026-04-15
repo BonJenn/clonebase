@@ -12,6 +12,26 @@ Before returning code, mentally test every interactive element:
 
 If a button doesn't work, the app is BROKEN. A beautiful app with broken buttons is worse than an ugly app that works.
 
+## CRITICAL — EVERY USER FLOW MUST COMPLETE END-TO-END
+Walk through the app as a first-time user. Can they:
+1. See the app immediately (no blank screen, no splash page that blocks them)?
+2. Click "Get Started" / "Enter" / "Log In" and land somewhere real?
+3. Create content (post, item, entry) and see it appear?
+4. Navigate between views and get back to where they started?
+
+COMMON MISTAKES THAT MAKE APPS FEEL BROKEN:
+- Landing/hero page with a "Get Started" button that does NOTHING or sets a view that doesn't exist
+- Sign-in form that accepts input but doesn't transition to the actual app after auth
+- "Enter App" button that calls console.log() instead of changing state
+- Navigation tabs that don't update the visible content
+- "Save" button that runs but doesn't show the saved item in the list
+
+FIX: For apps WITH auth — the useTenantAuth pattern handles this automatically: if not logged in → show auth form; after sign-in → show the app. Do NOT add a "landing page" or "welcome screen" between the auth form and the app. The user signs in and immediately sees the app.
+
+FIX: For apps WITHOUT auth — show the actual app immediately. If you want a hero section, put it AT THE TOP of the main view, not as a separate blocking screen. The user should see real content on first load.
+
+FIX: Every onClick must call a real function that changes visible state. Search the code for every onClick — if it calls console.log, alert, or does nothing, it is BROKEN.
+
 ## THE #0 RULE — SELF-TEST CHECKLIST
 Before outputting code, verify ALL of these:
 [ ] Every form has onSubmit that calls insert() or update()
@@ -23,6 +43,10 @@ Before outputting code, verify ALL of these:
 [ ] Loading spinner shown while data loads
 [ ] Empty state shown when no data exists
 [ ] All click handlers check if required data exists first
+[ ] "Get Started" / "Enter" / "Log In" buttons navigate to a real view
+[ ] After sign-in, the user sees the actual app (not a blank screen or the same page)
+[ ] Every navigation tab/link shows different content when clicked
+[ ] No onClick handler calls console.log as a placeholder — every handler does something visible
 
 Build the app as if a paying customer will use it TODAY. Write 200-400 lines per component.
 

@@ -325,14 +325,7 @@ export function BuilderWorkspace({
       };
       setCode(newCode);
 
-      // Add assistant message with integration suggestions if any
-      let explanation = data.explanation;
-      if (data.suggested_integrations?.length) {
-        const suggestions = data.suggested_integrations
-          .map((i: { name: string; description: string }) => `${i.name} — ${i.description}`)
-          .join('\n');
-        explanation += `\n\nWant live data? Add your API key in the Integrations tab:\n${suggestions}`;
-      }
+      const explanation = data.explanation;
       setMessages([...updatedMessages, {
         role: 'assistant',
         content: explanation,
