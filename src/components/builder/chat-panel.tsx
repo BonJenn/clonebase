@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
+import { DesignPicker } from '@/components/builder/design-picker';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -22,9 +23,15 @@ interface ChatPanelProps {
   canRetry?: boolean;
   selectedElement?: SelectedElement | null;
   onClearSelectedElement?: () => void;
+  preFlightPrompt?: string | null;
+  designPreset?: string | null;
+  onDesignPresetChange?: (id: string | null) => void;
+  authPref?: 'auto' | 'yes' | 'no';
+  onAuthPrefChange?: (pref: 'auto' | 'yes' | 'no') => void;
+  onStartGenerate?: () => void;
 }
 
-export function ChatPanel({ messages, onSend, generating, onRetry, canRetry, selectedElement, onClearSelectedElement }: ChatPanelProps) {
+export function ChatPanel({ messages, onSend, generating, onRetry, canRetry, selectedElement, onClearSelectedElement, preFlightPrompt, designPreset, onDesignPresetChange, authPref = 'auto', onAuthPrefChange, onStartGenerate }: ChatPanelProps) {
   const [input, setInput] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -43,7 +50,49 @@ export function ChatPanel({ messages, onSend, generating, onRetry, canRetry, sel
     <div className="flex h-full flex-col">
       {/* Messages */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        {messages.length === 0 && (
+        {messages.length === 0 && preFlightPrompt && (
+          <div className="px-1 py-2 space-y-4">
+            {/* User prompt bubble */}
+            <div className="flex justify-end">
+              <div className="max-w-[85%] rounded-xl bg-indigo-600 px-4 py-2.5 text-sm text-white">
+                <p className="whitespace-pre-wrap">{preFlightPrompt}</p>
+              </div>
+            </div>
+
+            {/* Pre-flight options */}
+            <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 space-y-4">
+              <DesignPicker selected={designPreset ?? null} onSelect={onDesignPresetChange ?? (() => {})} />
+
+              <div className="flex items-center gap-3">
+                <p className="text-sm font-medium text-gray-700">User accounts?</p>
+                <div className="flex rounded-lg border border-gray-200 bg-white text-xs">
+                  {(['auto', 'yes', 'no'] as const).map((option) => (
+                    <button
+                      key={option}
+                      type="button"
+                      onClick={() => onAuthPrefChange?.(option)}
+                      className={`px-3 py-1.5 capitalize transition-colors ${
+                        authPref === option
+                          ? 'bg-gray-900 text-white'
+                          : 'text-gray-500 hover:text-gray-700'
+                      } ${option === 'auto' ? 'rounded-l-md' : ''} ${option === 'no' ? 'rounded-r-md' : ''}`}
+                    >
+                      {option}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <Button
+                onClick={onStartGenerate}
+                className="w-full bg-indigo-600 hover:bg-indigo-500"
+              >
+                Generate App
+              </Button>
+            </div>
+          </div>
+        )}
+        {messages.length === 0 && !preFlightPrompt && (
           <div className="flex h-full items-center justify-center text-center text-gray-400">
             <div>
               <p className="text-lg font-medium">Describe your app</p>

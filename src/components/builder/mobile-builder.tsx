@@ -20,6 +20,12 @@ interface MobileBuilderProps {
   componentName: string;
   canRetry: boolean;
   onRetry: () => void;
+  preFlightPrompt?: string | null;
+  designPreset?: string | null;
+  onDesignPresetChange?: (id: string | null) => void;
+  authPref?: 'auto' | 'yes' | 'no';
+  onAuthPrefChange?: (pref: 'auto' | 'yes' | 'no') => void;
+  onStartGenerate?: () => void;
 }
 
 // Simplified mobile builder — toggle between Chat and Preview views.
@@ -34,6 +40,12 @@ export function MobileBuilder({
   componentName,
   canRetry,
   onRetry,
+  preFlightPrompt,
+  designPreset,
+  onDesignPresetChange,
+  authPref,
+  onAuthPrefChange,
+  onStartGenerate,
 }: MobileBuilderProps) {
   const [activeView, setActiveView] = useState<'chat' | 'preview'>('chat');
 
@@ -74,6 +86,12 @@ export function MobileBuilder({
             generating={generating}
             canRetry={canRetry}
             onRetry={onRetry}
+            preFlightPrompt={preFlightPrompt}
+            designPreset={designPreset}
+            onDesignPresetChange={onDesignPresetChange}
+            authPref={authPref}
+            onAuthPrefChange={onAuthPrefChange}
+            onStartGenerate={onStartGenerate}
           />
         </div>
         <div className={activeView === 'preview' ? 'h-full relative' : 'h-0 overflow-hidden'}>

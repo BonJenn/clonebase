@@ -7,10 +7,10 @@ export default async function BuilderPage({
   searchParams,
 }: {
   params: Promise<{ templateId: string }>;
-  searchParams: Promise<{ prompt?: string; design?: string; auth?: string }>;
+  searchParams: Promise<{ prompt?: string }>;
 }) {
   const { templateId } = await params;
-  const { prompt, design, auth } = await searchParams;
+  const { prompt } = await searchParams;
   const supabase = await createServerSupabaseClient();
   const { data: { user } } = await supabase.auth.getUser();
 
@@ -52,8 +52,6 @@ export default async function BuilderPage({
       templateId={templateId}
       templateName={template.name}
       initialPrompt={generated ? null : (prompt || null)}
-      initialDesignPreset={generated ? null : (design || null)}
-      initialAuthPref={generated ? null : ((auth as 'yes' | 'no') || null)}
       existingCode={generated ? {
         page_code: generated.page_code,
         admin_code: generated.admin_code,

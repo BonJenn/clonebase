@@ -4,11 +4,8 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { DesignPicker } from '@/components/builder/design-picker';
 import { useUser } from '@/hooks/use-user';
 import { createClient } from '@/lib/supabase/client';
-
-type AuthPref = 'auto' | 'yes' | 'no';
 
 interface DraftApp {
   id: string;
@@ -22,8 +19,6 @@ export default function BuilderLandingPage() {
   const { user, loading: userLoading } = useUser();
   const [drafts, setDrafts] = useState<DraftApp[]>([]);
   const [prompt, setPrompt] = useState('');
-  const [designPreset, setDesignPreset] = useState<string | null>(null);
-  const [authPref, setAuthPref] = useState<AuthPref>('auto');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -87,11 +82,8 @@ export default function BuilderLandingPage() {
       return;
     }
 
-    // Navigate to builder workspace with the initial prompt + preferences
-    const params = new URLSearchParams({ prompt: prompt.trim() });
-    if (designPreset) params.set('design', designPreset);
-    if (authPref !== 'auto') params.set('auth', authPref);
-    router.push(`/builder/${data.id}?${params.toString()}`);
+    // Navigate to builder workspace with the initial prompt
+    router.push(`/builder/${data.id}?prompt=${encodeURIComponent(prompt.trim())}`);
   }
 
   return (
@@ -126,31 +118,6 @@ export default function BuilderLandingPage() {
           </div>
         </div>
       </form>
-
-      {/* Design direction + Auth toggle */}
-      <div className="mt-6 space-y-5">
-        <DesignPicker selected={designPreset} onSelect={setDesignPreset} />
-
-        <div className="flex items-center gap-3">
-          <p className="text-sm font-medium text-gray-700">Include user accounts?</p>
-          <div className="flex rounded-lg border border-gray-200 text-xs">
-            {(['auto', 'yes', 'no'] as const).map((option) => (
-              <button
-                key={option}
-                type="button"
-                onClick={() => setAuthPref(option)}
-                className={`px-3 py-1.5 capitalize transition-colors ${
-                  authPref === option
-                    ? 'bg-gray-900 text-white'
-                    : 'text-gray-500 hover:text-gray-700'
-                } ${option === 'auto' ? 'rounded-l-md' : ''} ${option === 'no' ? 'rounded-r-md' : ''}`}
-              >
-                {option}
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
 
       {/* Try these */}
       <div className="mt-10 sm:mt-12">

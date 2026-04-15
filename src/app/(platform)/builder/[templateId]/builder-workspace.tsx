@@ -31,8 +31,6 @@ interface BuilderWorkspaceProps {
   templateId: string;
   templateName: string;
   initialPrompt: string | null;
-  initialDesignPreset: string | null;
-  initialAuthPref: 'yes' | 'no' | null;
   existingCode: GeneratedCode | null;
   existingMessages: Message[];
   existingInstance: ExistingInstance | null;
@@ -42,8 +40,6 @@ export function BuilderWorkspace({
   templateId,
   templateName,
   initialPrompt,
-  initialDesignPreset,
-  initialAuthPref,
   existingCode,
   existingMessages,
   existingInstance,
@@ -59,6 +55,10 @@ export function BuilderWorkspace({
   const [lastFailedMessage, setLastFailedMessage] = useState<string | null>(null);
   const [selectedElement, setSelectedElement] = useState<ElementSelectedEvent | null>(null);
   const [upgradePrompt, setUpgradePrompt] = useState<string | null>(null);
+  // Pre-flight: show design/auth pickers in chat before first generation
+  const [preFlightPrompt, setPreFlightPrompt] = useState<string | null>(initialPrompt);
+  const [designPreset, setDesignPreset] = useState<string | null>(null);
+  const [authPref, setAuthPref] = useState<'auto' | 'yes' | 'no'>('auto');
   const livePreviewRef = useRef<LivePreviewHandle>(null);
   const autoCaptureTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -157,19 +157,21 @@ export function BuilderWorkspace({
     }
   }, [existingCode, transpile]);
 
-  // Track whether the initial preferences have been consumed so they're
-  // only sent on the very first generate call, not on follow-up messages.
-  const initialPrefsRef = useRef({ design: initialDesignPreset, auth: initialAuthPref });
-
-  // Auto-generate on first load if we have an initial prompt and no existing work
+  // Clean the URL on mount so a refresh doesn't re-enter pre-flight mode
   useEffect(() => {
-    if (initialPrompt && messages.length === 0 && !code) {
-      handleSend(initialPrompt);
-      // Clear prompt from URL so refresh doesn't re-trigger
+    if (initialPrompt) {
       window.history.replaceState({}, '', `/builder/${templateId}`);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Called from the ChatPanel pre-flight UI when user clicks "Generate"
+  function handleStartGenerate() {
+    if (!preFlightPrompt) return;
+    const prompt = preFlightPrompt;
+    setPreFlightPrompt(null);
+    handleSend(prompt);
+  }
 
   // Handle inline text/image edits from the preview iframe.
   const handleElementEdited = useCallback(async (event: ElementEditEvent) => {
@@ -269,12 +271,10 @@ export function BuilderWorkspace({
         : updatedMessages;
 
       // Include design/auth preferences on the first generation only
-      const prefs = initialPrefsRef.current;
+      const isFirstGen = messages.length === 0;
       const extraParams: Record<string, string> = {};
-      if (prefs.design) { extraParams.design_preset = prefs.design; }
-      if (prefs.auth) { extraParams.auth_preference = prefs.auth; }
-      // Consume once — don't resend on follow-up messages
-      initialPrefsRef.current = { design: null, auth: null };
+      if (isFirstGen && designPreset) extraParams.design_preset = designPreset;
+      if (isFirstGen && authPref !== 'auto') extraParams.auth_preference = authPref;
 
       const res = await fetch('/api/builder/generate', {
         method: 'POST',
@@ -447,6 +447,12 @@ export function BuilderWorkspace({
       componentName={componentName}
       canRetry={!!lastFailedMessage}
       onRetry={() => lastFailedMessage && handleSend(lastFailedMessage)}
+      preFlightPrompt={preFlightPrompt}
+      designPreset={designPreset}
+      onDesignPresetChange={setDesignPreset}
+      authPref={authPref}
+      onAuthPrefChange={setAuthPref}
+      onStartGenerate={handleStartGenerate}
     />
     <div className="hidden sm:flex h-[calc(100vh-4rem)] flex-col">
       {/* Toolbar */}
@@ -595,6 +601,12 @@ export function BuilderWorkspace({
             onRetry={() => lastFailedMessage && handleSend(lastFailedMessage)}
             selectedElement={selectedElement}
             onClearSelectedElement={() => setSelectedElement(null)}
+            preFlightPrompt={preFlightPrompt}
+            designPreset={designPreset}
+            onDesignPresetChange={setDesignPreset}
+            authPref={authPref}
+            onAuthPrefChange={setAuthPref}
+            onStartGenerate={handleStartGenerate}
           />
         </div>
 
