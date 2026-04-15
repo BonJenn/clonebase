@@ -187,7 +187,6 @@ function MiniMockup({ preset }: { preset: PresetCard }) {
         {/* Content area with cards */}
         <div style={{ flex: 1, padding: 6, display: 'flex', flexDirection: 'column', gap: 4 }}>
           {isMarketplace ? (
-            /* Marketplace: taller image cards */
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 4, flex: 1 }}>
               {[1, 2, 3, 4].map(i => (
                 <div
@@ -211,7 +210,6 @@ function MiniMockup({ preset }: { preset: PresetCard }) {
               ))}
             </div>
           ) : (
-            /* Standard: 2x2 card grid */
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 4, flex: 1 }}>
               {[1, 2, 3, 4].map(i => (
                 <div
@@ -242,13 +240,13 @@ function MiniMockup({ preset }: { preset: PresetCard }) {
 export function DesignPicker({ selected, onSelect }: DesignPickerProps) {
   return (
     <div>
-      <p className="text-sm font-medium text-gray-700 mb-3">Design direction</p>
-      <div className="grid grid-cols-2 gap-2">
+      <p className="text-sm font-medium text-gray-700 mb-2">Design direction</p>
+      <div className="flex gap-2 overflow-x-auto pb-2">
         {/* Auto option */}
         <button
           type="button"
           onClick={() => onSelect(null)}
-          className={`rounded-xl border p-2 text-left transition-all ${
+          className={`flex-shrink-0 w-[100px] rounded-xl border p-1.5 text-left transition-all ${
             selected === null
               ? 'border-indigo-500 ring-2 ring-indigo-500/30 bg-white'
               : 'border-gray-200 bg-white hover:border-gray-300'
@@ -270,8 +268,8 @@ export function DesignPicker({ selected, onSelect }: DesignPickerProps) {
               <path d="M10 2L12.09 7.26L18 8.27L14 12.14L14.81 18.02L10 15.27L5.19 18.02L6 12.14L2 8.27L7.91 7.26L10 2Z" fill="#a5b4fc" stroke="#818cf8" strokeWidth="1" />
             </svg>
           </div>
-          <p className="mt-1.5 text-xs font-medium text-gray-900">Auto</p>
-          <p className="text-[10px] text-gray-500">AI chooses</p>
+          <p className="mt-1 text-[11px] font-medium text-gray-900 leading-tight">Auto</p>
+          <p className="text-[10px] text-gray-500 leading-tight">AI chooses</p>
         </button>
 
         {/* Preset cards */}
@@ -280,15 +278,15 @@ export function DesignPicker({ selected, onSelect }: DesignPickerProps) {
             key={preset.id}
             type="button"
             onClick={() => onSelect(preset.id)}
-            className={`rounded-xl border p-2 text-left transition-all ${
+            className={`flex-shrink-0 w-[100px] rounded-xl border p-1.5 text-left transition-all ${
               selected === preset.id
                 ? 'border-indigo-500 ring-2 ring-indigo-500/30 bg-white'
                 : 'border-gray-200 bg-white hover:border-gray-300'
             }`}
           >
             <MiniMockup preset={preset} />
-            <p className="mt-1.5 text-xs font-medium text-gray-900">{preset.name}</p>
-            <p className="text-[10px] text-gray-500">{preset.subtitle}</p>
+            <p className="mt-1 text-[11px] font-medium text-gray-900 leading-tight">{preset.name}</p>
+            <p className="text-[10px] text-gray-500 leading-tight">{preset.subtitle}</p>
           </button>
         ))}
       </div>

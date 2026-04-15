@@ -550,10 +550,13 @@ Return the JSON now.`;
     }
   }
 
-  // Deduct 1 credit for successful generation
-  useCredit(user.id).catch((err) => {
+  // Deduct 1 credit for successful generation (awaited so the DB is updated
+  // before the response — the credits badge re-fetches on 'credits-updated')
+  try {
+    await useCredit(user.id);
+  } catch (err) {
     console.error('[builder] credit deduction failed:', (err as Error).message);
-  });
+  }
 
   // Send a "credits running low" email at 20% remaining (fire-and-forget)
   const creditsLeft = creditStatus.creditsRemaining - 1;
