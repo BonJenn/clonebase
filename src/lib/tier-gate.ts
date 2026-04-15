@@ -61,12 +61,24 @@ export async function checkAppLimit(userId: string): Promise<string | null> {
   const { tier } = await getUserTier(userId);
   if (tier.maxApps === null) return null; // unlimited
 
+  // Count only templates that have actual generated code — empty drafts
+  // (created when the user clicks "Build an App" but hasn't generated yet)
+  // don't count against the limit.
   const admin = createAdminClient();
-  const { count } = await admin
+  const { data: templateIds } = await admin
     .from('app_templates')
-    .select('id', { count: 'exact', head: true })
+    .select('id')
     .eq('creator_id', userId)
     .eq('source_type', 'generated');
+
+  if (!templateIds || templateIds.length === 0) return null;
+
+  // Check which of these templates actually have generated code
+  const { count } = await admin
+    .from('generated_templates')
+    .select('template_id', { count: 'exact', head: true })
+    .in('template_id', templateIds.map(t => t.id))
+    .eq('is_current', true);
 
   const currentCount = count || 0;
   if (currentCount >= tier.maxApps) {
