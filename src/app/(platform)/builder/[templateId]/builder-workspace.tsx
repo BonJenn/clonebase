@@ -59,6 +59,7 @@ export function BuilderWorkspace({
   const [preFlightPrompt, setPreFlightPrompt] = useState<string | null>(initialPrompt);
   const [designPreset, setDesignPreset] = useState<string | null>(null);
   const [authPref, setAuthPref] = useState<'auto' | 'yes' | 'no'>('auto');
+  const [seedDataPref, setSeedDataPref] = useState<'yes' | 'no'>('yes');
   const livePreviewRef = useRef<LivePreviewHandle>(null);
   const autoCaptureTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -278,6 +279,7 @@ export function BuilderWorkspace({
       const extraParams: Record<string, string> = {};
       if (isFirstGen && designPreset) extraParams.design_preset = designPreset;
       if (isFirstGen && authPref !== 'auto') extraParams.auth_preference = authPref;
+      if (isFirstGen && seedDataPref === 'no') extraParams.seed_data_preference = 'no';
 
       const res = await fetch('/api/builder/generate', {
         method: 'POST',
@@ -454,6 +456,8 @@ export function BuilderWorkspace({
       onDesignPresetChange={setDesignPreset}
       authPref={authPref}
       onAuthPrefChange={setAuthPref}
+      seedDataPref={seedDataPref}
+      onSeedDataPrefChange={setSeedDataPref}
       onStartGenerate={handleStartGenerate}
     />
     <div className="hidden sm:flex h-[calc(100vh-4rem)] flex-col">
@@ -608,6 +612,8 @@ export function BuilderWorkspace({
             onDesignPresetChange={setDesignPreset}
             authPref={authPref}
             onAuthPrefChange={setAuthPref}
+            seedDataPref={seedDataPref}
+            onSeedDataPrefChange={setSeedDataPref}
             onStartGenerate={handleStartGenerate}
           />
         </div>

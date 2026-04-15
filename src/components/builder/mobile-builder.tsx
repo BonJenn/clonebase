@@ -25,6 +25,8 @@ interface MobileBuilderProps {
   onDesignPresetChange?: (id: string | null) => void;
   authPref?: 'auto' | 'yes' | 'no';
   onAuthPrefChange?: (pref: 'auto' | 'yes' | 'no') => void;
+  seedDataPref?: 'yes' | 'no';
+  onSeedDataPrefChange?: (pref: 'yes' | 'no') => void;
   onStartGenerate?: () => void;
 }
 
@@ -45,6 +47,8 @@ export function MobileBuilder({
   onDesignPresetChange,
   authPref,
   onAuthPrefChange,
+  seedDataPref,
+  onSeedDataPrefChange,
   onStartGenerate,
 }: MobileBuilderProps) {
   const [activeView, setActiveView] = useState<'chat' | 'preview'>('chat');
@@ -91,6 +95,8 @@ export function MobileBuilder({
             onDesignPresetChange={onDesignPresetChange}
             authPref={authPref}
             onAuthPrefChange={onAuthPrefChange}
+            seedDataPref={seedDataPref}
+            onSeedDataPrefChange={onSeedDataPrefChange}
             onStartGenerate={onStartGenerate}
           />
         </div>

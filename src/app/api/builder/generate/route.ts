@@ -141,7 +141,7 @@ export async function POST(request: NextRequest) {
 
   let template_id: string, messages: Array<{ role: string; content: string }>;
   let element_context: { editId?: string; tag?: string; text?: string } | undefined;
-  let design_preset: string | undefined, auth_preference: string | undefined;
+  let design_preset: string | undefined, auth_preference: string | undefined, seed_data_preference: string | undefined;
   try {
     const body = await request.json();
     template_id = body.template_id;
@@ -149,6 +149,7 @@ export async function POST(request: NextRequest) {
     element_context = body.element_context;
     design_preset = body.design_preset;
     auth_preference = body.auth_preference;
+    seed_data_preference = body.seed_data_preference;
   } catch {
     return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
   }
@@ -307,17 +308,26 @@ IMPORTANT CONSTRAINTS FROM PLAN:
 `;
   }
 
-  // Apply user overrides from the landing page controls
+  // Apply user overrides from the pre-flight controls
   if (plan && auth_preference === 'yes') {
     plan.needs_auth = true;
   } else if (plan && auth_preference === 'no') {
     plan.needs_auth = false;
   }
-  // Update planContext to reflect the auth override so the model sees the correct instruction
+  if (plan && seed_data_preference === 'no') {
+    plan.seed_data = false;
+  }
+  // Update planContext to reflect the overrides so the model sees the correct instructions
   if (plan && auth_preference && auth_preference !== 'auto' && planContext) {
     planContext = planContext.replace(
       /Authentication: (YES — use useTenantAuth\(\)|NO — do not add auth)/,
       `Authentication: ${plan.needs_auth ? 'YES — use useTenantAuth()' : 'NO — do not add auth'}`
+    );
+  }
+  if (plan && seed_data_preference === 'no' && planContext) {
+    planContext = planContext.replace(
+      /Seed Data: YES — seed with realistic data/,
+      'Seed Data: NO — start with empty collections, no sample content'
     );
   }
 

@@ -28,10 +28,12 @@ interface ChatPanelProps {
   onDesignPresetChange?: (id: string | null) => void;
   authPref?: 'auto' | 'yes' | 'no';
   onAuthPrefChange?: (pref: 'auto' | 'yes' | 'no') => void;
+  seedDataPref?: 'yes' | 'no';
+  onSeedDataPrefChange?: (pref: 'yes' | 'no') => void;
   onStartGenerate?: () => void;
 }
 
-export function ChatPanel({ messages, onSend, generating, onRetry, canRetry, selectedElement, onClearSelectedElement, preFlightPrompt, designPreset, onDesignPresetChange, authPref = 'auto', onAuthPrefChange, onStartGenerate }: ChatPanelProps) {
+export function ChatPanel({ messages, onSend, generating, onRetry, canRetry, selectedElement, onClearSelectedElement, preFlightPrompt, designPreset, onDesignPresetChange, authPref = 'auto', onAuthPrefChange, seedDataPref = 'yes', onSeedDataPrefChange, onStartGenerate }: ChatPanelProps) {
   const [input, setInput] = useState('');
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -99,6 +101,26 @@ export function ChatPanel({ messages, onSend, generating, onRetry, canRetry, sel
                           ? 'bg-gray-900 text-white'
                           : 'text-gray-500 hover:text-gray-700'
                       } ${option === 'auto' ? 'rounded-l-md' : ''} ${option === 'no' ? 'rounded-r-md' : ''}`}
+                    >
+                      {option}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <p className="text-sm font-medium text-gray-700">Sample data?</p>
+                <div className="flex rounded-lg border border-gray-200 bg-white text-xs">
+                  {(['yes', 'no'] as const).map((option) => (
+                    <button
+                      key={option}
+                      type="button"
+                      onClick={() => onSeedDataPrefChange?.(option)}
+                      className={`px-3 py-1.5 capitalize transition-colors ${
+                        seedDataPref === option
+                          ? 'bg-gray-900 text-white'
+                          : 'text-gray-500 hover:text-gray-700'
+                      } ${option === 'yes' ? 'rounded-l-md' : 'rounded-r-md'}`}
                     >
                       {option}
                     </button>
