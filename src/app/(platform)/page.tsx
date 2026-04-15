@@ -1,256 +1,167 @@
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { AuroraRippleGrid } from '@/components/aurora-ripple-grid';
 
 export default function HomePage() {
   return (
     <div className="flex flex-col">
       {/* Hero */}
-      <section className="relative isolate overflow-hidden transform-gpu">
-        <div className="absolute inset-0 bg-gradient-to-br from-gray-950 via-gray-900 to-indigo-950 transform-gpu" />
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_rgba(99,102,241,0.15),transparent_50%)] transform-gpu" />
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,_rgba(168,85,247,0.1),transparent_50%)] transform-gpu" />
-        <AuroraRippleGrid />
+      <section className="relative bg-gray-950">
+        <div className="mx-auto max-w-6xl px-4 py-20 sm:px-6 sm:py-28 lg:py-36">
+          <p className="text-sm font-medium text-indigo-400 tracking-wide">
+            The app builder for everyone
+          </p>
 
-        <div className="relative mx-auto max-w-7xl px-4 py-16 sm:px-6 sm:py-32 lg:px-8 lg:py-40">
-          <div className="max-w-3xl">
-            <div className="inline-flex items-center rounded-full border border-indigo-500/30 bg-indigo-500/10 px-3 py-1.5 text-xs sm:text-sm text-indigo-300">
-              <span className="mr-2">✨</span> Describe it. Build it. Ship it.
-            </div>
+          <h1 className="mt-4 max-w-2xl text-4xl font-semibold tracking-tight text-white sm:text-5xl lg:text-6xl">
+            Describe what you want.<br />
+            <span className="text-gray-400">We build it.</span>
+          </h1>
 
-            <h1 className="mt-6 text-4xl font-bold tracking-tight text-white sm:text-6xl lg:text-7xl">
-              Build software{' '}
-              <span className="bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
-                with words.
-              </span>
-            </h1>
+          <p className="mt-6 max-w-lg text-base leading-7 text-gray-400 sm:text-lg sm:leading-8">
+            Turn a sentence into a working app with its own URL, database,
+            auth, and payments. No code. No deploy. Just ship.
+          </p>
 
-            <p className="mt-6 max-w-xl text-base sm:text-lg leading-7 sm:leading-8 text-gray-400">
-              Describe the app you want in plain English. Our AI builds it in seconds — complete with
-              real data, authentication, file uploads, and a live URL. No coding required.
-            </p>
+          <div className="mt-10 flex flex-col sm:flex-row gap-3">
+            <Link href="/builder">
+              <Button size="lg" className="w-full sm:w-auto px-8 py-3.5 text-sm font-medium bg-indigo-600 hover:bg-indigo-500">
+                Start building — free
+              </Button>
+            </Link>
+            <Link href="/pricing">
+              <Button size="lg" variant="secondary" className="w-full sm:w-auto px-8 py-3.5 text-sm font-medium border-gray-700 bg-transparent text-gray-300 hover:bg-gray-800">
+                See pricing
+              </Button>
+            </Link>
+          </div>
 
-            <div className="mt-8 sm:mt-10 flex flex-col sm:flex-row items-stretch sm:items-start gap-3 sm:gap-4">
-              <Link href="/builder" className="w-full sm:w-auto">
-                <Button size="lg" className="w-full sm:w-auto text-base px-6 sm:px-8 py-4 bg-indigo-600 hover:bg-indigo-500">
-                  Start Building — It&apos;s Free
-                </Button>
-              </Link>
-              <Link href="/marketplace" className="w-full sm:w-auto">
-                <Button size="lg" variant="secondary" className="w-full sm:w-auto text-base px-6 sm:px-8 py-4 border-gray-700 bg-gray-800/50 text-gray-300 hover:bg-gray-800">
-                  Browse Apps
-                </Button>
-              </Link>
-            </div>
-
-            <div className="mt-8 flex flex-wrap items-center gap-x-4 gap-y-2 sm:gap-6 text-xs sm:text-sm text-gray-500">
-              <span className="flex items-center gap-1.5"><span className="text-green-500">●</span> No credit card</span>
-              <span className="flex items-center gap-1.5"><span className="text-green-500">●</span> Ships instantly</span>
-              <span className="flex items-center gap-1.5"><span className="text-green-500">●</span> Free subdomain</span>
-            </div>
+          <div className="mt-8 flex items-center gap-6 text-xs text-gray-500">
+            <span>30 free credits</span>
+            <span className="h-3 w-px bg-gray-700" />
+            <span>No credit card</span>
+            <span className="h-3 w-px bg-gray-700" />
+            <span>Live in seconds</span>
           </div>
         </div>
       </section>
 
       {/* How it works */}
-      <section className="bg-white py-16 sm:py-24">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="text-center">
-            <h2 className="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">
-              From idea to live app in 3 steps
-            </h2>
-            <p className="mt-4 text-lg text-gray-600">No coding, no design skills, no deployment headaches.</p>
-          </div>
+      <section className="border-t border-gray-200 bg-white py-16 sm:py-24">
+        <div className="mx-auto max-w-6xl px-4 sm:px-6">
+          <p className="text-sm font-medium text-indigo-600">How it works</p>
+          <h2 className="mt-2 text-2xl font-semibold tracking-tight text-gray-900 sm:text-3xl">
+            Idea to live app in minutes
+          </h2>
 
-          <div className="mt-16 grid gap-8 md:grid-cols-3">
-            <div className="relative rounded-2xl bg-gradient-to-b from-gray-50 to-white p-8 border border-gray-100">
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-indigo-600 text-white text-lg font-bold">1</div>
-              <h3 className="mt-6 text-xl font-semibold text-gray-900">Describe your app</h3>
-              <p className="mt-3 text-gray-600 leading-relaxed">
-                Tell the AI what you want in plain English. &quot;Build me a restaurant website with a full menu and online ordering.&quot; Be as specific or vague as you want.
-              </p>
-            </div>
-
-            <div className="relative rounded-2xl bg-gradient-to-b from-gray-50 to-white p-8 border border-gray-100">
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-purple-600 text-white text-lg font-bold">2</div>
-              <h3 className="mt-6 text-xl font-semibold text-gray-900">Watch it build</h3>
-              <p className="mt-3 text-gray-600 leading-relaxed">
-                AI generates your app in real-time — code, design, data, and all. Preview it live, then iterate: &quot;Make the header dark&quot; or &quot;Add user accounts.&quot;
-              </p>
-            </div>
-
-            <div className="relative rounded-2xl bg-gradient-to-b from-gray-50 to-white p-8 border border-gray-100">
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-pink-600 text-white text-lg font-bold">3</div>
-              <h3 className="mt-6 text-xl font-semibold text-gray-900">Ship it live</h3>
-              <p className="mt-3 text-gray-600 leading-relaxed">
-                Publish with one click. Your app gets a live URL instantly. Share it, let others clone it, or connect your own domain.
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* What you can build */}
-      <section className="bg-gray-50 py-16 sm:py-24">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="text-center">
-            <h2 className="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">
-              Build anything you can describe
-            </h2>
-            <p className="mt-4 text-lg text-gray-600">Real apps, not toy demos. Here&apos;s what people are building.</p>
-          </div>
-
-          <div className="mt-10 sm:mt-16 grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="mt-12 grid gap-px bg-gray-200 sm:grid-cols-3 rounded-xl overflow-hidden border border-gray-200">
             {[
-              { emoji: '🍕', title: 'Restaurant Websites', desc: 'Full menu, locations, hours, reviews — pulled from real data.', color: 'orange' },
-              { emoji: '📝', title: 'Blog Platforms', desc: 'User accounts, rich text posts, comments, likes.', color: 'sky' },
-              { emoji: '💪', title: 'Fitness Trackers', desc: 'Log workouts, track progress, view stats and history.', color: 'emerald' },
-              { emoji: '🎮', title: 'Games', desc: '2D virtual worlds, quiz games, card games — playable in the browser.', color: 'violet' },
-              { emoji: '🛍️', title: 'E-Commerce Stores', desc: 'Product catalogs, shopping carts, checkout flows.', color: 'amber' },
-              { emoji: '📊', title: 'Dashboards', desc: 'Data visualization, analytics, admin panels with real stats.', color: 'slate' },
+              {
+                step: '01',
+                title: 'Describe',
+                body: 'Tell the AI what to build in plain English. "A fitness tracker with workout logging and progress charts." Be specific or vague — it adapts.',
+              },
+              {
+                step: '02',
+                title: 'Iterate',
+                body: 'Preview your app in real-time. Refine it conversationally: "add dark mode", "make the cards bigger", "connect Stripe for payments."',
+              },
+              {
+                step: '03',
+                title: 'Ship',
+                body: 'One click to deploy. Your app gets a live URL, a real database, and optional marketplace listing. Share it or sell it.',
+              },
             ].map((item) => (
-              <div key={item.title} className="rounded-2xl bg-white p-6 border border-gray-200 hover:shadow-lg transition-shadow">
-                <span className="text-3xl">{item.emoji}</span>
-                <h3 className="mt-4 text-lg font-semibold text-gray-900">{item.title}</h3>
-                <p className="mt-2 text-gray-600">{item.desc}</p>
+              <div key={item.step} className="bg-white p-8">
+                <span className="text-xs font-mono text-gray-400">{item.step}</span>
+                <h3 className="mt-3 text-lg font-semibold text-gray-900">{item.title}</h3>
+                <p className="mt-2 text-sm text-gray-600 leading-relaxed">{item.body}</p>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* Marketplace / Cloning */}
-      <section className="isolate bg-white py-16 sm:py-24">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="grid gap-10 lg:gap-16 lg:grid-cols-2 items-center">
-            <div>
-              <div className="inline-flex items-center rounded-full bg-purple-100 px-3 py-1.5 text-xs sm:text-sm font-medium text-purple-700">
-                🔁 The Marketplace
+      {/* What you get */}
+      <section className="border-t border-gray-200 bg-gray-50 py-16 sm:py-24">
+        <div className="mx-auto max-w-6xl px-4 sm:px-6">
+          <p className="text-sm font-medium text-indigo-600">Everything included</p>
+          <h2 className="mt-2 text-2xl font-semibold tracking-tight text-gray-900 sm:text-3xl">
+            Not a prototype. A real product.
+          </h2>
+          <p className="mt-3 max-w-lg text-sm text-gray-600">
+            Every app comes with infrastructure that would take weeks to set up manually.
+          </p>
+
+          <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {[
+              { title: 'Live URL', body: 'Deployed instantly at yourapp.clonebase.app. Connect your own domain on Pro.' },
+              { title: 'Database', body: 'Postgres-backed data store. View, edit, and export all data from the dashboard.' },
+              { title: 'Authentication', body: 'Sign up, login, password reset. Real auth with encrypted credentials.' },
+              { title: 'File uploads', body: 'Images, documents, media. Stored securely, served via CDN.' },
+              { title: 'Payments', body: 'Accept real payments via Stripe Connect. 3% platform fee, rest goes to you.' },
+              { title: 'API integrations', body: 'Connect OpenAI, weather APIs, or any REST endpoint. Keys encrypted at rest.' },
+            ].map((feature) => (
+              <div key={feature.title} className="rounded-xl border border-gray-200 bg-white p-6">
+                <h3 className="text-sm font-semibold text-gray-900">{feature.title}</h3>
+                <p className="mt-2 text-sm text-gray-600 leading-relaxed">{feature.body}</p>
               </div>
-              <h2 className="mt-6 text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight text-gray-900">
-                Clone any app.<br />Sell yours.
-              </h2>
-              <p className="mt-4 text-base sm:text-lg text-gray-600 leading-relaxed">
-                Every app on Clonebase can be published to the marketplace. Other users can clone your app
-                in one click — they get their own copy with a unique subdomain, fresh data, and full customization.
-              </p>
-              <dl className="mt-8 space-y-5">
-                <div className="flex gap-3">
-                  <span className="text-xl shrink-0">💰</span>
-                  <div>
-                    <dt className="font-semibold text-gray-900">Sell your apps</dt>
-                    <dd className="text-gray-600">Set a price and earn 85% of every sale. Or make it free to grow your audience.</dd>
-                  </div>
-                </div>
-                <div className="flex gap-3">
-                  <span className="text-xl shrink-0">⚡</span>
-                  <div>
-                    <dt className="font-semibold text-gray-900">One-click cloning</dt>
-                    <dd className="text-gray-600">Buyers get an instant copy with their own subdomain, data, and config. No setup.</dd>
-                  </div>
-                </div>
-                <div className="flex gap-3">
-                  <span className="text-xl shrink-0">🎨</span>
-                  <div>
-                    <dt className="font-semibold text-gray-900">Make it yours</dt>
-                    <dd className="text-gray-600">Cloners can customize everything — data, design, integrations. It&apos;s their app now.</dd>
-                  </div>
-                </div>
-              </dl>
-              <div className="mt-8">
-                <Link href="/marketplace">
-                  <Button variant="secondary" className="text-base">Browse the Marketplace →</Button>
-                </Link>
-              </div>
-            </div>
-            <div className="rounded-2xl bg-gradient-to-br from-purple-50 to-indigo-50 border border-purple-100 p-8">
-              <div className="space-y-4">
-                <div className="rounded-xl bg-white p-5 shadow-sm border border-gray-100">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <span className="text-2xl">🍕</span>
-                      <div>
-                        <p className="font-semibold">Restaurant Website Pro</p>
-                        <p className="text-xs text-gray-500">by @sarah · 234 clones</p>
-                      </div>
-                    </div>
-                    <span className="rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-700">Free</span>
-                  </div>
-                </div>
-                <div className="rounded-xl bg-white p-5 shadow-sm border border-gray-100">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <span className="text-2xl">📊</span>
-                      <div>
-                        <p className="font-semibold">SaaS Analytics Dashboard</p>
-                        <p className="text-xs text-gray-500">by @mike · 89 clones</p>
-                      </div>
-                    </div>
-                    <span className="rounded-full bg-indigo-100 px-3 py-1 text-xs font-semibold text-indigo-700">$9.99</span>
-                  </div>
-                </div>
-                <div className="rounded-xl bg-white p-5 shadow-sm border border-gray-100">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <span className="text-2xl">💪</span>
-                      <div>
-                        <p className="font-semibold">FitTrack Pro</p>
-                        <p className="text-xs text-gray-500">by @alex · 412 clones</p>
-                      </div>
-                    </div>
-                    <span className="rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-700">Free</span>
-                  </div>
-                </div>
-              </div>
-            </div>
+            ))}
           </div>
         </div>
       </section>
 
-      {/* Features */}
-      <section className="isolate bg-gray-50 py-16 sm:py-24">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="grid gap-10 lg:gap-24 lg:grid-cols-2 items-center">
+      {/* Marketplace */}
+      <section className="border-t border-gray-200 bg-white py-16 sm:py-24">
+        <div className="mx-auto max-w-6xl px-4 sm:px-6">
+          <div className="lg:grid lg:grid-cols-2 lg:gap-16 lg:items-start">
             <div>
-              <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight text-gray-900">
-                Everything a real app needs.<br />Built in.
+              <p className="text-sm font-medium text-indigo-600">Marketplace</p>
+              <h2 className="mt-2 text-2xl font-semibold tracking-tight text-gray-900 sm:text-3xl">
+                Clone any app. Sell yours.
               </h2>
-              <dl className="mt-10 space-y-6">
+              <p className="mt-4 text-sm text-gray-600 leading-relaxed">
+                Every published app can be cloned in one click. Cloners get their own copy with a
+                unique URL, fresh data, and full customization. Set a price and earn from every clone,
+                or share for free.
+              </p>
+
+              <dl className="mt-8 space-y-4">
                 {[
-                  { icon: '🔐', title: 'User Authentication', desc: 'Sign up, login, password reset — real auth, not a mock.' },
-                  { icon: '📁', title: 'File Uploads', desc: 'Images, documents, media — stored securely, accessible anywhere.' },
-                  { icon: '🗄️', title: 'Database', desc: 'Your app gets its own data store. View and edit everything in the Data tab.' },
-                  { icon: '🌐', title: 'Instant Deployment', desc: 'Every app gets a live URL. Share it immediately.' },
-                  { icon: '🔑', title: 'API Integrations', desc: 'Connect OpenAI, Stripe, or any API. Keys encrypted and secure.' },
-                  { icon: '🔍', title: 'Web Research', desc: 'AI looks up real businesses and data to populate your app.' },
-                ].map((feature) => (
-                  <div key={feature.title} className="flex gap-4">
-                    <span className="text-2xl shrink-0">{feature.icon}</span>
-                    <div>
-                      <dt className="font-semibold text-gray-900">{feature.title}</dt>
-                      <dd className="mt-1 text-gray-600">{feature.desc}</dd>
-                    </div>
+                  { term: 'One-click cloning', desc: 'Buyers get an instant copy with their own subdomain and isolated data.' },
+                  { term: 'Version updates', desc: 'Push updates to your app. Clone owners choose when to upgrade.' },
+                  { term: 'Earn revenue', desc: 'Set a one-time price. You keep 85% of every sale.' },
+                ].map((item) => (
+                  <div key={item.term} className="border-l-2 border-gray-200 pl-4">
+                    <dt className="text-sm font-medium text-gray-900">{item.term}</dt>
+                    <dd className="mt-0.5 text-sm text-gray-600">{item.desc}</dd>
                   </div>
                 ))}
               </dl>
-            </div>
-            <div className="rounded-2xl bg-gradient-to-br from-gray-900 to-gray-800 p-8 text-white">
-              <div className="flex items-center gap-2 text-sm text-gray-400 mb-4">
-                <div className="flex gap-1.5">
-                  <div className="h-3 w-3 rounded-full bg-red-500" />
-                  <div className="h-3 w-3 rounded-full bg-yellow-500" />
-                  <div className="h-3 w-3 rounded-full bg-green-500" />
-                </div>
-                <span>builder</span>
+
+              <div className="mt-8">
+                <Link href="/marketplace">
+                  <Button variant="secondary" className="text-sm">Browse the marketplace</Button>
+                </Link>
               </div>
-              <div className="space-y-2 font-mono text-sm">
-                <p><span className="text-purple-400">you:</span> build me a pizza ordering app</p>
-                <p className="text-gray-500">// AI is building your app...</p>
-                <p><span className="text-green-400">ai:</span> Built a pizza ordering app with menu, cart, and checkout.</p>
-                <p className="mt-4"><span className="text-purple-400">you:</span> add user accounts and order history</p>
-                <p><span className="text-green-400">ai:</span> Added authentication and order tracking.</p>
-                <p className="mt-4"><span className="text-purple-400">you:</span> make it dark mode</p>
-                <p><span className="text-green-400">ai:</span> Done, switched to dark theme.</p>
+            </div>
+
+            <div className="mt-10 lg:mt-0">
+              <div className="rounded-xl border border-gray-200 bg-gray-50 p-6 space-y-3">
+                {[
+                  { name: 'Restaurant Website', creator: 'sarah', clones: 234, price: 'Free' },
+                  { name: 'SaaS Dashboard', creator: 'mike', clones: 89, price: '$9.99' },
+                  { name: 'Fitness Tracker', creator: 'alex', clones: 412, price: 'Free' },
+                  { name: 'E-Commerce Store', creator: 'jen', clones: 156, price: '$14.99' },
+                ].map((app) => (
+                  <div key={app.name} className="flex items-center justify-between rounded-lg bg-white border border-gray-200 px-4 py-3">
+                    <div>
+                      <p className="text-sm font-medium text-gray-900">{app.name}</p>
+                      <p className="text-xs text-gray-500">@{app.creator} · {app.clones} clones</p>
+                    </div>
+                    <span className={`text-xs font-medium ${app.price === 'Free' ? 'text-gray-500' : 'text-gray-900'}`}>
+                      {app.price}
+                    </span>
+                  </div>
+                ))}
               </div>
             </div>
           </div>
@@ -258,18 +169,18 @@ export default function HomePage() {
       </section>
 
       {/* CTA */}
-      <section className="bg-gradient-to-r from-indigo-600 to-purple-600 py-16 sm:py-20">
-        <div className="mx-auto max-w-4xl px-4 text-center sm:px-6 lg:px-8">
-          <h2 className="text-3xl font-bold tracking-tight text-white sm:text-4xl">
-            Your app is one sentence away.
+      <section className="border-t border-gray-200 bg-gray-950 py-16 sm:py-20">
+        <div className="mx-auto max-w-2xl px-4 text-center sm:px-6">
+          <h2 className="text-2xl font-semibold tracking-tight text-white sm:text-3xl">
+            Your next app is one sentence away
           </h2>
-          <p className="mt-4 text-lg text-indigo-100">
-            Join thousands of people building software without writing code.
+          <p className="mt-3 text-sm text-gray-400">
+            30 free credits. No credit card. Build something real today.
           </p>
           <div className="mt-8">
             <Link href="/builder">
-              <Button size="lg" className="text-base px-8 py-4 bg-gray-900 text-white hover:bg-gray-800 border border-gray-700">
-                Start Building for Free
+              <Button size="lg" className="px-8 py-3.5 text-sm font-medium bg-indigo-600 hover:bg-indigo-500">
+                Start building
               </Button>
             </Link>
           </div>
@@ -277,15 +188,17 @@ export default function HomePage() {
       </section>
 
       {/* Footer */}
-      <footer className="bg-gray-950 py-12">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-            <span className="text-lg font-bold text-white">Clonebase</span>
-            <div className="flex gap-6 text-sm text-gray-400">
-              <Link href="/marketplace" className="hover:text-white transition-colors">Marketplace</Link>
+      <footer className="border-t border-gray-800 bg-gray-950 py-10">
+        <div className="mx-auto max-w-6xl px-4 sm:px-6">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
+            <span className="text-sm font-semibold text-white">Clonebase</span>
+            <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm text-gray-400">
               <Link href="/builder" className="hover:text-white transition-colors">Builder</Link>
+              <Link href="/marketplace" className="hover:text-white transition-colors">Marketplace</Link>
+              <Link href="/pricing" className="hover:text-white transition-colors">Pricing</Link>
+              <Link href="/dashboard" className="hover:text-white transition-colors">Dashboard</Link>
             </div>
-            <p className="text-sm text-gray-600">&copy; {new Date().getFullYear()} Clonebase</p>
+            <p className="text-xs text-gray-600">&copy; {new Date().getFullYear()} Clonebase</p>
           </div>
         </div>
       </footer>
