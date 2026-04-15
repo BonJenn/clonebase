@@ -44,10 +44,11 @@ function rewriteImports(source: string, mode: 'preview' | 'production'): string 
 // so the code can run inside new Function() / eval.
 function rewriteExports(source: string): string {
   return source
-    // export default function Foo(...) → function Foo(...) ... module.exports.default = Foo;
+    // export default function Foo(...) → module.exports.Foo = function Foo(...)
+    // Also assign to module.exports.default for the fallback lookup.
     .replace(
       /export\s+default\s+function\s+(\w+)/g,
-      'function $1'
+      'module.exports.$1 = module.exports.default = function $1'
     )
     // export function Foo(...) → function Foo(...) ... (we'll assign below)
     .replace(
