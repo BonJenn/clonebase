@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { OAuthButtons } from '@/components/platform/oauth-buttons';
 
 function LoginForm() {
   const router = useRouter();
@@ -79,7 +80,17 @@ export default function LoginPage() {
             Sign up
           </Link>
         </p>
-        <Suspense fallback={<div className="mt-8 h-48 animate-pulse rounded-lg bg-gray-100" />}>
+        <div className="mt-8">
+          <OAuthButtons />
+        </div>
+
+        <div className="mt-6 flex items-center gap-3">
+          <div className="h-px flex-1 bg-gray-200" />
+          <span className="text-xs text-gray-400">or</span>
+          <div className="h-px flex-1 bg-gray-200" />
+        </div>
+
+        <Suspense fallback={<div className="mt-6 h-48 animate-pulse rounded-lg bg-gray-100" />}>
           <LoginForm />
         </Suspense>
       </div>
