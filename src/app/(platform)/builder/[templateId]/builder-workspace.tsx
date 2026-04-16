@@ -107,23 +107,28 @@ export function BuilderWorkspace({
     return () => window.removeEventListener('message', handleDataSnapshot);
   }, [sandboxDataKey]);
 
-  // Transpile code for preview whenever it changes
+  // Transpile code for preview whenever it changes.
+  // Retries up to 3 times to handle cold-start latency and transient errors.
   const transpile = useCallback(async (pageCode: string) => {
-    try {
-      const res = await fetch('/api/builder/transpile', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code: pageCode }),
-      });
-      const data = await res.json();
-      if (data.transpiled) {
-        setTranspiledCode(data.transpiled);
-        // Extract component name from export
-        const match = pageCode.match(/export\s+function\s+(\w+)/);
-        if (match) setComponentName(match[1]);
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        const res = await fetch('/api/builder/transpile', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ code: pageCode }),
+        });
+        const data = await res.json();
+        if (data.transpiled) {
+          setTranspiledCode(data.transpiled);
+          const match = pageCode.match(/export\s+function\s+(\w+)/);
+          if (match) setComponentName(match[1]);
+          return; // success
+        }
+        console.warn(`[builder] transpile attempt ${attempt + 1}: no result`, data.error);
+      } catch (err) {
+        console.warn(`[builder] transpile attempt ${attempt + 1} failed:`, err);
       }
-    } catch {
-      // Transpilation error — preview will show error state
+      if (attempt < 2) await new Promise(r => setTimeout(r, 1000));
     }
   }, []);
 
