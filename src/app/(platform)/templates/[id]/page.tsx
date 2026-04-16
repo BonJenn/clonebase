@@ -72,6 +72,7 @@ export default async function TemplateDetailPage({ params }: TemplateDetailProps
             hasPurchased={hasPurchased}
             isOwner={isOwner}
             priceCents={price?.price_cents}
+            isGenerated={tpl.source_type === 'generated'}
           />
         </div>
       </div>

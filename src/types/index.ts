@@ -41,6 +41,8 @@ export interface AppTemplate {
   clone_count: number;
   average_rating: number;
   review_count: number;
+  source_type: 'generated' | 'static';
+  forked_from: string | null;
   version: number;
   changelog: string | null;
   created_at: string;

@@ -13,9 +13,10 @@ interface CloneButtonProps {
   hasPurchased?: boolean;
   isOwner?: boolean;
   priceCents?: number;
+  isGenerated?: boolean;
 }
 
-export function CloneButton({ templateId, templateName, isFree, hasPurchased, isOwner, priceCents }: CloneButtonProps) {
+export function CloneButton({ templateId, templateName, isFree, hasPurchased, isOwner, priceCents, isGenerated }: CloneButtonProps) {
   const { user } = useUser();
   const router = useRouter();
   const [showModal, setShowModal] = useState(false);
@@ -55,10 +56,15 @@ export function CloneButton({ templateId, templateName, isFree, hasPurchased, is
     setLoading(true);
 
     try {
+      const payload: Record<string, string> = { template_id: templateId, name: appName };
+      if (!isGenerated) {
+        payload.slug = slug;
+      }
+
       const res = await fetch('/api/clone', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ template_id: templateId, slug, name: appName }),
+        body: JSON.stringify(payload),
       });
 
       const data = await res.json();
@@ -69,8 +75,11 @@ export function CloneButton({ templateId, templateName, isFree, hasPurchased, is
         return;
       }
 
-      // Redirect to dashboard or setup wizard
-      router.push(`/dashboard`);
+      if (isGenerated && data.redirect) {
+        router.push(data.redirect);
+      } else {
+        router.push('/dashboard');
+      }
       router.refresh();
     } catch {
       setError('Network error. Please try again.');
@@ -107,7 +116,9 @@ export function CloneButton({ templateId, templateName, isFree, hasPurchased, is
           <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
             <h2 className="text-xl font-bold">Clone &quot;{templateName}&quot;</h2>
             <p className="mt-1 text-sm text-gray-600">
-              Choose a name and subdomain for your new app.
+              {isGenerated
+                ? 'Give your forked app a name. You can customize it in the builder.'
+                : 'Choose a name and subdomain for your new app.'}
             </p>
 
             <form onSubmit={handleClone} className="mt-6 space-y-4">
@@ -123,25 +134,27 @@ export function CloneButton({ templateId, templateName, isFree, hasPurchased, is
                 required
               />
 
-              <div>
-                <Input
-                  label="Subdomain"
-                  value={slug}
-                  onChange={(e) => setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
-                  placeholder="my-app"
-                  required
-                />
-                <p className="mt-1 text-xs text-gray-500">
-                  Your app will be at <strong>{slug || 'my-app'}.clonebase.app</strong>
-                </p>
-              </div>
+              {!isGenerated && (
+                <div>
+                  <Input
+                    label="Subdomain"
+                    value={slug}
+                    onChange={(e) => setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
+                    placeholder="my-app"
+                    required
+                  />
+                  <p className="mt-1 text-xs text-gray-500">
+                    Your app will be at <strong>{slug || 'my-app'}.clonebase.app</strong>
+                  </p>
+                </div>
+              )}
 
               <div className="flex gap-3 pt-2">
                 <Button type="button" variant="secondary" className="flex-1" onClick={() => setShowModal(false)}>
                   Cancel
                 </Button>
                 <Button type="submit" className="flex-1" loading={loading}>
-                  Clone
+                  {isGenerated ? 'Fork to Builder' : 'Clone'}
                 </Button>
               </div>
             </form>

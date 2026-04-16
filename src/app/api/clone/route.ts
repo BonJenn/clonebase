@@ -3,8 +3,9 @@ import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { isValidSlug } from '@/lib/tenant';
 
-// POST /api/clone — Clone a template into a new app instance
-// This is the core operation: template → tenant + app_instance + integration stubs
+// POST /api/clone — Clone a template
+// For static templates: tenant + app_instance + integration stubs (existing flow)
+// For generated templates: fork as a new draft template + copy generated code
 export async function POST(request: NextRequest) {
   const supabase = await createServerSupabaseClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -16,14 +17,8 @@ export async function POST(request: NextRequest) {
   const body = await request.json();
   const { template_id, slug, name } = body;
 
-  if (!template_id || !slug || !name?.trim()) {
-    return NextResponse.json({ error: 'template_id, slug, and name are required' }, { status: 400 });
-  }
-
-  // Validate slug
-  const slugCheck = isValidSlug(slug);
-  if (!slugCheck.valid) {
-    return NextResponse.json({ error: slugCheck.error }, { status: 400 });
+  if (!template_id || !name?.trim()) {
+    return NextResponse.json({ error: 'template_id and name are required' }, { status: 400 });
   }
 
   // Fetch the template (RLS ensures user can see it)
@@ -65,6 +60,21 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Purchase required for this template' }, { status: 403 });
       }
     }
+  }
+
+  // Branch: generated templates use fork flow, static templates use tenant flow
+  if (template.source_type === 'generated') {
+    return handleGeneratedFork(supabase, user, template, name.trim());
+  }
+
+  // --- Static template: existing clone flow ---
+  if (!slug) {
+    return NextResponse.json({ error: 'slug is required for static templates' }, { status: 400 });
+  }
+
+  const slugCheck = isValidSlug(slug);
+  if (!slugCheck.valid) {
+    return NextResponse.json({ error: slugCheck.error }, { status: 400 });
   }
 
   // Check slug availability
@@ -162,5 +172,71 @@ export async function POST(request: NextRequest) {
     instance,
     subdomain: `${tenant.slug}.clonebase.app`,
     setup_required: integrations.length > 0,
+  }, { status: 201 });
+}
+
+// Fork a generated template: copy template row + generated code as a new draft
+async function handleGeneratedFork(
+  supabase: Awaited<ReturnType<typeof createServerSupabaseClient>>,
+  user: { id: string },
+  template: Record<string, unknown>,
+  name: string,
+) {
+  // 1. Create a new app_templates row (fork)
+  const { data: newTemplate, error: tplInsertError } = await supabase
+    .from('app_templates')
+    .insert({
+      creator_id: user.id,
+      name,
+      slug: '', // generated apps don't use slug until publish
+      description: template.description,
+      long_description: template.long_description,
+      category: template.category,
+      tags: template.tags,
+      icon_url: template.icon_url,
+      preview_url: template.preview_url,
+      status: 'draft',
+      visibility: 'private',
+      source_type: 'generated',
+      forked_from: template.id,
+    })
+    .select()
+    .single();
+
+  if (tplInsertError || !newTemplate) {
+    return NextResponse.json({ error: 'Failed to fork template' }, { status: 500 });
+  }
+
+  // 2. Copy the latest generated_templates row (the actual code)
+  const { data: sourceCode } = await supabase
+    .from('generated_templates')
+    .select('*')
+    .eq('template_id', template.id)
+    .eq('is_current', true)
+    .limit(1)
+    .maybeSingle();
+
+  if (sourceCode) {
+    await supabase.from('generated_templates').insert({
+      template_id: newTemplate.id,
+      page_code: sourceCode.page_code,
+      admin_code: sourceCode.admin_code,
+      api_handler_code: sourceCode.api_handler_code,
+      component_files: sourceCode.component_files || {},
+      generation_prompt: sourceCode.generation_prompt,
+      conversation_history: sourceCode.conversation_history,
+      model_used: sourceCode.model_used,
+      version: 1,
+      is_current: true,
+    });
+  }
+
+  // 3. Increment clone count on the original
+  const adminClient = createAdminClient();
+  await (adminClient.rpc as Function)('increment_clone_count', { template_uuid: template.id }).catch(() => {});
+
+  return NextResponse.json({
+    template: newTemplate,
+    redirect: `/builder/${newTemplate.id}`,
   }, { status: 201 });
 }
