@@ -165,7 +165,7 @@ export async function POST(request: NextRequest) {
 
   // 4. Increment clone count (admin client bypasses RLS for this function)
   const adminClient = createAdminClient();
-  await (adminClient.rpc as Function)('increment_clone_count', { template_uuid: template.id }).catch(() => {});
+  try { await (adminClient.rpc as Function)('increment_clone_count', { template_uuid: template.id }); } catch {}
 
   return NextResponse.json({
     tenant,
@@ -234,7 +234,7 @@ async function handleGeneratedFork(
   }
 
   // 3. Increment clone count on the original
-  await (adminClient.rpc as Function)('increment_clone_count', { template_uuid: template.id }).catch(() => {});
+  try { await (adminClient.rpc as Function)('increment_clone_count', { template_uuid: template.id }); } catch {}
 
   return NextResponse.json({
     template: newTemplate,
