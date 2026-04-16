@@ -176,13 +176,16 @@ export async function POST(request: NextRequest) {
 }
 
 // Fork a generated template: copy template row + generated code as a new draft
+// Uses admin client to bypass RLS (user doesn't own the source template's generated_templates rows)
 async function handleGeneratedFork(
   supabase: Awaited<ReturnType<typeof createServerSupabaseClient>>,
   user: { id: string },
   template: Record<string, unknown>,
   name: string,
 ) {
-  // 1. Create a new app_templates row (fork)
+  const adminClient = createAdminClient();
+
+  // 1. Create a new app_templates row (fork) — use user client so RLS sets creator_id
   const { data: newTemplate, error: tplInsertError } = await supabase
     .from('app_templates')
     .insert({
@@ -206,17 +209,17 @@ async function handleGeneratedFork(
     return NextResponse.json({ error: 'Failed to fork template' }, { status: 500 });
   }
 
-  // 2. Copy the latest generated_templates row (the actual code)
-  const { data: sourceCode } = await supabase
+  // 2. Copy the latest generated_templates row — admin client bypasses RLS
+  const { data: sourceCode } = await adminClient
     .from('generated_templates')
-    .select('*')
-    .eq('template_id', template.id)
+    .select('page_code, admin_code, api_handler_code, component_files, generation_prompt, conversation_history, model_used')
+    .eq('template_id', template.id as string)
     .eq('is_current', true)
     .limit(1)
     .maybeSingle();
 
   if (sourceCode) {
-    await supabase.from('generated_templates').insert({
+    await adminClient.from('generated_templates').insert({
       template_id: newTemplate.id,
       page_code: sourceCode.page_code,
       admin_code: sourceCode.admin_code,
@@ -231,7 +234,6 @@ async function handleGeneratedFork(
   }
 
   // 3. Increment clone count on the original
-  const adminClient = createAdminClient();
   await (adminClient.rpc as Function)('increment_clone_count', { template_uuid: template.id }).catch(() => {});
 
   return NextResponse.json({
