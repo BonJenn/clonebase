@@ -210,13 +210,13 @@ async function handleGeneratedFork(
   }
 
   // 2. Copy the latest generated_templates row — admin client bypasses RLS
-  const { data: sourceCode } = await adminClient
-    .from('generated_templates')
+  const { data: sourceCode } = await (adminClient
+    .from('generated_templates') as any)
     .select('page_code, admin_code, api_handler_code, component_files, generation_prompt, conversation_history, model_used')
     .eq('template_id', template.id as string)
     .eq('is_current', true)
     .limit(1)
-    .maybeSingle();
+    .maybeSingle() as { data: Record<string, unknown> | null };
 
   if (sourceCode) {
     await (adminClient.from('generated_templates') as any).insert({
