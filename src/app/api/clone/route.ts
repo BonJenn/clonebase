@@ -63,7 +63,19 @@ export async function POST(request: NextRequest) {
   }
 
   // Branch: generated templates use fork flow, static templates use tenant flow
-  if (template.source_type === 'generated') {
+  // Also check for generated code rows in case source_type is NULL (seed templates)
+  let isGenerated = template.source_type === 'generated';
+  if (!isGenerated && !template.source_type) {
+    const { data: genRow } = await supabase
+      .from('generated_templates')
+      .select('id')
+      .eq('template_id', template_id)
+      .limit(1)
+      .maybeSingle();
+    isGenerated = !!genRow;
+  }
+
+  if (isGenerated) {
     return handleGeneratedFork(supabase, user, template, name.trim());
   }
 

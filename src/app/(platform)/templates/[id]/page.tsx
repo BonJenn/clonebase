@@ -26,6 +26,19 @@ export default async function TemplateDetailPage({ params }: TemplateDetailProps
   if (!template) notFound();
 
   const tpl = template as AppTemplate & { creator: { display_name: string; avatar_url: string | null } };
+
+  // Detect generated app: check source_type or presence of generated code rows
+  const isGenerated = tpl.source_type === 'generated' || await (async () => {
+    if (tpl.source_type) return false; // explicitly static
+    const { data } = await supabase
+      .from('generated_templates')
+      .select('id')
+      .eq('template_id', tpl.id)
+      .limit(1)
+      .maybeSingle();
+    return !!data;
+  })();
+
   // Supabase returns pricing as either an object or array — normalize to object
   const priceRaw = tpl.pricing as unknown;
   const price = (Array.isArray(priceRaw) ? priceRaw[0] : priceRaw) as { pricing_type: string; price_cents: number } | undefined;
@@ -72,7 +85,7 @@ export default async function TemplateDetailPage({ params }: TemplateDetailProps
             hasPurchased={hasPurchased}
             isOwner={isOwner}
             priceCents={price?.price_cents}
-            isGenerated={tpl.source_type === 'generated'}
+            isGenerated={isGenerated}
           />
         </div>
       </div>
