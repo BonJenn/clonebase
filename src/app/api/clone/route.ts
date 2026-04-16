@@ -219,7 +219,7 @@ async function handleGeneratedFork(
     .maybeSingle();
 
   if (sourceCode) {
-    await adminClient.from('generated_templates').insert({
+    await (adminClient.from('generated_templates') as any).insert({
       template_id: newTemplate.id,
       page_code: sourceCode.page_code,
       admin_code: sourceCode.admin_code,
