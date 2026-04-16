@@ -287,13 +287,15 @@ window.__SDK__ = {
     return React.createElement('div', { ref: containerRef, className: 'w-full' });
   },
 
-  // useTenantAuth hook (mock — persists across re-renders)
+  // useTenantAuth hook (mock — persists across re-renders AND iframe reloads)
   useTenantAuth: function() {
-    // Persist auth state and accounts across code re-renders
-    if (!window.__authAccounts) window.__authAccounts = {};
-    if (!window.__authCurrentUser) window.__authCurrentUser = null;
+    // Store auth state on the PARENT window (same reasoning as dataStore above):
+    // the iframe may reload when its sandbox attribute updates, which would
+    // wipe accounts stored on window. Parent-window storage survives reload.
+    if (!window.parent.__sandboxAuth) window.parent.__sandboxAuth = { accounts: {}, currentUser: null };
+    var authStore = window.parent.__sandboxAuth;
 
-    var _userState = React.useState(window.__authCurrentUser);
+    var _userState = React.useState(authStore.currentUser);
     var user = _userState[0];
     var setUser = _userState[1];
     var _errorState = React.useState(null);
@@ -306,21 +308,21 @@ window.__SDK__ = {
       error: error,
       signUp: function(email, password, metadata) {
         setError(null);
-        if (window.__authAccounts[email]) {
+        if (authStore.accounts[email]) {
           setError('An account with this email already exists.');
           return Promise.resolve(false);
         }
         // Consistent user ID based on email so data persists across sign-ins
         var userId = 'user-' + email.replace(/[^a-z0-9]/gi, '-');
         var newUser = { id: userId, email: email, user_metadata: metadata || { name: email.split('@')[0] } };
-        window.__authAccounts[email] = { user: newUser, password: password };
-        window.__authCurrentUser = newUser;
+        authStore.accounts[email] = { user: newUser, password: password };
+        authStore.currentUser = newUser;
         setUser(newUser);
         return Promise.resolve(true);
       },
       signIn: function(email, password) {
         setError(null);
-        var account = window.__authAccounts[email];
+        var account = authStore.accounts[email];
         if (!account) {
           setError('No account found with this email. Please sign up first.');
           return Promise.resolve(false);
@@ -329,12 +331,12 @@ window.__SDK__ = {
           setError('Incorrect password.');
           return Promise.resolve(false);
         }
-        window.__authCurrentUser = account.user;
+        authStore.currentUser = account.user;
         setUser(account.user);
         return Promise.resolve(true);
       },
       signOut: function() {
-        window.__authCurrentUser = null;
+        authStore.currentUser = null;
         setUser(null);
         setError(null);
         return Promise.resolve();
@@ -344,18 +346,18 @@ window.__SDK__ = {
         return Promise.resolve(true);
       },
       updatePassword: function(newPassword) {
-        var currentUser = window.__authCurrentUser;
+        var currentUser = authStore.currentUser;
         if (!currentUser) { setError('Not signed in.'); return Promise.resolve(false); }
-        var account = window.__authAccounts[currentUser.email];
+        var account = authStore.accounts[currentUser.email];
         if (account) account.password = newPassword;
         setError(null);
         return Promise.resolve(true);
       },
       updateProfile: function(metadata) {
-        var currentUser = window.__authCurrentUser;
+        var currentUser = authStore.currentUser;
         if (!currentUser) { setError('Not signed in.'); return Promise.resolve(false); }
         currentUser.user_metadata = Object.assign({}, currentUser.user_metadata || {}, metadata);
-        window.__authCurrentUser = currentUser;
+        authStore.currentUser = currentUser;
         setUser(Object.assign({}, currentUser));
         setError(null);
         return Promise.resolve(true);
