@@ -188,7 +188,7 @@ async function handleGeneratedFork(
     .insert({
       creator_id: user.id,
       name,
-      slug: '', // generated apps don't use slug until publish
+      slug: 'fork-' + Date.now().toString(36),
       description: template.description,
       long_description: template.long_description,
       category: template.category,
@@ -198,7 +198,6 @@ async function handleGeneratedFork(
       status: 'draft',
       visibility: 'private',
       source_type: 'generated',
-      forked_from: template.id,
     })
     .select()
     .single();
