@@ -37,6 +37,7 @@ export function ChatPanel({ messages, onSend, generating, onRetry, canRetry, sel
   const [input, setInput] = useState('');
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const prevMessagesLength = useRef(messages.length);
 
   // Scroll to top on mount so pre-flight content starts visible
   useEffect(() => {
@@ -57,11 +58,13 @@ export function ChatPanel({ messages, onSend, generating, onRetry, canRetry, sel
     }
   }, [generating, messages.length]);
 
-  // Scroll to bottom when a new assistant message arrives
+  // Scroll to bottom only when a NEW message is added during this session,
+  // not when loading existing messages on mount (which would scroll past the top).
   useEffect(() => {
-    if (messages.length > 1) {
+    if (messages.length > prevMessagesLength.current && messages.length > 1) {
       messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }
+    prevMessagesLength.current = messages.length;
   }, [messages.length]);
 
   function handleSubmit(e: React.FormEvent) {
