@@ -318,6 +318,7 @@ window.__SDK__ = {
         authStore.accounts[email] = { user: newUser, password: password };
         authStore.currentUser = newUser;
         setUser(newUser);
+        sendAuthSnapshot();
         return Promise.resolve(true);
       },
       signIn: function(email, password) {
@@ -333,12 +334,14 @@ window.__SDK__ = {
         }
         authStore.currentUser = account.user;
         setUser(account.user);
+        sendAuthSnapshot();
         return Promise.resolve(true);
       },
       signOut: function() {
         authStore.currentUser = null;
         setUser(null);
         setError(null);
+        sendAuthSnapshot();
         return Promise.resolve();
       },
       resetPassword: function() {
@@ -351,6 +354,7 @@ window.__SDK__ = {
         var account = authStore.accounts[currentUser.email];
         if (account) account.password = newPassword;
         setError(null);
+        sendAuthSnapshot();
         return Promise.resolve(true);
       },
       updateProfile: function(metadata) {
@@ -360,6 +364,7 @@ window.__SDK__ = {
         authStore.currentUser = currentUser;
         setUser(Object.assign({}, currentUser));
         setError(null);
+        sendAuthSnapshot();
         return Promise.resolve(true);
       },
     };
@@ -426,6 +431,13 @@ function sendDataSnapshot() {
     });
   }
   window.parent.postMessage({ type: 'data-snapshot', collections: snapshot }, '*');
+}
+
+// Notify parent that sandbox auth state changed so it can persist to localStorage.
+// The actual auth object already lives on window.parent.__sandboxAuth — the
+// message just triggers the parent's save handler.
+function sendAuthSnapshot() {
+  window.parent.postMessage({ type: 'auth-snapshot' }, '*');
 }
 
 // --- Edit Mode ---

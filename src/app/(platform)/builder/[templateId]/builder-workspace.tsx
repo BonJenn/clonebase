@@ -100,13 +100,15 @@ export function BuilderWorkspace({
     };
   }, [isResizing]);
 
-  // Persist sandbox data to localStorage so it survives page refresh.
-  // The sandbox iframe stores data on window.__sandboxData — we hydrate
-  // from localStorage on mount and save whenever a data-snapshot arrives.
+  // Persist sandbox data + auth to localStorage so they survive page refresh.
+  // The sandbox iframe stores data on window.__sandboxData and auth on
+  // window.__sandboxAuth — we hydrate from localStorage on mount and save
+  // whenever a snapshot message arrives.
   const sandboxDataKey = `clonebase-sandbox-data-${templateId}`;
+  const sandboxAuthKey = `clonebase-sandbox-auth-${templateId}`;
 
   useEffect(() => {
-    // Hydrate: restore data from localStorage before iframe initializes
+    // Hydrate: restore data + auth from localStorage before iframe initializes
     try {
       const saved = localStorage.getItem(sandboxDataKey);
       if (saved) {
@@ -118,23 +120,44 @@ export function BuilderWorkspace({
     } catch {
       // Corrupted data — start fresh
     }
+    try {
+      const savedAuth = localStorage.getItem(sandboxAuthKey);
+      if (savedAuth) {
+        const parsed = JSON.parse(savedAuth);
+        if (parsed && typeof parsed === 'object') {
+          (window as unknown as Record<string, unknown>).__sandboxAuth = parsed;
+        }
+      }
+    } catch {
+      // Corrupted auth — start fresh
+    }
 
-    // Save: listen for data-snapshot messages from the sandbox and persist
-    function handleDataSnapshot(event: MessageEvent) {
-      if (event.data?.type !== 'data-snapshot') return;
-      const sandboxData = (window as unknown as { __sandboxData?: Record<string, unknown[]> }).__sandboxData;
-      if (sandboxData) {
-        try {
-          localStorage.setItem(sandboxDataKey, JSON.stringify(sandboxData));
-        } catch {
-          // localStorage full or unavailable — non-fatal
+    // Save: listen for snapshot messages from the sandbox and persist
+    function handleSnapshot(event: MessageEvent) {
+      if (event.data?.type === 'data-snapshot') {
+        const sandboxData = (window as unknown as { __sandboxData?: Record<string, unknown[]> }).__sandboxData;
+        if (sandboxData) {
+          try {
+            localStorage.setItem(sandboxDataKey, JSON.stringify(sandboxData));
+          } catch {
+            // localStorage full or unavailable — non-fatal
+          }
+        }
+      } else if (event.data?.type === 'auth-snapshot') {
+        const sandboxAuth = (window as unknown as { __sandboxAuth?: unknown }).__sandboxAuth;
+        if (sandboxAuth) {
+          try {
+            localStorage.setItem(sandboxAuthKey, JSON.stringify(sandboxAuth));
+          } catch {
+            // localStorage full or unavailable — non-fatal
+          }
         }
       }
     }
 
-    window.addEventListener('message', handleDataSnapshot);
-    return () => window.removeEventListener('message', handleDataSnapshot);
-  }, [sandboxDataKey]);
+    window.addEventListener('message', handleSnapshot);
+    return () => window.removeEventListener('message', handleSnapshot);
+  }, [sandboxDataKey, sandboxAuthKey]);
 
   // Transpile code for preview whenever it changes.
   // Retries up to 3 times to handle cold-start latency and transient errors.
