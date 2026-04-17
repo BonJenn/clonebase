@@ -71,6 +71,35 @@ export function BuilderWorkspace({
   const [updating, setUpdating] = useState(false);
   const [updateToast, setUpdateToast] = useState<string | null>(null);
 
+  // Draggable split between chat and preview so users can shrink the app
+  // pane to see mobile/tablet/desktop widths. Chat width is clamped to
+  // [320, container - 320] so neither panel becomes unusable.
+  const [chatWidth, setChatWidth] = useState(400);
+  const [isResizing, setIsResizing] = useState(false);
+  const splitRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!isResizing) return;
+    function handleMouseMove(e: MouseEvent) {
+      const container = splitRef.current;
+      if (!container) return;
+      const rect = container.getBoundingClientRect();
+      const newWidth = e.clientX - rect.left;
+      const min = 320;
+      const max = Math.max(min, rect.width - 320);
+      setChatWidth(Math.min(Math.max(newWidth, min), max));
+    }
+    function handleMouseUp() {
+      setIsResizing(false);
+    }
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isResizing]);
+
   // Persist sandbox data to localStorage so it survives page refresh.
   // The sandbox iframe stores data on window.__sandboxData — we hydrate
   // from localStorage on mount and save whenever a data-snapshot arrives.
@@ -601,9 +630,9 @@ export function BuilderWorkspace({
       )}
 
       {/* Split pane */}
-      <div className="flex flex-1 overflow-hidden">
+      <div ref={splitRef} className="flex flex-1 overflow-hidden">
         {/* Chat panel */}
-        <div className="w-[400px] min-w-[320px] border-r border-gray-200 bg-white">
+        <div className="bg-white flex-shrink-0" style={{ width: chatWidth }}>
           <ChatPanel
             messages={messages}
             onSend={handleSend}
@@ -623,8 +652,24 @@ export function BuilderWorkspace({
           />
         </div>
 
+        {/* Drag handle — resize preview to test responsive widths. pointer-events
+            on the preview pane is disabled during drag so iframe doesn't eat mouse events. */}
+        <div
+          onMouseDown={(e) => {
+            e.preventDefault();
+            setIsResizing(true);
+          }}
+          className={`w-1 flex-shrink-0 cursor-col-resize transition-colors ${
+            isResizing ? 'bg-indigo-500' : 'bg-gray-200 hover:bg-indigo-400'
+          }`}
+          title="Drag to resize the preview (desktop / tablet / mobile)"
+        />
+
         {/* Preview / Code / Data panel — iframe always mounted so Data tab can communicate */}
-        <div className="flex-1 overflow-hidden relative">
+        <div
+          className="flex-1 overflow-hidden relative"
+          style={{ pointerEvents: isResizing ? 'none' : undefined }}
+        >
           <div className={activeView === 'preview' ? 'h-full relative' : 'h-0 overflow-hidden'}>
             {/* Animation overlays the preview — iframe stays mounted to preserve state */}
             {showAnimation && (
