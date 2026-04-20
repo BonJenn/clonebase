@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { transpileForPreview } from '@/lib/builder/transpiler';
+import { captureError } from '@/lib/monitoring';
 
 // POST /api/builder/transpile — Transpile TSX to JS for preview iframe.
 // Always returns 200 — transpilation errors are returned in the body so
@@ -23,6 +24,10 @@ export async function POST(request: NextRequest) {
     const transpiled = transpileForPreview(code, filename || 'component.tsx');
     return NextResponse.json({ transpiled });
   } catch (err) {
+    captureError(err, {
+      subsystem: 'transpile',
+      extra: { code_preview: code.slice(0, 4000) },
+    });
     return NextResponse.json({
       transpiled: null,
       error: 'Transpilation failed',

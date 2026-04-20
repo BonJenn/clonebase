@@ -10,6 +10,7 @@ import { GeneratingAnimation } from '@/components/builder/generating-animation';
 import { MobileBuilder } from '@/components/builder/mobile-builder';
 import { PublishDialog } from '@/components/builder/publish-dialog';
 import { Button } from '@/components/ui/button';
+import { captureError } from '@/lib/monitoring';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -188,8 +189,35 @@ export function BuilderWorkspace({
       }
       if (attempt < 2) await new Promise(r => setTimeout(r, 1000));
     }
+    // All 3 retries exhausted — this is the silent-failure path that produced
+    // the white-screen bug. Report to Sentry with the failing code so the
+    // auto-fix pipeline can see what caused it.
+    captureError(new Error(lastError), {
+      subsystem: 'transpile',
+      templateId,
+      extra: { page_code: pageCode.slice(0, 4000) },
+    });
     return { ok: false, error: lastError };
-  }, []);
+  }, [templateId]);
+
+  // One-shot auto-fix: ask Claude to patch code that failed to transpile or
+  // render. Returns the patched code or null. Called by handleSend when a
+  // generation produces broken code — scoped to the user's generated app.
+  const requestAutofix = useCallback(async (code: string, errorMessage: string): Promise<string | null> => {
+    try {
+      const res = await fetch('/api/builder/autofix', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code, error: errorMessage }),
+      });
+      if (!res.ok) return null;
+      const data = await res.json();
+      return data.page_code || null;
+    } catch (err) {
+      captureError(err, { subsystem: 'autofix', templateId });
+      return null;
+    }
+  }, [templateId]);
 
   // Auto-capture a preview screenshot after code generation so that even
   // draft (unpublished) apps have thumbnails on the dashboard.
@@ -402,10 +430,23 @@ export function BuilderWorkspace({
         content: explanation,
       }]);
 
-      // Transpile for preview. If this fails after all retries, surface the
-      // error — otherwise the animation dismisses and the user is left with
-      // a blank preview (the "white screen" bug).
-      const transpileResult = await transpile(data.page_code);
+      // Transpile for preview. If this fails after all retries, try one
+      // auto-fix round-trip through Claude before giving up. If that also
+      // fails, surface the error in chat (white-screen bug fix).
+      let transpileResult = await transpile(data.page_code);
+      if (!transpileResult.ok) {
+        const fixed = await requestAutofix(data.page_code, transpileResult.error);
+        if (fixed) {
+          setCode({ ...newCode, page_code: fixed });
+          transpileResult = await transpile(fixed);
+          if (transpileResult.ok) {
+            setMessages((prev) => [...prev, {
+              role: 'assistant',
+              content: 'I caught an error in the generated code and auto-fixed it. Preview is live.',
+            }]);
+          }
+        }
+      }
       setShowAnimation(false);
       if (!transpileResult.ok) {
         setMessages((prev) => [...prev, {
@@ -422,7 +463,12 @@ export function BuilderWorkspace({
       if (typeof data.credits_remaining === 'number') {
         window.dispatchEvent(new CustomEvent('credits-updated', { detail: { remaining: data.credits_remaining } }));
       }
-    } catch {
+    } catch (err) {
+      captureError(err, {
+        subsystem: 'builder',
+        templateId,
+        extra: { stage: 'handleSend', prompt: content.slice(0, 500) },
+      });
       setMessages([...updatedMessages, {
         role: 'assistant',
         content: 'Network error — the request timed out or failed. Tap "Retry" or try a simpler request.',

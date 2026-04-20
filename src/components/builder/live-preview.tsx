@@ -1,6 +1,7 @@
 'use client';
 
 import { useRef, useEffect, useState, useCallback, forwardRef, useImperativeHandle } from 'react';
+import { captureError } from '@/lib/monitoring';
 
 export interface ElementEditEvent {
   kind: 'text' | 'image';
@@ -76,6 +77,15 @@ export const LivePreview = forwardRef<LivePreviewHandle, LivePreviewProps>(funct
       setError(null);
     } else if (data.type === 'preview-error') {
       setError(data.error);
+      // Forward generated-code runtime errors (evaluated inside the iframe
+      // via new Function) to Sentry. The iframe posts message + optional
+      // stack — we reconstruct an Error so Sentry gets proper grouping.
+      const err = new Error(data.error || 'Sandbox runtime error');
+      if (data.stack) err.stack = data.stack;
+      captureError(err, {
+        subsystem: 'sandbox',
+        extra: { preview_code: data.code?.slice?.(0, 4000) },
+      });
     } else if (data.type === 'capture-result') {
       const resolver = captureResolvers.current.get(data.requestId);
       if (resolver) {

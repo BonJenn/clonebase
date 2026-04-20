@@ -415,7 +415,14 @@ function renderComponent(code, componentName) {
 
     window.parent.postMessage({ type: 'preview-ready' }, '*');
   } catch (err) {
-    window.parent.postMessage({ type: 'preview-error', error: err.message }, '*');
+    // Forward both message + stack so Sentry (via the parent) can group and
+    // the auto-fix pipeline has enough info to patch the underlying code.
+    window.parent.postMessage({
+      type: 'preview-error',
+      error: err.message,
+      stack: err.stack || null,
+      code: code,
+    }, '*');
     document.getElementById('root').innerHTML =
       '<div style="padding:2rem;color:#dc2626;font-family:monospace;white-space:pre-wrap;">' +
       'Error: ' + err.message + '</div>';

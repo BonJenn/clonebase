@@ -8,6 +8,7 @@ import { planApp } from '@/lib/builder/planner';
 import { researchTopic, searchImages } from '@/lib/builder/researcher';
 import { detectBlueprint, formatBlueprintForPrompt } from '@/lib/builder/app-blueprints';
 import { lintDesign } from '@/lib/builder/design-linter';
+import { captureError } from '@/lib/monitoring';
 
 export const maxDuration = 300;
 
@@ -383,6 +384,10 @@ IMPORTANT CONSTRAINTS FROM PLAN:
   } catch (err) {
     const message = (err as Error).message || 'Claude call failed';
     console.log(`[builder] t+${elapsed()}ms primary call FAILED: ${message}`);
+    captureError(err, {
+      subsystem: 'generate',
+      extra: { stage: 'primary_claude_call', elapsed_ms: elapsed() },
+    });
     return NextResponse.json(
       { error: message.includes('timeout') || message.includes('aborted')
         ? 'The generation took too long. Try a simpler request or break it into smaller steps.'
@@ -398,9 +403,17 @@ IMPORTANT CONSTRAINTS FROM PLAN:
 
   let generated = parseGenerated(textContent);
   if (!generated) {
+    captureError(new Error('parseGenerated returned null'), {
+      subsystem: 'generate',
+      extra: { stage: 'parse', response_preview: textContent.slice(0, 2000) },
+    });
     return NextResponse.json({ error: 'Failed to parse generated code. Try a simpler request.' }, { status: 500 });
   }
   if (!generated.page_code) {
+    captureError(new Error('Generated code missing page_code'), {
+      subsystem: 'generate',
+      extra: { stage: 'validate', keys: Object.keys(generated) },
+    });
     return NextResponse.json({ error: 'Generated code missing page_code' }, { status: 500 });
   }
 
