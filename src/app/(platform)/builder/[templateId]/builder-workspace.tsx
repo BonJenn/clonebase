@@ -161,7 +161,11 @@ export function BuilderWorkspace({
 
   // Transpile code for preview whenever it changes.
   // Retries up to 3 times to handle cold-start latency and transient errors.
-  const transpile = useCallback(async (pageCode: string) => {
+  // Returns { ok: true } on success or { ok: false, error } after all retries
+  // fail — callers must surface the error to the user instead of leaving the
+  // preview blank.
+  const transpile = useCallback(async (pageCode: string): Promise<{ ok: true } | { ok: false; error: string }> => {
+    let lastError = 'Transpilation failed after 3 attempts';
     for (let attempt = 0; attempt < 3; attempt++) {
       try {
         const res = await fetch('/api/builder/transpile', {
@@ -174,14 +178,17 @@ export function BuilderWorkspace({
           setTranspiledCode(data.transpiled);
           const match = pageCode.match(/export\s+function\s+(\w+)/);
           if (match) setComponentName(match[1]);
-          return; // success
+          return { ok: true };
         }
+        lastError = data.details || data.error || lastError;
         console.warn(`[builder] transpile attempt ${attempt + 1}: no result`, data.error);
       } catch (err) {
+        lastError = (err as Error)?.message || lastError;
         console.warn(`[builder] transpile attempt ${attempt + 1} failed:`, err);
       }
       if (attempt < 2) await new Promise(r => setTimeout(r, 1000));
     }
+    return { ok: false, error: lastError };
   }, []);
 
   // Auto-capture a preview screenshot after code generation so that even
@@ -395,9 +402,18 @@ export function BuilderWorkspace({
         content: explanation,
       }]);
 
-      // Transpile for preview
-      await transpile(data.page_code);
+      // Transpile for preview. If this fails after all retries, surface the
+      // error — otherwise the animation dismisses and the user is left with
+      // a blank preview (the "white screen" bug).
+      const transpileResult = await transpile(data.page_code);
       setShowAnimation(false);
+      if (!transpileResult.ok) {
+        setMessages((prev) => [...prev, {
+          role: 'assistant',
+          content: `I generated your app but couldn't prepare the preview: ${transpileResult.error}. Tap "Retry" to regenerate.`,
+        }]);
+        setLastFailedMessage(content);
+      }
 
       // Auto-capture a preview thumbnail so the dashboard shows it
       scheduleAutoCapture();
