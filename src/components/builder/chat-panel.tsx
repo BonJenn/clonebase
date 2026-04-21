@@ -36,13 +36,23 @@ interface ChatPanelProps {
 export function ChatPanel({ messages, onSend, generating, onRetry, canRetry, selectedElement, onClearSelectedElement, preFlightPrompt, designPreset, onDesignPresetChange, authPref = 'auto', onAuthPrefChange, seedDataPref = 'yes', onSeedDataPrefChange, onStartGenerate }: ChatPanelProps) {
   const [input, setInput] = useState('');
   const scrollContainerRef = useRef<HTMLDivElement>(null);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
   const prevMessagesLength = useRef(messages.length);
 
   // Scroll to top on mount so pre-flight content starts visible
   useEffect(() => {
     scrollContainerRef.current?.scrollTo(0, 0);
   }, []);
+
+  // Scroll helper that stays inside the chat container. scrollIntoView (even
+  // with behavior: smooth) walks up the DOM and can scroll ancestors
+  // including the window — that caused the "page scrolls down when app
+  // finishes generating" bug. Setting scrollTop directly on the container
+  // is scoped, guaranteed not to move the outer viewport.
+  function scrollChatToBottom() {
+    const el = scrollContainerRef.current;
+    if (!el) return;
+    el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
+  }
 
   // When generation starts (first message added), reset scroll so the user
   // sees the "Building your app..." indicator instead of a stale scroll offset
@@ -53,7 +63,7 @@ export function ChatPanel({ messages, onSend, generating, onRetry, canRetry, sel
       if (messages.length <= 1) {
         scrollContainerRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
       } else {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+        scrollChatToBottom();
       }
     }
   }, [generating, messages.length]);
@@ -62,7 +72,7 @@ export function ChatPanel({ messages, onSend, generating, onRetry, canRetry, sel
   // not when loading existing messages on mount (which would scroll past the top).
   useEffect(() => {
     if (messages.length > prevMessagesLength.current && messages.length > 1) {
-      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+      scrollChatToBottom();
     }
     prevMessagesLength.current = messages.length;
   }, [messages.length]);
@@ -184,7 +194,6 @@ export function ChatPanel({ messages, onSend, generating, onRetry, canRetry, sel
             </button>
           </div>
         )}
-        <div ref={messagesEndRef} />
       </div>
 
       {/* Input */}
