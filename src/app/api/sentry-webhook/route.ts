@@ -50,12 +50,37 @@ function verifySignature(body: string, signature: string | null): boolean {
   return timingSafeEqual(a, b);
 }
 
+// Subsystems tagged by captureError that represent GENERATED-code errors,
+// not platform bugs. The Phase 2 client-side autofix already handles these
+// — we don't want the platform webhook opening PRs against the transpile
+// route for what's really a user's vibecoded-app issue.
+const GENERATED_CODE_SUBSYSTEMS = new Set(['transpile', 'generate', 'sandbox', 'autofix']);
+
+// Sentry tags come in two shapes depending on the integration type:
+//   - [["key", "value"], ...]         (event payload)
+//   - [{ key: "k", value: "v" }, ...] (issue payload)
+// Normalize to a flat record.
+function normalizeTags(raw: unknown): Record<string, string> {
+  if (!Array.isArray(raw)) return {};
+  const out: Record<string, string> = {};
+  for (const item of raw) {
+    if (Array.isArray(item) && item.length >= 2) {
+      out[String(item[0])] = String(item[1]);
+    } else if (item && typeof item === 'object' && 'key' in item && 'value' in item) {
+      const t = item as { key: unknown; value: unknown };
+      out[String(t.key)] = String(t.value);
+    }
+  }
+  return out;
+}
+
 // Extract the first project-owned frame from a Sentry event. Sentry payloads
 // vary by integration type; we handle the common shapes defensively.
 function extractErrorContext(payload: unknown): {
   path: string | null;
   message: string;
   stack: string;
+  tags: Record<string, string>;
   issueUrl?: string;
 } {
   const p = payload as Record<string, unknown>;
@@ -65,17 +90,31 @@ function extractErrorContext(payload: unknown): {
   const values = (exception?.values as Array<Record<string, unknown>> | undefined)?.[0];
   const message = (values?.value as string) || (event.message as string) || (event.title as string) || 'Unknown error';
 
+  const tags = normalizeTags(event.tags || (data.event as Record<string, unknown> | undefined)?.tags);
+
   const frames = ((values?.stacktrace as Record<string, unknown> | undefined)?.frames as Array<Record<string, unknown>> | undefined) || [];
   // Sentry orders frames oldest-first; the most recent (in-app) frame is the
   // most specific fix target. Prefer in_app === true frames.
   const inAppFrames = frames.filter((f) => f.in_app === true);
   const targetFrame = (inAppFrames[inAppFrames.length - 1] || frames[frames.length - 1]) as Record<string, unknown> | undefined;
-  // Normalize the file path — Sentry often prefixes with ./ or includes webpack internals
+  // Normalize the file path. Next.js on Vercel uses an `app:///` URL scheme
+  // in stack frames, plus the usual `./` and `webpack-internal://` prefixes.
   let path = (targetFrame?.filename as string) || (targetFrame?.abs_path as string) || null;
   if (path) {
-    path = path.replace(/^\.\//, '').replace(/^webpack-internal:\/\/\/\.?\//, '');
-    // Skip node_modules and platform-internal frames
-    if (path.includes('node_modules') || path.startsWith('/_next/')) path = null;
+    path = path
+      .replace(/^app:\/\/\//, '')
+      .replace(/^\.\//, '')
+      .replace(/^webpack-internal:\/\/\/\.?\//, '');
+    // Skip node_modules, Next.js internals, and compiled chunk output — none
+    // of those are editable source files in our repo.
+    if (
+      path.includes('node_modules') ||
+      path.startsWith('/_next/') ||
+      path.startsWith('_next/') ||
+      /^(?:\.?\/)?_next\/(?:server|static)\/chunks\//.test(path)
+    ) {
+      path = null;
+    }
   }
 
   const stack = frames.slice(-10).map((f) => {
@@ -86,7 +125,22 @@ function extractErrorContext(payload: unknown): {
   }).join('\n');
 
   const issueUrl = (p.url as string) || (data.url as string) || undefined;
-  return { path, message, stack, issueUrl };
+  return { path, message, stack, tags, issueUrl };
+}
+
+// GET /api/sentry-webhook — health check so you can confirm env vars are set
+// in Vercel without triggering a real Sentry event. Does NOT leak secret
+// values — only reports whether each one is present.
+export function GET() {
+  return NextResponse.json({
+    sentry_webhook_secret: process.env.SENTRY_WEBHOOK_SECRET ? 'ok' : 'missing',
+    github_token: process.env.GITHUB_TOKEN ? 'ok' : 'missing',
+    github_owner: process.env.GITHUB_OWNER || 'missing',
+    github_repo: process.env.GITHUB_REPO || 'missing',
+    github_base_branch: process.env.GITHUB_BASE_BRANCH || 'main (default)',
+    anthropic_api_key: process.env.ANTHROPIC_API_KEY ? 'ok' : 'missing',
+    sentry_dsn: process.env.NEXT_PUBLIC_SENTRY_DSN ? 'ok' : 'missing',
+  });
 }
 
 export async function POST(request: NextRequest) {
@@ -106,6 +160,18 @@ export async function POST(request: NextRequest) {
   }
 
   const ctx = extractErrorContext(payload);
+
+  // Skip events coming from generated-code subsystems — those are already
+  // handled by the client-side autofix (/api/builder/autofix). Opening a
+  // platform PR to "fix" the transpile route for what's really a user's
+  // vibecoded-app bug would produce nonsense patches.
+  if (ctx.tags.subsystem && GENERATED_CODE_SUBSYSTEMS.has(ctx.tags.subsystem)) {
+    return NextResponse.json({
+      status: 'skipped',
+      reason: `subsystem=${ctx.tags.subsystem} is handled by generated-code autofix`,
+    });
+  }
+
   if (!ctx.path) {
     // Nothing actionable — platform / vendor code or un-mappable frame
     return NextResponse.json({ status: 'skipped', reason: 'No actionable source file in stack' });
