@@ -1,6 +1,16 @@
+'use client';
+
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 
 export function Footer() {
+  const pathname = usePathname();
+  // Hide the footer on the builder workspace — that page uses the full
+  // viewport height (navbar + h-[calc(100vh-4rem)]), so a footer below
+  // it would overflow the viewport and make the whole page scrollable,
+  // pulling the chat/preview down whenever content changes.
+  if (pathname?.startsWith('/builder/')) return null;
+
   return (
     <footer className="border-t border-gray-200 bg-white py-10">
       <div className="mx-auto max-w-6xl px-4 sm:px-6">
