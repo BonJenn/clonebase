@@ -31,10 +31,14 @@ interface LivePreviewProps {
   componentName: string;
   onElementEdited?: (event: ElementEditEvent) => void;
   onElementSelected?: (event: ElementSelectedEvent) => void;
+  // Fired when generated code crashes at runtime inside the iframe (React
+  // render error, unhandled promise, etc). Caller uses this to trigger the
+  // Phase 2 autofix on runtime failures, not just transpile failures.
+  onPreviewError?: (error: { message: string; stack: string | null; code: string | null }) => void;
 }
 
 export const LivePreview = forwardRef<LivePreviewHandle, LivePreviewProps>(function LivePreview(
-  { transpiledCode, componentName, onElementEdited, onElementSelected },
+  { transpiledCode, componentName, onElementEdited, onElementSelected, onPreviewError },
   forwardedRef
 ) {
   const iframeRef = useRef<HTMLIFrameElement>(null);
@@ -86,6 +90,11 @@ export const LivePreview = forwardRef<LivePreviewHandle, LivePreviewProps>(funct
         subsystem: 'sandbox',
         extra: { preview_code: data.code?.slice?.(0, 4000) },
       });
+      onPreviewError?.({
+        message: data.error || 'Sandbox runtime error',
+        stack: data.stack || null,
+        code: data.code || null,
+      });
     } else if (data.type === 'capture-result') {
       const resolver = captureResolvers.current.get(data.requestId);
       if (resolver) {
@@ -113,7 +122,7 @@ export const LivePreview = forwardRef<LivePreviewHandle, LivePreviewProps>(funct
         text: data.text,
       });
     }
-  }, [onElementEdited, onElementSelected]);
+  }, [onElementEdited, onElementSelected, onPreviewError]);
 
   useEffect(() => {
     window.addEventListener('message', handleMessage);

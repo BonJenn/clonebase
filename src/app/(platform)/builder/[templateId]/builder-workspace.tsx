@@ -63,6 +63,10 @@ export function BuilderWorkspace({
   const [seedDataPref, setSeedDataPref] = useState<'yes' | 'no'>('yes');
   const livePreviewRef = useRef<LivePreviewHandle>(null);
   const autoCaptureTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // One-shot guard for runtime-error autofix: iframe can emit preview-error
+  // repeatedly (e.g. re-renders) — we only attempt one autofix per
+  // generation. Reset to false at the start of each handleSend.
+  const autofixFiredRef = useRef(false);
 
   // Instance tracks the creator's own deployment. Once they've published
   // once, the primary button flips from "Publish" to "Update" for one-click
@@ -327,12 +331,55 @@ export function BuilderWorkspace({
     setSelectedElement(event);
   }, []);
 
+  // Triggered when the sandbox iframe reports a React runtime error via the
+  // new error boundary (or window.onerror / unhandledrejection). Fires the
+  // generated-code autofix so that "transpile OK but render crashed" —
+  // exactly the React #130 white-screen case — is no longer silent.
+  //
+  // One-shot per generation: if the autofix result ALSO crashes, we stop
+  // trying to avoid infinite loops and credit burn. autofixFiredRef resets
+  // at the top of handleSend.
+  const handlePreviewError = useCallback(async (err: { message: string; stack: string | null; code: string | null }) => {
+    if (autofixFiredRef.current) return;
+    if (!code?.page_code) return;
+    autofixFiredRef.current = true;
+
+    setMessages((prev) => [...prev, {
+      role: 'assistant',
+      content: `The preview crashed with: ${err.message}. Attempting auto-fix…`,
+    }]);
+
+    const fixed = await requestAutofix(code.page_code, err.message);
+    if (!fixed) {
+      setMessages((prev) => [...prev, {
+        role: 'assistant',
+        content: `Auto-fix couldn't recover — tap "Retry" to regenerate.`,
+      }]);
+      return;
+    }
+    setCode({ ...code, page_code: fixed });
+    const result = await transpile(fixed);
+    if (result.ok) {
+      setMessages((prev) => [...prev, {
+        role: 'assistant',
+        content: 'Auto-fixed the runtime error. Preview is live.',
+      }]);
+    } else {
+      setMessages((prev) => [...prev, {
+        role: 'assistant',
+        content: `Auto-fix produced code that still failed: ${result.error}. Tap "Retry".`,
+      }]);
+    }
+  }, [code, requestAutofix, transpile]);
+
   async function handleSend(content: string) {
     const userMessage: Message = { role: 'user', content };
     const updatedMessages = [...messages, userMessage];
     setMessages(updatedMessages);
     setGenerating(true);
     setShowAnimation(true);
+    // Reset the runtime-autofix guard for this new generation
+    autofixFiredRef.current = false;
     setActiveView('preview');
 
     // Optimistically decrement the credits badge immediately
@@ -797,6 +844,7 @@ export function BuilderWorkspace({
               componentName={componentName}
               onElementEdited={handleElementEdited}
               onElementSelected={handleElementSelected}
+              onPreviewError={handlePreviewError}
             />
           </div>
           {activeView === 'code' && (

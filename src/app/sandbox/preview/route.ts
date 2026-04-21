@@ -374,6 +374,54 @@ window.__SDK__ = {
 // --- Renderer ---
 var root = null;
 
+// Catch React render errors (e.g. "element type is invalid" when generated
+// code imports something that isn't on __UI__). Without a boundary these
+// cause the tree to unmount to a blank div with zero feedback — the exact
+// white-screen loophole the platform hit on the finance dashboard test.
+var ErrorBoundary = (function() {
+  function EB(props) { React.Component.call(this, props); this.state = { err: null }; }
+  EB.prototype = Object.create(React.Component.prototype);
+  EB.prototype.constructor = EB;
+  EB.getDerivedStateFromError = function(err) { return { err: err }; };
+  EB.prototype.componentDidCatch = function(err, info) {
+    window.parent.postMessage({
+      type: 'preview-error',
+      error: err && err.message || String(err),
+      stack: (err && err.stack) || (info && info.componentStack) || null,
+      code: window.__lastCode || null,
+    }, '*');
+  };
+  EB.prototype.render = function() {
+    if (this.state.err) {
+      return React.createElement('div', {
+        style: { padding: '2rem', color: '#dc2626', fontFamily: 'monospace', whiteSpace: 'pre-wrap' },
+      }, 'Runtime error: ' + (this.state.err.message || this.state.err));
+    }
+    return this.props.children;
+  };
+  return EB;
+})();
+
+// Window-level safety net for async errors the error boundary misses —
+// effects that throw, promise rejections, setTimeout callbacks, etc.
+window.addEventListener('error', function(event) {
+  window.parent.postMessage({
+    type: 'preview-error',
+    error: event.message || 'Uncaught error',
+    stack: event.error && event.error.stack || null,
+    code: window.__lastCode || null,
+  }, '*');
+});
+window.addEventListener('unhandledrejection', function(event) {
+  var reason = event.reason;
+  window.parent.postMessage({
+    type: 'preview-error',
+    error: (reason && reason.message) || String(reason) || 'Unhandled promise rejection',
+    stack: (reason && reason.stack) || null,
+    code: window.__lastCode || null,
+  }, '*');
+});
+
 function renderComponent(code, componentName) {
   try {
     // Save for re-renders after data mutations
@@ -408,10 +456,12 @@ function renderComponent(code, componentName) {
       root = ReactDOM.createRoot(document.getElementById('root'));
     }
 
-    root.render(React.createElement(Component, {
-      tenantId: 'preview-tenant-id',
-      instanceId: 'preview-instance-id',
-    }));
+    root.render(React.createElement(ErrorBoundary, null,
+      React.createElement(Component, {
+        tenantId: 'preview-tenant-id',
+        instanceId: 'preview-instance-id',
+      })
+    ));
 
     window.parent.postMessage({ type: 'preview-ready' }, '*');
   } catch (err) {
