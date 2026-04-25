@@ -42,7 +42,16 @@ export function DataPanel({ templateId }: DataPanelProps) {
   const [editJson, setEditJson] = useState('');
   const [addingTo, setAddingTo] = useState<string | null>(null);
   const [newJson, setNewJson] = useState('{\n  \n}');
+
+  function getPreviewWindow(): Window | null {
+    const iframe = document.querySelector('iframe[title="App Preview"]') as HTMLIFrameElement | null;
+    return iframe?.contentWindow || null;
+  }
+
   const handleMessage = useCallback((event: MessageEvent) => {
+    const previewWindow = getPreviewWindow();
+    if (!previewWindow || event.source !== previewWindow) return;
+
     if (event.data?.type === 'data-snapshot') {
       const snapshot = event.data.collections as Record<string, DataRow[]>;
       setCollections(snapshot);
@@ -58,35 +67,8 @@ export function DataPanel({ templateId }: DataPanelProps) {
   }, [handleMessage]);
 
   useEffect(() => {
-    function readSandboxData() {
-      // Read directly from window.__sandboxData — the sandbox iframe writes
-      // here instead of to its own scope, so data survives iframe reloads.
-      const sandboxData = (window as unknown as { __sandboxData?: Record<string, Array<Record<string, unknown>>> }).__sandboxData;
-      if (!sandboxData) return;
-
-      const snapshot: Record<string, DataRow[]> = {};
-      for (const [key, arr] of Object.entries(sandboxData)) {
-        if (!Array.isArray(arr)) continue;
-        snapshot[key] = arr.map((item) => ({
-          id: (item.id as string) || `id-${Date.now()}`,
-          collection: key,
-          data: item,
-          created_at: (item.created_at as string) || new Date().toISOString(),
-        }));
-      }
-
-      setCollections(snapshot);
-      if (!activeCollection && Object.keys(snapshot).length > 0) {
-        setActiveCollection(Object.keys(snapshot)[0]);
-      }
-    }
-
-    // Fire immediately then poll every 500ms for responsiveness
-    readSandboxData();
-    const interval = setInterval(readSandboxData, 500);
-    return () => clearInterval(interval);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    getPreviewWindow()?.postMessage({ type: 'request-data', templateId }, '*');
+  }, [templateId]);
 
   const activeRows = collections[activeCollection] || [];
   const collectionNames = Object.keys(collections);
@@ -126,8 +108,7 @@ export function DataPanel({ templateId }: DataPanelProps) {
   }
 
   function sendToIframe(message: Record<string, unknown>) {
-    const iframe = document.querySelector('iframe[title="App Preview"]') as HTMLIFrameElement;
-    if (iframe?.contentWindow) iframe.contentWindow.postMessage(message, '*');
+    getPreviewWindow()?.postMessage(message, '*');
   }
 
   function handleDelete(collection: string, rowId: string) {

@@ -2,47 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { apiHandler as aiSupportBotHandler } from '@/templates/ai-support-bot/api/handler';
 import { loadGeneratedCode } from '@/lib/builder/load-generated';
-import { transpileForProduction } from '@/lib/builder/transpiler';
-import { callIntegration } from '@/sdk/call-integration';
 
 // Static template API handlers
 const staticHandlers: Record<string, (req: Request, context: { tenantId: string; params: string[] }) => Promise<Response>> = {
   'ai-support-bot': aiSupportBotHandler,
 };
-
-// Execute a generated API handler from transpiled code
-async function executeGeneratedHandler(
-  code: string,
-  request: Request,
-  context: { tenantId: string; params: string[] }
-): Promise<Response> {
-  const transpiled = transpileForProduction(code);
-
-  // Provide server-side SDK in scope
-  const __SDK__ = {
-    callIntegration,
-    createAdminClient,
-  };
-
-  const module = { exports: {} as Record<string, unknown> };
-  const fn = new Function('require', 'module', 'exports', '__SDK__', 'NextResponse', transpiled);
-
-  // Minimal require shim for server-side imports
-  const requireShim = (mod: string) => {
-    if (mod === 'next/server' || mod === '@/lib/supabase/admin') return { NextResponse, createAdminClient };
-    if (mod === '@/sdk/call-integration') return { callIntegration };
-    return {};
-  };
-
-  fn(requireShim, module, module.exports, __SDK__, NextResponse);
-
-  const handler = module.exports.apiHandler as typeof aiSupportBotHandler | undefined;
-  if (!handler) {
-    return NextResponse.json({ error: 'Generated API handler missing apiHandler export' }, { status: 500 });
-  }
-
-  return handler(request, context);
-}
 
 async function handleRequest(
   request: NextRequest,
@@ -81,10 +45,14 @@ async function handleRequest(
   const tpl = instance.template as unknown as { slug: string; source_type: string };
 
   // Track API usage
-  (supabase.rpc as Function)('increment_analytics', {
+  const incrementAnalytics = supabase.rpc as unknown as (
+    fn: 'increment_analytics',
+    args: { p_tenant_id: string; p_event_type: string }
+  ) => Promise<unknown>;
+  void incrementAnalytics('increment_analytics', {
     p_tenant_id: tenant.id,
     p_event_type: `api:${path[0] || 'unknown'}`,
-  }).then(() => {}, () => {});
+  });
 
   // Static templates: use hardcoded handlers
   const staticHandler = staticHandlers[tpl.slug];
@@ -92,21 +60,16 @@ async function handleRequest(
     return staticHandler(request, { tenantId: tenant.id, params: path });
   }
 
-  // Generated templates: load and execute API handler from DB
+  // Generated API handlers are intentionally not executed in-process. Running
+  // tenant-controlled JavaScript on the server would expose process globals and
+  // service-role data. Static handlers above remain available.
   if (tpl.source_type === 'generated') {
     const generated = await loadGeneratedCode(instance.template_id, instance.template_version);
     if (generated?.api_handler_code) {
-      try {
-        return await executeGeneratedHandler(generated.api_handler_code, request, {
-          tenantId: tenant.id,
-          params: path,
-        });
-      } catch (err) {
-        return NextResponse.json({
-          error: 'API handler error',
-          details: (err as Error).message,
-        }, { status: 500 });
-      }
+      return NextResponse.json(
+        { error: 'Generated API handlers are disabled for security.' },
+        { status: 501 }
+      );
     }
   }
 

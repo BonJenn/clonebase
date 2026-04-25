@@ -1,7 +1,9 @@
 // File upload pattern using useFileUpload + useTenantData. Always included.
 
 export const FILE_UPLOAD = `### File Upload Pattern (IMPORTANT — follow exactly)
-When the app needs file uploads (images, documents, essays, photos), you MUST:
+File uploads are owner/admin-only in production. Do NOT build public visitor upload forms; public uploads require a platform-issued scoped upload token that is not available to generated apps yet.
+
+When the owner/admin side needs file uploads (images, documents, essays, photos), you MUST:
 1. Import useFileUpload
 2. Call upload(file) to get a URL
 3. Store the URL in useTenantData via insert()

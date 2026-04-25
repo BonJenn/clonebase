@@ -28,6 +28,40 @@ interface ExistingInstance {
   slug: string;
 }
 
+type SandboxData = Record<string, unknown[]>;
+
+interface SandboxSnapshotRow {
+  data?: Record<string, unknown>;
+}
+
+function readJsonStorage<T>(key: string): T | undefined {
+  if (typeof window === 'undefined') return undefined;
+  try {
+    const saved = localStorage.getItem(key);
+    return saved ? JSON.parse(saved) as T : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function snapshotToSandboxData(collections: unknown): SandboxData | undefined {
+  if (!collections || typeof collections !== 'object' || Array.isArray(collections)) return undefined;
+
+  const data: SandboxData = {};
+  for (const [collection, rows] of Object.entries(collections as Record<string, unknown>)) {
+    if (!Array.isArray(rows)) continue;
+    data[collection] = rows
+      .map((row) => {
+        if (!row || typeof row !== 'object') return null;
+        const snapshotRow = row as SandboxSnapshotRow;
+        return snapshotRow.data && typeof snapshotRow.data === 'object' ? snapshotRow.data : row;
+      })
+      .filter((row): row is Record<string, unknown> => !!row && typeof row === 'object');
+  }
+
+  return data;
+}
+
 interface BuilderWorkspaceProps {
   templateId: string;
   templateName: string;
@@ -75,6 +109,10 @@ export function BuilderWorkspace({
   const [settingsMenuOpen, setSettingsMenuOpen] = useState(false);
   const [updating, setUpdating] = useState(false);
   const [updateToast, setUpdateToast] = useState<string | null>(null);
+  const sandboxDataKey = `clonebase-sandbox-data-${templateId}`;
+  const sandboxAuthKey = `clonebase-sandbox-auth-${templateId}`;
+  const [sandboxData, setSandboxData] = useState<SandboxData | undefined>(() => readJsonStorage<SandboxData>(sandboxDataKey));
+  const [sandboxAuth, setSandboxAuth] = useState<unknown>(() => readJsonStorage<unknown>(sandboxAuthKey));
 
   // Draggable split between chat and preview so users can shrink the app
   // pane to see mobile/tablet/desktop widths. Chat width is clamped to
@@ -105,54 +143,27 @@ export function BuilderWorkspace({
     };
   }, [isResizing]);
 
-  // Persist sandbox data + auth to localStorage so they survive page refresh.
-  // The sandbox iframe stores data on window.__sandboxData and auth on
-  // window.__sandboxAuth — we hydrate from localStorage on mount and save
-  // whenever a snapshot message arrives.
-  const sandboxDataKey = `clonebase-sandbox-data-${templateId}`;
-  const sandboxAuthKey = `clonebase-sandbox-auth-${templateId}`;
-
   useEffect(() => {
-    // Hydrate: restore data + auth from localStorage before iframe initializes
-    try {
-      const saved = localStorage.getItem(sandboxDataKey);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (parsed && typeof parsed === 'object') {
-          (window as unknown as Record<string, unknown>).__sandboxData = parsed;
-        }
-      }
-    } catch {
-      // Corrupted data — start fresh
-    }
-    try {
-      const savedAuth = localStorage.getItem(sandboxAuthKey);
-      if (savedAuth) {
-        const parsed = JSON.parse(savedAuth);
-        if (parsed && typeof parsed === 'object') {
-          (window as unknown as Record<string, unknown>).__sandboxAuth = parsed;
-        }
-      }
-    } catch {
-      // Corrupted auth — start fresh
-    }
-
-    // Save: listen for snapshot messages from the sandbox and persist
+    // Save snapshots from the sandbox so preview state survives page refreshes.
     function handleSnapshot(event: MessageEvent) {
+      const iframe = document.querySelector('iframe[title="App Preview"]') as HTMLIFrameElement | null;
+      if (!iframe?.contentWindow || event.source !== iframe.contentWindow) return;
+
       if (event.data?.type === 'data-snapshot') {
-        const sandboxData = (window as unknown as { __sandboxData?: Record<string, unknown[]> }).__sandboxData;
-        if (sandboxData) {
+        const nextData = snapshotToSandboxData(event.data.collections);
+        if (nextData) {
+          setSandboxData(nextData);
           try {
-            localStorage.setItem(sandboxDataKey, JSON.stringify(sandboxData));
+            localStorage.setItem(sandboxDataKey, JSON.stringify(nextData));
           } catch {
             // localStorage full or unavailable — non-fatal
           }
         }
       } else if (event.data?.type === 'auth-snapshot') {
-        const sandboxAuth = (window as unknown as { __sandboxAuth?: unknown }).__sandboxAuth;
-        if (sandboxAuth) {
+        if (event.data.auth && typeof event.data.auth === 'object') {
+          setSandboxAuth(event.data.auth);
           try {
-            localStorage.setItem(sandboxAuthKey, JSON.stringify(sandboxAuth));
+            localStorage.setItem(sandboxAuthKey, JSON.stringify(event.data.auth));
           } catch {
             // localStorage full or unavailable — non-fatal
           }
@@ -568,7 +579,6 @@ export function BuilderWorkspace({
 
     // Re-publish with minimal fields — the server reuses the existing tenant
     // so slug, password, marketplace settings are untouched.
-    const sandboxData = (window as unknown as { __sandboxData?: Record<string, unknown[]> }).__sandboxData;
     const res = await fetch('/api/builder/publish', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -842,6 +852,8 @@ export function BuilderWorkspace({
               ref={livePreviewRef}
               transpiledCode={transpiledCode}
               componentName={componentName}
+              initialSandboxData={sandboxData}
+              initialSandboxAuth={sandboxAuth}
               onElementEdited={handleElementEdited}
               onElementSelected={handleElementSelected}
               onPreviewError={handlePreviewError}
@@ -868,7 +880,7 @@ export function BuilderWorkspace({
         <PublishDialog
           templateId={templateId}
           templateName={templateName}
-          sandboxData={(window as unknown as { __sandboxData?: Record<string, unknown[]> }).__sandboxData}
+          sandboxData={sandboxData}
           onClose={handleDialogClose}
           capturePreview={() => livePreviewRef.current?.capturePreview() ?? Promise.resolve(null)}
           onPublished={(info) => {

@@ -1,7 +1,6 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { createClient } from '@/lib/supabase/client';
 import { useTenant } from './tenant-context';
 import type { Collection } from './types';
 
@@ -16,94 +15,100 @@ export function useTenantData<T extends { id?: string; [key: string]: unknown }>
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const supabase = createClient();
-
   const refresh = useCallback(async () => {
     setLoading(true);
     setError(null);
-    const { data: rows, error: err } = await supabase
-      .from('tenant_data')
-      .select('id, data')
-      .eq('tenant_id', tenantId)
-      .eq('app_instance_id', instanceId)
-      .eq('collection', collectionName)
-      .order('created_at', { ascending: false });
+    const params = new URLSearchParams({
+      tenant_id: tenantId,
+      app_instance_id: instanceId,
+      collection: collectionName,
+    });
+    const res = await fetch(`/api/tenant-data?${params.toString()}`);
+    const payload = await res.json().catch(() => ({}));
 
-    if (err) {
-      setError(err.message);
-    } else {
-      setData((rows || []).map((r: { id: string; data: Record<string, unknown> }) => ({ ...r.data, id: r.id } as T)));
+    if (!res.ok) {
+      setError(payload.error || 'Failed to load data');
+      setLoading(false);
+      return;
     }
+
+    const rows = Array.isArray(payload.rows) ? payload.rows : [];
+    setData(rows.map((r: { id: string; data: Record<string, unknown> }) => ({ ...r.data, id: r.id } as T)));
     setLoading(false);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tenantId, instanceId, collectionName]);
 
   useEffect(() => {
-    refresh();
+    const timeout = window.setTimeout(() => {
+      void refresh();
+    }, 0);
+    return () => window.clearTimeout(timeout);
   }, [refresh]);
 
   const insert = useCallback(async (item: Partial<T>): Promise<T | null> => {
-    const { data: row, error: err } = await supabase
-      .from('tenant_data')
-      .insert({
+    const res = await fetch('/api/tenant-data', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
         tenant_id: tenantId,
         app_instance_id: instanceId,
         collection: collectionName,
         data: item,
-      })
-      .select('id, data')
-      .single();
+      }),
+    });
+    const row = await res.json().catch(() => null);
 
-    if (err) {
-      setError(err.message);
+    if (!res.ok || !row) {
+      setError(row?.error || 'Failed to insert data');
       return null;
     }
     const newItem = { ...row.data, id: row.id } as T;
     setData((prev) => [newItem, ...prev]);
     return newItem;
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tenantId, instanceId, collectionName]);
 
   const update = useCallback(async (id: string, changes: Partial<T>): Promise<T | null> => {
-    // Fetch current data first, then merge
-    const { data: existing } = await supabase
-      .from('tenant_data')
-      .select('data')
-      .eq('id', id)
-      .single();
+    const res = await fetch('/api/tenant-data', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        id,
+        tenant_id: tenantId,
+        app_instance_id: instanceId,
+        collection: collectionName,
+        changes,
+      }),
+    });
+    const row = await res.json().catch(() => null);
 
-    if (!existing) return null;
-
-    const merged = { ...existing.data, ...changes };
-    const { data: row, error: err } = await supabase
-      .from('tenant_data')
-      .update({ data: merged })
-      .eq('id', id)
-      .select('id, data')
-      .single();
-
-    if (err) {
-      setError(err.message);
+    if (!res.ok || !row) {
+      setError(row?.error || 'Failed to update data');
       return null;
     }
     const updated = { ...row.data, id: row.id } as T;
     setData((prev) => prev.map((item) => (item.id === id ? updated : item)));
     return updated;
-  }, []);
+  }, [tenantId, instanceId, collectionName]);
 
   const remove = useCallback(async (id: string): Promise<boolean> => {
-    const { error: err } = await supabase
-      .from('tenant_data')
-      .delete()
-      .eq('id', id);
+    const res = await fetch('/api/tenant-data', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        id,
+        tenant_id: tenantId,
+        app_instance_id: instanceId,
+        collection: collectionName,
+      }),
+    });
+    const payload = await res.json().catch(() => ({}));
 
-    if (err) {
-      setError(err.message);
+    if (!res.ok) {
+      setError(payload.error || 'Failed to delete data');
       return false;
     }
     setData((prev) => prev.filter((item) => item.id !== id));
     return true;
-  }, []);
+  }, [tenantId, instanceId, collectionName]);
 
   return { data, loading, error, insert, update, remove, refresh };
 }

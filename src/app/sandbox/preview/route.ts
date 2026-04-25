@@ -45,13 +45,26 @@ export async function GET() {
   <input type="file" id="clonebase-image-input" accept="image/*" style="display:none" />
   <script>
 // --- SDK Shims (flat — each hook is a direct property on window.__SDK__) ---
-// CRITICAL: dataStore lives on the PARENT window, not inside the iframe.
-// The iframe may reload when its sandbox attribute updates or the browser
-// reclaims resources for an h-0 overflow-hidden frame. Storing data on the
-// parent ensures it survives across iframe reloads and is directly readable
-// by the builder's Data panel without any postMessage roundtrip.
-if (!window.parent.__sandboxData) window.parent.__sandboxData = {};
-var dataStore = window.parent.__sandboxData;
+// The iframe runs with an opaque origin. State is kept inside the sandbox and
+// synchronized to the parent through postMessage snapshots.
+var dataStore = {};
+var authStore = { accounts: {}, currentUser: null };
+
+function isPlainObject(value) {
+  return !!value && typeof value === 'object' && !Array.isArray(value);
+}
+
+function normalizeCollections(collections) {
+  var normalized = {};
+  if (!isPlainObject(collections)) return normalized;
+  Object.keys(collections).forEach(function(key) {
+    if (!Array.isArray(collections[key])) return;
+    normalized[key] = collections[key]
+      .filter(function(item) { return isPlainObject(item); })
+      .map(function(item) { return Object.assign({}, item); });
+  });
+  return normalized;
+}
 
 function getCollection(name) {
   if (!dataStore[name]) dataStore[name] = [];
@@ -287,14 +300,9 @@ window.__SDK__ = {
     return React.createElement('div', { ref: containerRef, className: 'w-full' });
   },
 
-  // useTenantAuth hook (mock — persists across re-renders AND iframe reloads)
+  // useTenantAuth hook (mock — persists across re-renders and is synchronized
+  // to the parent through auth-snapshot messages)
   useTenantAuth: function() {
-    // Store auth state on the PARENT window (same reasoning as dataStore above):
-    // the iframe may reload when its sandbox attribute updates, which would
-    // wipe accounts stored on window. Parent-window storage survives reload.
-    if (!window.parent.__sandboxAuth) window.parent.__sandboxAuth = { accounts: {}, currentUser: null };
-    var authStore = window.parent.__sandboxAuth;
-
     var _userState = React.useState(authStore.currentUser);
     var user = _userState[0];
     var setUser = _userState[1];
@@ -491,10 +499,8 @@ function sendDataSnapshot() {
 }
 
 // Notify parent that sandbox auth state changed so it can persist to localStorage.
-// The actual auth object already lives on window.parent.__sandboxAuth — the
-// message just triggers the parent's save handler.
 function sendAuthSnapshot() {
-  window.parent.postMessage({ type: 'auth-snapshot' }, '*');
+  window.parent.postMessage({ type: 'auth-snapshot', auth: authStore }, '*');
 }
 
 // --- Edit Mode ---
@@ -737,10 +743,23 @@ function captureScreenshot(requestId) {
   });
 }
 
-window.addEventListener('message', function(event) {
-  if (!event.data || !event.data.type) return;
+	window.addEventListener('message', function(event) {
+	  if (event.source !== window.parent) return;
+	  if (!event.data || !event.data.type) return;
 
   switch (event.data.type) {
+    case 'hydrate-sandbox':
+      dataStore = normalizeCollections(event.data.collections);
+      if (isPlainObject(event.data.auth)) {
+        authStore = {
+          accounts: isPlainObject(event.data.auth.accounts) ? event.data.auth.accounts : {},
+          currentUser: event.data.auth.currentUser || null
+        };
+      }
+      sendDataSnapshot();
+      sendAuthSnapshot();
+      break;
+
     case 'render':
       renderComponent(event.data.code, event.data.componentName || 'Page');
       break;

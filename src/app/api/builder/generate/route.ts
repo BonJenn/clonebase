@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { getAnthropic } from '@/lib/anthropic';
-import { checkCredits, useCredit } from '@/lib/credits';
+import { checkCredits, useCredit as consumeCredit } from '@/lib/credits';
 import { getUserTier, checkAppLimit } from '@/lib/tier-gate';
 import { composePrompt } from '@/lib/builder/prompts';
 import { planApp } from '@/lib/builder/planner';
@@ -27,6 +27,25 @@ const RETRY_MIN_BUDGET_MS = 100_000;
 //   need Sonnet's reasoning — Haiku is ~10x cheaper and fast)
 const MODEL_SONNET = 'claude-sonnet-4-6';
 const MODEL_HAIKU = 'claude-haiku-4-5-20251001';
+
+type SupabaseServerClient = Awaited<ReturnType<typeof createServerSupabaseClient>>;
+type IntegrationDefinitionInsert = {
+  template_id: string;
+  name: string;
+  service_key: string;
+  description: string;
+  integration_type: 'user_provided';
+  required_fields: unknown;
+  allowed_hosts: string[];
+};
+
+function integrationDefinitionsTable(supabase: SupabaseServerClient): {
+  insert(values: IntegrationDefinitionInsert): PromiseLike<{ error: { message: string } | null }>;
+} {
+  return supabase.from('integration_definitions') as unknown as {
+    insert(values: IntegrationDefinitionInsert): PromiseLike<{ error: { message: string } | null }>;
+  };
+}
 
 /**
  * Call Claude with prompt caching. The stable portion of the system prompt
@@ -565,13 +584,16 @@ Return the JSON now.`;
         .limit(1);
 
       if (!existingInteg?.length) {
-        await (supabase.from('integration_definitions') as any).insert({
+        await integrationDefinitionsTable(supabase).insert({
           template_id: template_id,
           name: integ.name.trim(),
           service_key: integ.service_key.trim(),
           description: (integ.description as string) || '',
           integration_type: 'user_provided',
           required_fields: integ.required_fields || ['api_key'],
+          allowed_hosts: Array.isArray(integ.allowed_hosts)
+            ? integ.allowed_hosts.filter((host): host is string => typeof host === 'string' && !!host.trim())
+            : [],
         });
       }
     } catch {
@@ -582,7 +604,7 @@ Return the JSON now.`;
   // Deduct 1 credit for successful generation (awaited so the DB is updated
   // before the response — the credits badge re-fetches on 'credits-updated')
   try {
-    await useCredit(user.id);
+    await consumeCredit(user.id);
   } catch (err) {
     console.error('[builder] credit deduction failed:', (err as Error).message);
   }
