@@ -13,6 +13,14 @@ import { randomBytes, scryptSync, timingSafeEqual, createHmac } from 'crypto';
 const SALT_BYTES = 16;
 const KEY_LENGTH = 64;
 
+function getUnlockSecret(): string {
+  const secret = process.env.ENCRYPTION_KEY;
+  if (!secret) {
+    throw new Error('ENCRYPTION_KEY is required for tenant unlock tokens');
+  }
+  return secret;
+}
+
 /** Hash a password for storage. Returns { hash, salt } as base64 strings. */
 export function hashPassword(password: string): { hash: string; salt: string } {
   const salt = randomBytes(SALT_BYTES);
@@ -45,7 +53,7 @@ export function verifyPassword(password: string, storedHash: string, storedSalt:
  * Signed with ENCRYPTION_KEY so it can't be forged.
  */
 export function createUnlockToken(tenantId: string): string {
-  const secret = process.env.ENCRYPTION_KEY || '';
+  const secret = getUnlockSecret();
   const signature = createHmac('sha256', secret).update(tenantId).digest('base64url');
   return `${tenantId}.${signature}`;
 }
@@ -56,7 +64,8 @@ export function verifyUnlockToken(token: string, tenantId: string): boolean {
   const [tokenTenantId, signature] = token.split('.');
   if (tokenTenantId !== tenantId || !signature) return false;
 
-  const secret = process.env.ENCRYPTION_KEY || '';
+  const secret = process.env.ENCRYPTION_KEY;
+  if (!secret) return false;
   const expected = createHmac('sha256', secret).update(tenantId).digest('base64url');
   // Constant-time compare
   const expectedBuf = Buffer.from(expected);

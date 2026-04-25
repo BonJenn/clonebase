@@ -19,6 +19,7 @@ When the app would benefit from live/real-time data, include suggestions:
     "service_key": "sportsdata",
     "description": "Live NBA scores, standings, and player stats",
     "required_fields": ["api_key"],
+    "allowed_hosts": ["api.sportsdata.io", "sportsdata.io"],
     "signup_url": "https://sportsdata.io/developers/api-documentation/nba"
   }
 ]
@@ -37,5 +38,6 @@ Common API suggestions (use these when relevant):
 Rules:
 - ALWAYS build the app with seed data first so it works immediately
 - Include suggested_integrations when the user asks for something that has an obvious API
+- Each suggested integration MUST include allowed_hosts: an array of exact API hostnames that the integration is allowed to call.
 - In the explanation, casually mention: "Want live data? Add your [API name] key in the Integrations tab."
-- If the user says "yes" or "connect it" or "set it up", generate the api_handler_code that uses callIntegration()`;
+- Server-side generated API handlers are disabled for security. ALWAYS return "api_handler_code": null.`;

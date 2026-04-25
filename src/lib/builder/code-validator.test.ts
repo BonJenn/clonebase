@@ -157,36 +157,26 @@ describe('validateTemplateCode — admin code', () => {
 });
 
 describe('validateTemplateCode — api handler', () => {
-  it('requires apiHandler function name', () => {
-    const res = validateTemplateCode({
-      page_code: VALID_PAGE,
-      api_handler_code: `export function somethingElse() {}`,
-    });
-    expect(res.valid).toBe(false);
-    expect(res.errors.some((e) => e.includes('apiHandler'))).toBe(true);
-  });
-
-  it('accepts a valid apiHandler', () => {
+  it('rejects generated api handlers', () => {
     const res = validateTemplateCode({
       page_code: VALID_PAGE,
       api_handler_code: `export async function apiHandler(req) { return { ok: true }; }`,
     });
+    expect(res.valid).toBe(false);
+    expect(res.errors.some((e) => e.includes('Generated server-side API handlers are disabled'))).toBe(true);
+  });
+
+  it('accepts null api_handler_code', () => {
+    const res = validateTemplateCode({
+      page_code: VALID_PAGE,
+      api_handler_code: null,
+    });
     expect(res.valid).toBe(true);
   });
 
-  it('rejects eval in api handler', () => {
+  it('accepts omitted api_handler_code', () => {
     const res = validateTemplateCode({
       page_code: VALID_PAGE,
-      api_handler_code: `export async function apiHandler() { eval('1'); }`,
-    });
-    expect(res.valid).toBe(false);
-    expect(res.errors.some((e) => e.startsWith('[api_handler]'))).toBe(true);
-  });
-
-  it('does NOT require "use client" for api handler (server code)', () => {
-    const res = validateTemplateCode({
-      page_code: VALID_PAGE,
-      api_handler_code: `export function apiHandler() { return {}; }`,
     });
     expect(res.valid).toBe(true);
   });

@@ -80,21 +80,8 @@ export function validateTemplateCode(code: {
     allWarnings.push(...admin.warnings);
   }
 
-  // Validate API handler (different rules — server-side)
   if (code.api_handler_code) {
-    const handler = code.api_handler_code;
-
-    for (const { pattern, message } of DANGEROUS_PATTERNS) {
-      if (pattern.test(handler)) allErrors.push(`[api_handler] ${message}`);
-    }
-
-    if (!/export\s+(async\s+)?function\s+apiHandler/.test(handler)) {
-      allErrors.push('[api_handler] Must export a function named apiHandler');
-    }
-
-    if (handler.length > 50_000) {
-      allErrors.push(`[api_handler] File too large`);
-    }
+    allErrors.push('[api_handler] Generated server-side API handlers are disabled for security. Return api_handler_code: null.');
   }
 
   return {

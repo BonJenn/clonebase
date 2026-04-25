@@ -27,7 +27,15 @@ export function MediaPanel() {
   const [selected, setSelected] = useState<MediaItem | null>(null);
   const [filter, setFilter] = useState<string>('all');
 
+  function getPreviewWindow(): Window | null {
+    const iframe = document.querySelector('iframe[title="App Preview"]') as HTMLIFrameElement | null;
+    return iframe?.contentWindow || null;
+  }
+
   const handleMessage = useCallback((event: MessageEvent) => {
+    const previewWindow = getPreviewWindow();
+    if (!previewWindow || event.source !== previewWindow) return;
+
     if (event.data?.type === 'data-snapshot') {
       setCollections(event.data.collections as Record<string, DataRow[]>);
     }
@@ -40,10 +48,7 @@ export function MediaPanel() {
 
   useEffect(() => {
     const interval = setInterval(() => {
-      const iframe = document.querySelector('iframe[title="App Preview"]') as HTMLIFrameElement;
-      if (iframe?.contentWindow) {
-        iframe.contentWindow.postMessage({ type: 'request-data' }, '*');
-      }
+      getPreviewWindow()?.postMessage({ type: 'request-data' }, '*');
     }, 1500);
     return () => clearInterval(interval);
   }, []);

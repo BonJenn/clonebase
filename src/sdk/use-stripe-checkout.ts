@@ -4,18 +4,10 @@ import { useCallback, useState } from 'react';
 import { useTenant } from './tenant-context';
 
 export interface CheckoutLineItem {
-  /** Display name shown to the customer on the Stripe Checkout page. */
-  name: string;
-  /** Optional description shown under the name. */
-  description?: string;
-  /** Price in cents. Minimum 50 (Stripe requires ≥ $0.50). */
-  amount_cents: number;
+  /** ID returned by useTenantData for the product/service being purchased. */
+  id: string;
   /** Number of units. 1-999. */
   quantity: number;
-  /** Optional product image URL. */
-  image_url?: string;
-  /** ISO currency code, default 'usd'. */
-  currency?: string;
 }
 
 export interface CheckoutOptions {
@@ -47,14 +39,14 @@ export interface CheckoutOptions {
  *
  * async function handleBuyNow() {
  *   await checkout([
- *     { name: 'Vintage T-Shirt', amount_cents: 2500, quantity: 1, image_url: shirt.image },
+ *     { id: shirt.id, quantity: 1 },
  *   ]);
  *   // The user is redirected to Stripe Checkout. After payment, they come back
  *   // to success_url and the order is recorded in the `orders` collection.
  * }
  */
 export function useStripeCheckout() {
-  const { tenantId } = useTenant();
+  const { tenantId, instanceId } = useTenant();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -73,6 +65,7 @@ export function useStripeCheckout() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             tenant_id: tenantId,
+            app_instance_id: instanceId,
             line_items: lineItems,
             success_url: successUrl,
             cancel_url: cancelUrl,
@@ -100,7 +93,7 @@ export function useStripeCheckout() {
         return null;
       }
     },
-    [tenantId]
+    [tenantId, instanceId]
   );
 
   return { checkout, loading, error };

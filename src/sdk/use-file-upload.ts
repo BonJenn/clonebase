@@ -15,11 +15,11 @@ interface UseFileUpload {
   error: string | null;
 }
 
-// Hook for template code to upload files (images, documents, etc.)
+// Hook for owner/admin template code to upload files (images, documents, etc.)
 // Files are stored in Supabase Storage, scoped by tenant_id.
 // Returns a public URL that can be stored in tenant_data.
 export function useFileUpload(): UseFileUpload {
-  const { tenantId } = useTenant();
+  const { tenantId, instanceId } = useTenant();
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -31,6 +31,7 @@ export function useFileUpload(): UseFileUpload {
       const formData = new FormData();
       formData.append('file', file);
       formData.append('tenant_id', tenantId);
+      formData.append('app_instance_id', instanceId);
 
       const res = await fetch('/api/upload', {
         method: 'POST',
@@ -56,7 +57,7 @@ export function useFileUpload(): UseFileUpload {
       setUploading(false);
       return null;
     }
-  }, [tenantId]);
+  }, [tenantId, instanceId]);
 
   return { upload, uploading, error };
 }

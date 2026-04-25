@@ -29,6 +29,8 @@ export interface LivePreviewHandle {
 interface LivePreviewProps {
   transpiledCode: string | null;
   componentName: string;
+  initialSandboxData?: Record<string, unknown[]>;
+  initialSandboxAuth?: unknown;
   onElementEdited?: (event: ElementEditEvent) => void;
   onElementSelected?: (event: ElementSelectedEvent) => void;
   // Fired when generated code crashes at runtime inside the iframe (React
@@ -38,7 +40,7 @@ interface LivePreviewProps {
 }
 
 export const LivePreview = forwardRef<LivePreviewHandle, LivePreviewProps>(function LivePreview(
-  { transpiledCode, componentName, onElementEdited, onElementSelected, onPreviewError },
+  { transpiledCode, componentName, initialSandboxData, initialSandboxAuth, onElementEdited, onElementSelected, onPreviewError },
   forwardedRef
 ) {
   const iframeRef = useRef<HTMLIFrameElement>(null);
@@ -73,10 +75,18 @@ export const LivePreview = forwardRef<LivePreviewHandle, LivePreviewProps>(funct
   }), [sandboxReady]);
 
   const handleMessage = useCallback((event: MessageEvent) => {
+    const previewWindow = iframeRef.current?.contentWindow;
+    if (!previewWindow || event.source !== previewWindow) return;
+
     const data = event.data;
     if (!data || typeof data !== 'object') return;
     if (data.type === 'sandbox-ready') {
       setSandboxReady(true);
+      previewWindow.postMessage({
+        type: 'hydrate-sandbox',
+        collections: initialSandboxData || {},
+        auth: initialSandboxAuth || null,
+      }, '*');
     } else if (data.type === 'preview-ready') {
       setError(null);
     } else if (data.type === 'preview-error') {
@@ -122,7 +132,7 @@ export const LivePreview = forwardRef<LivePreviewHandle, LivePreviewProps>(funct
         text: data.text,
       });
     }
-  }, [onElementEdited, onElementSelected, onPreviewError]);
+  }, [initialSandboxAuth, initialSandboxData, onElementEdited, onElementSelected, onPreviewError]);
 
   useEffect(() => {
     window.addEventListener('message', handleMessage);
@@ -132,7 +142,6 @@ export const LivePreview = forwardRef<LivePreviewHandle, LivePreviewProps>(funct
   // Send code to iframe when ready
   useEffect(() => {
     if (sandboxReady && transpiledCode && iframeRef.current?.contentWindow) {
-      setError(null);
       iframeRef.current.contentWindow.postMessage({
         type: 'render',
         code: transpiledCode,
@@ -188,7 +197,7 @@ export const LivePreview = forwardRef<LivePreviewHandle, LivePreviewProps>(funct
       <iframe
         ref={iframeRef}
         src="/sandbox/preview"
-        sandbox="allow-scripts allow-same-origin"
+        sandbox="allow-scripts"
         className={`h-full w-full border-0 ${!transpiledCode ? 'hidden' : ''} ${editMode ? 'ring-4 ring-inset ring-indigo-500' : ''}`}
         title="App Preview"
       />
