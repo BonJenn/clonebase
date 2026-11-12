@@ -1,3 +1,27 @@
+# Clonebase
+
+**An AI app builder and marketplace for creating, publishing, and cloning apps.**
+
+[Open Clonebase](https://clonebase.vercel.app) · [More work by Jonathan Benn](https://github.com/BonJenn)
+
+Clonebase turns an app idea into a conversational building workflow: describe what you want, iterate with a live preview, then publish your app or reuse an existing template. Its marketplace lets creators share or sell templates and lets other builders start from an existing app.
+
+## What it brings together
+
+- **AI-assisted creation and editing** with a conversational builder and live preview.
+- **Reusable apps and templates** with cloning and version-management workflows.
+- **Application infrastructure** for tenant data, authentication, and file storage.
+- **Payments and monetization** through Stripe billing and Stripe Connect.
+- **Creator tools** for managing apps, integrations, data, and marketplace listings.
+
+## Stack
+
+**TypeScript · Next.js · React · Supabase/PostgreSQL · Anthropic and OpenAI APIs · Stripe Connect**
+
+The project demonstrates full-stack product engineering across AI generation, multi-tenant data, authentication, payments, and the interface that ties them together.
+
+---
+
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
 ## Getting Started
